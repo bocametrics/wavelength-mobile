@@ -1168,11 +1168,11 @@
     <div id="insights">
       <div class="insight-card">
         <div class="insight-icon">🌅</div>
-        <div class="insight-text">Summer sunrise in West Palm is <strong>6:30 AM</strong> — morning habits logged before 8 AM count as <strong>golden hours</strong>.</div>
+        <div class="insight-text" id="insightSunrise">Warming up the sunrise data…</div>
       </div>
       <div class="insight-card">
         <div class="insight-icon">💧</div>
-        <div class="insight-text">July heat index often hits <strong>100°F+</strong>. Hydration habits get <strong>bonus weight</strong> in your streak.</div>
+        <div class="insight-text" id="insightHeat">Warming up the heat data…</div>
       </div>
       <div class="insight-card">
         <div class="insight-icon">🏖️</div>
@@ -1219,7 +1219,7 @@
 const DEFAULT_HABITS = [
   { id:'wake',       cat:'morning',  icon:'⏰', text:'Wake at 6:30 AM',                    note:'Before the Florida heat sets in', weight:2 },
   { id:'affirm',     cat:'morning',  icon:'💬', text:'Start the day with an affirmation',    note:'Set a positive tone before the day begins', weight:1 },
-  { id:'hydrate',    cat:'morning',  icon:'💧', text:'Drink 16 oz water',                    note:'Electrolytes in July heat', weight:2 },
+  { id:'hydrate',    cat:'morning',  icon:'💧', text:'Drink 16 oz water',                    note:'Electrolytes in the Florida heat', weight:2 },
   { id:'stretch',    cat:'morning',  icon:'🧘', text:'10-min mobility',                      note:'Sun salutation or joint circles', weight:1 },
   { id:'beach',      cat:'movement', icon:'🌊', text:'Beach walk or paddle',                 note:'Sunrise or sunset, just move', weight:2 },
   { id:'strength',   cat:'movement', icon:'🏋️', text:'Strength session',                     note:'20+ min, bodyweight or bands', weight:2 },
@@ -1280,6 +1280,108 @@ const FLORIDA_FACTS = [
   { icon:'☀️', text:'Florida UV index hits <strong>11+</strong> in July. Your sunscreen habit isn\'t vanity — it\'s survival for anyone spending time outside.' },
   { icon:'🦩', text:'<strong>Roseate spoonbills</strong> are nesting now in the Loxahatchee preserve — make one of your outdoor habits double as birdwatching.' },
 ];
+
+// ═══════════════════════════════════════════════════════════════════
+// DYNAMIC INSIGHTS — "Your Florida rhythm" (month + location aware)
+// ═══════════════════════════════════════════════════════════════════
+const DEFAULT_LOC = { lat: 26.7153, lon: -80.0534, city: 'West Palm Beach' };
+const LOC_CACHE_KEY = 'wavelength_loc';
+const LOC_CACHE_TTL = 7 * 86400000; // re-ask geolocation at most weekly
+
+// Typical afternoon heat index (°F) + typical sunrise (local) per month, WPB normals.
+// Used for the instant, offline-safe render and as the fallback when live data is unavailable.
+const MONTHLY_CLIMATE = [
+  { heat: 77,  sunrise: '7:08' }, // Jan
+  { heat: 79,  sunrise: '6:53' }, // Feb
+  { heat: 81,  sunrise: '7:28' }, // Mar
+  { heat: 85,  sunrise: '6:57' }, // Apr
+  { heat: 91,  sunrise: '6:34' }, // May
+  { heat: 96,  sunrise: '6:26' }, // Jun
+  { heat: 100, sunrise: '6:36' }, // Jul
+  { heat: 100, sunrise: '6:52' }, // Aug
+  { heat: 97,  sunrise: '7:05' }, // Sep
+  { heat: 91,  sunrise: '7:18' }, // Oct
+  { heat: 85,  sunrise: '6:37' }, // Nov
+  { heat: 79,  sunrise: '7:01' }  // Dec
+];
+
+function cachedLoc() {
+  try {
+    const raw = localStorage.getItem(LOC_CACHE_KEY);
+    if (!raw) return null;
+    const loc = JSON.parse(raw);
+    if (Date.now() - loc.ts > LOC_CACHE_TTL) return null;
+    return loc;
+  } catch (e) { return null; }
+}
+function cacheLoc(loc) {
+  try { localStorage.setItem(LOC_CACHE_KEY, JSON.stringify(Object.assign({}, loc, { ts: Date.now() }))); } catch (e) {}
+}
+
+// Resolve the user's location: cached → geolocation + reverse geocode → WPB default.
+// Never rejects; always resolves to a {lat, lon, city}.
+function getLocation() {
+  const cached = cachedLoc();
+  if (cached) return Promise.resolve(cached);
+  return new Promise(resolve => {
+    if (!navigator.geolocation) { resolve(DEFAULT_LOC); return; }
+    try {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const { latitude: lat, longitude: lon } = pos.coords;
+          fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`)
+            .then(r => r.json())
+            .then(d => {
+              const city = (d.locality || d.city || '').trim() || DEFAULT_LOC.city;
+              const loc = { lat, lon, city };
+              cacheLoc(loc);
+              resolve(loc);
+            })
+            .catch(() => resolve({ lat, lon, city: DEFAULT_LOC.city }));
+        },
+        () => resolve(DEFAULT_LOC),
+        { timeout: 6000, maximumAge: 300000 }
+      );
+    } catch (e) { resolve(DEFAULT_LOC); }
+  });
+}
+
+function fmtClock(isoStr) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
+function renderInsights() {
+  const now = new Date();
+  const monthIdx = now.getMonth();
+  const monthName = now.toLocaleDateString('en-US', { month: 'long' });
+  const cli = MONTHLY_CLIMATE[monthIdx];
+  const sunEl = document.getElementById('insightSunrise');
+  const heatEl = document.getElementById('insightHeat');
+
+  getLocation().then(loc => {
+    // 1) Instant, offline-safe render from monthly normals.
+    const sunFallback = `Typical ${monthName} sunrise in ${loc.city} is around <strong>${cli.sunrise} AM</strong> — morning habits before 8 AM count as <strong>golden hours</strong>.`;
+    const heatFallback = `The ${monthName} heat index in ${loc.city} typically hits <strong>${cli.heat}°F+</strong>. Hydration habits get <strong>bonus weight</strong> in your streak.`;
+    if (sunEl) sunEl.innerHTML = sunFallback;
+    if (heatEl) heatEl.innerHTML = heatFallback;
+
+    // 2) Live upgrade: today's real sunrise + heat index (feels-like) from Open-Meteo.
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature&daily=sunrise,sunset&timezone=auto&temperature_unit=fahrenheit`)
+      .then(r => r.json())
+      .then(d => {
+        if (!d || !d.current) return;
+        const feel = Math.round(d.current.apparent_temperature);
+        const temp = Math.round(d.current.temperature_2m);
+        const hum = Math.round(d.current.relative_humidity_2m);
+        const sunrise = (d.daily && d.daily.sunrise && d.daily.sunrise[0]) ? fmtClock(d.daily.sunrise[0]) : `${cli.sunrise} AM`;
+        if (sunEl) sunEl.innerHTML = `Sunrise today in ${loc.city} is <strong>${sunrise}</strong> — morning habits before 8 AM count as <strong>golden hours</strong>.`;
+        if (heatEl) heatEl.innerHTML = `Right now it feels like <strong>${feel}°F</strong> in ${loc.city} (${temp}°F, ${hum}% humidity). Hydration habits get <strong>bonus weight</strong> in your streak.`;
+      })
+      .catch(() => { /* keep climatology fallback */ });
+  });
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // STATE
@@ -2063,6 +2165,8 @@ function init() {
 
   setupInstallTip();
   setupOfflineStatus();
+
+  renderInsights();
 
   // Close on Escape
   document.addEventListener('keydown', e => {
