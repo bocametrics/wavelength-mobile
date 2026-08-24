@@ -286,17 +286,22 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding: 4px 4px 4px 0;
-    margin-right: 2px;
+    padding: 4px 0 4px 4px;
+    margin-left: 2px;
     cursor: grab;
     opacity: 0.3;
     transition: opacity 0.15s ease;
     flex-shrink: 0;
     touch-action: none;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .habit:hover .drag-handle {
     opacity: 0.7;
+  }
+
+  .drag-handle.drag-press {
+    opacity: 1;
   }
 
   .drag-handle:active {
@@ -693,7 +698,7 @@
     .week-grid { gap: 4px; }
     .week-day .dot { height: auto; }
     .habit { padding: 10px 12px; }
-    .drag-handle { padding: 4px 4px 4px 0; }
+    .drag-handle { padding: 4px 0 4px 4px; margin-left: 2px; }
     .move-btn { opacity: 0.5; padding: 4px; }
   }
 
@@ -1043,7 +1048,7 @@
       align-items: center;
       opacity: 0.58;
       padding: 4px;
-      margin-right: 0;
+      margin-left: 0;
     }
     .habit-icon { width: 26px; }
     .checkbox { width: 24px; height: 24px; }
@@ -1149,7 +1154,7 @@
     <span class="count" id="doneCount">0 / 20</span>
   </div>
 
-  <div class="reorder-hint">≡ Drag handle or use ↑↓ arrows to reorder</div>
+  <div class="reorder-hint">≡ Hold the right grip to drag — or use ↑↓ arrows</div>
 
   <div class="habits" id="habitList"></div>
 
@@ -1493,11 +1498,6 @@ function renderHabits() {
     const isLast = h.id === lastId;
     return `
       <div class="habit ${isDone ? 'done' : ''}" data-id="${h.id}" data-cat="${h.cat}">
-        <div class="drag-handle" data-handle="${h.id}">
-          <div class="drag-handle-dot"></div>
-          <div class="drag-handle-dot"></div>
-          <div class="drag-handle-dot"></div>
-        </div>
         <div class="habit-icon">${h.icon}</div>
         <div class="checkbox">
           <svg viewBox="0 0 12 12" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1512,6 +1512,11 @@ function renderHabits() {
         <div class="move-btns">
           <button class="move-btn" data-move="${h.id}" data-dir="up" ${isFirst ? 'disabled' : ''} title="Move up">▲</button>
           <button class="move-btn" data-move="${h.id}" data-dir="down" ${isLast ? 'disabled' : ''} title="Move down">▼</button>
+        </div>
+        <div class="drag-handle" data-handle="${h.id}" title="Hold to reorder">
+          <div class="drag-handle-dot"></div>
+          <div class="drag-handle-dot"></div>
+          <div class="drag-handle-dot"></div>
         </div>
       </div>
     `;
@@ -1594,16 +1599,59 @@ function moveHabit(id, direction) {
 // REORDERING: Pointer-based drag (mouse + touch via pointer events)
 // ═══════════════════════════════════════════════════════════════════
 let dragState = null;
+let longPressTimer = null;
+let pressCleanup = null;
+
+const DRAG_ARM_MS = 300;   // hold the grip this long before drag arms
+const DRAG_MOVE_PX = 12;   // travel past this before a reorder commits
+
+function clearLongPress() {
+  if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+}
 
 function handlePointerDown(e) {
   // Only initiate from the drag handle
   if (!e.target.closest('.drag-handle')) return;
-
   e.preventDefault();
 
   const habitEl = e.target.closest('.habit');
-  if (!habitEl) return;
+  if (!habitEl || dragState) return;
 
+  const startX = e.clientX, startY = e.clientY;
+  clearLongPress();
+  habitEl.classList.add('drag-press');
+
+  // If the finger wanders before the hold completes, it's not a long-press.
+  const onMove = (ev) => {
+    if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > 10) {
+      clearLongPress();
+      if (pressCleanup) pressCleanup();
+    }
+  };
+  const onRelease = () => {
+    clearLongPress();
+    if (pressCleanup) pressCleanup();
+  };
+  pressCleanup = () => {
+    habitEl.classList.remove('drag-press');
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onRelease);
+    document.removeEventListener('pointercancel', onRelease);
+    pressCleanup = null;
+  };
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onRelease);
+  document.addEventListener('pointercancel', onRelease);
+
+  // Arm the drag only after a deliberate hold.
+  longPressTimer = setTimeout(() => {
+    longPressTimer = null;
+    if (pressCleanup) pressCleanup();
+    armDrag(habitEl, startX, startY);
+  }, DRAG_ARM_MS);
+}
+
+function armDrag(habitEl, startX, startY) {
   const list = document.getElementById('habitList');
   const id = habitEl.dataset.id;
 
@@ -1611,8 +1659,8 @@ function handlePointerDown(e) {
   const ghost = habitEl.cloneNode(true);
   ghost.className = 'touch-ghost';
   ghost.style.width = habitEl.offsetWidth + 'px';
-  ghost.style.left = (e.clientX - 20) + 'px';
-  ghost.style.top = (e.clientY - 30) + 'px';
+  ghost.style.left = (startX - 20) + 'px';
+  ghost.style.top = (startY - 30) + 'px';
   document.body.appendChild(ghost);
 
   // Simplify ghost content
@@ -1633,7 +1681,7 @@ function handlePointerDown(e) {
     habitEl: habitEl,
     listRects: listRects,
     origOpacity: habitEl.style.opacity,
-    startY: e.clientY,
+    startY: startY,
     moved: false
   };
 
@@ -1653,8 +1701,8 @@ function handlePointerMove(e) {
   ghost.style.left = (e.clientX - 20) + 'px';
   ghost.style.top = (e.clientY - 30) + 'px';
 
-  // Only consider it a drag if moved more than 5px
-  if (Math.abs(e.clientY - dragState.startY) > 5) {
+  // Only consider it a drag if moved past the threshold
+  if (Math.abs(e.clientY - dragState.startY) > DRAG_MOVE_PX) {
     dragState.moved = true;
   }
 
