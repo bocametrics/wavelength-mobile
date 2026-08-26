@@ -12,6 +12,19 @@ This folder is the iPhone-first, installable version of Wavelength. Shared behav
 - Backup/share and import controls under **Manage Habits**
 - Existing localStorage data model and habit editing preserved
 - Pending-day-aware streaks: an unfinished today does not erase a qualifying streak through yesterday
+- Three appearance modes: **System**, **Day**, and **Night**, shared across iPhone, Android, and desktop
+
+## Appearance behavior
+
+Open **Manage Habits → Appearance** and choose:
+
+- **System** — follows the device's light/dark setting and updates live when it changes
+- **Day** — always uses Wavelength's high-contrast coastal light palette
+- **Night** — always uses the original dark palette
+
+Existing installations without a saved appearance preference start in Night to avoid an unexpected visual change. New installations start in System. The choice is stored under `wavelength_theme` and does not alter habit history or backup data.
+
+Android Chrome uses the active palette for browser/PWA chrome through the dynamic `theme-color` metadata. The manifest remains standalone-installable, all three appearance buttons meet the 44px mobile touch-target minimum, and the System mode uses the standard `prefers-color-scheme` media query on Android, iOS, Windows, and other modern platforms.
 
 ## Streak behavior
 
@@ -21,6 +34,7 @@ Run the regression coverage for both mobile and desktop builds with:
 
 ```bash
 node tests/streak-regression.mjs
+node tests/theme-regression.mjs
 ```
 
 ## Requirement for iPhone installation
