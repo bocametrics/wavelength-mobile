@@ -1875,24 +1875,50 @@ function calculateLongestStreak() {
   return longest;
 }
 
-function updateStreak() {
-  let streak = 0;
-  const d = new Date();
-  for (let i=0; i<365; i++) {
-    const key = dateKey(d);
-    const dayHabits = state.done[key] || {};
-    const cnt = HABITS.filter(h => dayHabits[h.id]).length;
-    if (cnt >= 5) {
-      streak++;
-      d.setDate(d.getDate() - 1);
-    } else {
-      break;
-    }
-  }
+function calculateCurrentStreak(doneByDate, habitIds, today, target = 5) {
+  const keyForDate = d => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  const completedOn = d => {
+    const dayHabits = doneByDate[keyForDate(d)] || {};
+    return habitIds.filter(id => dayHabits[id]).length;
+  };
 
-  const todayDone = state.done[TODAY_KEY] || {};
+  const cursor = new Date(today);
+  // Today remains eligible until it ends. If its target is still pending,
+  // preserve the active chain through yesterday instead of showing zero.
+  if (completedOn(cursor) < target) cursor.setDate(cursor.getDate() - 1);
+
+  let streak = 0;
+  for (let i = 0; i < 365 && completedOn(cursor) >= target; i++) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+function getStreakStatusCopy(streak, todayCount, target = 5) {
+  const remaining = Math.max(0, target - todayCount);
+  if (remaining > 0) {
+    const habitWord = remaining === 1 ? 'habit' : 'habits';
+    if (streak > 0) {
+      const nextStreak = streak + 1;
+      const dayWord = nextStreak === 1 ? 'day' : 'days';
+      return `Complete ${remaining} more ${habitWord} today to extend your streak to ${nextStreak} ${dayWord}`;
+    }
+    return `Complete ${remaining} more ${habitWord} today to start a streak`;
+  }
+  return `✅ ${streak}-day streak secured!`;
+}
+
+function updateStreak() {
+  const now = new Date();
+  const todayDone = state.done[dateKey(now)] || {};
   const todayCount = HABITS.filter(h => todayDone[h.id]).length;
-  const needForStreak = Math.max(0, 5 - todayCount);
+  const streak = calculateCurrentStreak(state.done || {}, HABITS.map(h => h.id), now);
 
   document.getElementById('streakCount').textContent = streak;
   document.getElementById('streakEmoji').textContent = streak >= 7 ? '🔥' : streak >= 3 ? '🌊' : '💧';
@@ -1901,13 +1927,8 @@ function updateStreak() {
   state.longestStreak = Math.max(Number(state.longestStreak) || 0, historicalBest, streak);
   document.getElementById('longestStreak').textContent =
     `${state.longestStreak} day${state.longestStreak === 1 ? '' : 's'}`;
-
-  if (needForStreak > 0) {
-    document.getElementById('streakSub').textContent =
-      `Complete ${needForStreak} more habit${needForStreak>1?'s':''} today to keep your streak alive`;
-  } else if (todayCount >= 5) {
-    document.getElementById('streakSub').textContent = '✅ Streak secured for today!';
-  }
+  document.getElementById('streakSub').textContent =
+    getStreakStatusCopy(streak, todayCount);
 
   state.streak = streak;
   saveState();

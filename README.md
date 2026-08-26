@@ -1,6 +1,6 @@
 # Wavelength Mobile — iPhone deployment target
 
-This folder is the iPhone-first, installable version of Wavelength. The original desktop HTML file remains unchanged.
+This folder is the iPhone-first, installable version of Wavelength. Shared behavior fixes are mirrored to the desktop HTML file at `../friday_app_2026-07-12.html`.
 
 ## What is ready
 
@@ -11,6 +11,17 @@ This folder is the iPhone-first, installable version of Wavelength. The original
 - Offline app shell via service worker
 - Backup/share and import controls under **Manage Habits**
 - Existing localStorage data model and habit editing preserved
+- Pending-day-aware streaks: an unfinished today does not erase a qualifying streak through yesterday
+
+## Streak behavior
+
+A day qualifies after at least five habits are completed. While today is still below that target, the displayed current streak is counted through yesterday. When today reaches five habits, today is added to the streak. A prior missed day correctly leaves the current streak at zero.
+
+Run the regression coverage for both mobile and desktop builds with:
+
+```bash
+node tests/streak-regression.mjs
+```
 
 ## Requirement for iPhone installation
 
