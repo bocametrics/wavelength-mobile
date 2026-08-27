@@ -13,6 +13,7 @@ This folder is the iPhone-first, installable version of Wavelength. Shared behav
 - Existing localStorage data model and habit editing preserved
 - Pending-day-aware streaks: an unfinished today does not erase a qualifying streak through yesterday
 - Three appearance modes: **System**, **Day**, and **Night**, shared across iPhone, Android, and desktop
+- Time-consistent greeting icons and a roomier mobile streak card with the decorative left icon suppressed at widths up to 600px
 
 ## Appearance behavior
 
@@ -37,6 +38,7 @@ Run the regression coverage for both mobile and desktop builds with:
 ```bash
 node tests/streak-regression.mjs
 node tests/theme-regression.mjs
+node tests/greeting-responsive-regression.mjs
 ```
 
 ## Requirement for iPhone installation

@@ -1203,6 +1203,8 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     .greeting { margin-bottom: 22px; }
     .greeting h1 { font-size: 1.3rem; }
     .streak-bar { padding: 16px; gap: 13px; }
+    .streak-flame { display: none; }
+    .streak-info { min-width: 0; }
 
     .category-tabs {
       flex-wrap: nowrap;
@@ -2090,26 +2092,18 @@ function toggleHabit(id) {
   }
 }
 
+function getGreetingForHour(hour) {
+  if (hour < 5) return { text: 'Good night', icon: '🌙' };
+  if (hour < 12) return { text: 'Good morning', icon: '☀️' };
+  if (hour < 17) return { text: 'Good afternoon', icon: '🌤️' };
+  return { text: 'Good evening', icon: '🌙' };
+}
+
 function updateGreeting() {
   const h = new Date().getHours();
   const greet = document.getElementById('greeting');
-
-  const todayDone = state.done[TODAY_KEY] || {};
-  const doneCount = HABITS.filter(h => todayDone[h.id]).length;
-
-  let timeGreeting = '';
-  if (h < 12) timeGreeting = 'Good morning';
-  else if (h < 17) timeGreeting = 'Good afternoon';
-  else timeGreeting = 'Good evening';
-
-  let emoji = '';
-  if (doneCount === 0) emoji = '☀️';
-  else if (doneCount >= HABITS.length) emoji = '🏆';
-  else if (doneCount >= 8) emoji = '🔥';
-  else if (doneCount >= 3) emoji = '🌊';
-  else emoji = '💪';
-
-  greet.textContent = `${timeGreeting} ${emoji}`;
+  const { text, icon } = getGreetingForHour(h);
+  greet.textContent = `${text} ${icon}`;
 }
 
 function calculateLongestStreak() {
