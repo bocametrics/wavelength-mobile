@@ -89,6 +89,9 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     --accent: #60b0ff;
     --accent2: #8fdbaf;
     --accent3: #f0c070;
+    --success-ring: #8fdbaf;
+    --success-text: #8fdbaf;
+    --completion-blue: #60b0ff;
     --rose: #f06a8a;
     --lavender: #b897e8;
     --accent-faint: rgba(96,176,255,0.05);
@@ -128,6 +131,9 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     --accent: #2776a8;
     --accent2: #247653;
     --accent3: #8c5500;
+    --success-ring: #16a34a;
+    --success-text: #15803d;
+    --completion-blue: #4b98d8;
     --rose: #b8425d;
     --lavender: #7259ad;
     --accent-faint: rgba(39,118,168,0.055);
@@ -261,7 +267,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   .streak-info .count {
     font-size: 1.5rem;
     font-weight: 600;
-    color: var(--accent3);
+    color: var(--completion-blue);
   }
 
   .streak-info .label {
@@ -305,7 +311,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     width: 54px;
     height: 54px;
     border-radius: 50%;
-    background: conic-gradient(var(--accent2) 0deg 180deg, var(--border2) 180deg 360deg);
+    background: conic-gradient(var(--success-ring) 0deg 180deg, var(--border2) 180deg 360deg);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -322,7 +328,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     justify-content: center;
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--accent2);
+    color: var(--success-text);
   }
 
   /* ── Daily Habits ── */
@@ -380,8 +386,8 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   }
 
   .habit.done .checkbox {
-    background: var(--accent);
-    border-color: var(--accent);
+    background: var(--completion-blue);
+    border-color: var(--completion-blue);
   }
 
   .habit.done .checkbox svg {
@@ -655,11 +661,11 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   }
 
   .week-day .dot.filled {
-    background: var(--accent2);
+    background: var(--success-ring);
   }
 
   .week-day .dot.partial {
-    background: linear-gradient(135deg, var(--accent2) 50%, var(--border) 50%);
+    background: linear-gradient(135deg, var(--success-ring) 50%, var(--border) 50%);
   }
 
   .week-day .dot.today {
@@ -2200,7 +2206,7 @@ function updateRing() {
 
   const ring = document.querySelector('.streak-ring');
   const deg = (doneCount / HABITS.length) * 360;
-  ring.style.background = `conic-gradient(var(--accent2) 0deg ${deg}deg, var(--ring-track) ${deg}deg 360deg)`;
+  ring.style.background = `conic-gradient(var(--success-ring) 0deg ${deg}deg, var(--ring-track) ${deg}deg 360deg)`;
 }
 
 function updateWeekly() {
@@ -2230,7 +2236,7 @@ function updateWeekly() {
     return `
       <div class="week-day">
         <div class="label">${DAYS[d.getDay()]}</div>
-        <div class="${dotClass}" style="${cnt>0?`background:conic-gradient(var(--accent2) 0deg ${(cnt/HABITS.length)*360}deg, var(--week-track) ${(cnt/HABITS.length)*360}deg 360deg)`:''}">
+        <div class="${dotClass}" style="${cnt>0?`background:conic-gradient(var(--success-ring) 0deg ${(cnt/HABITS.length)*360}deg, var(--week-track) ${(cnt/HABITS.length)*360}deg 360deg)`:''}">
           ${cnt > 0 ? cnt : ''}
         </div>
         <div class="count">${d.getDate()}</div>

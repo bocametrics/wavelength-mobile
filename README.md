@@ -24,6 +24,8 @@ Open **Manage Habits → Appearance** and choose:
 
 Existing installations without a saved appearance preference start in Night to avoid an unexpected visual change. New installations start in System. The choice is stored under `wavelength_theme` and does not alter habit history or backup data.
 
+Day mode keeps the completed-card background subtle, uses a brighter Night-family blue for completed checkboxes and the large streak count, and uses separate vivid/dark success greens for chart graphics and chart text. The split preserves cross-theme color identity while meeting the 3:1 non-text/large-text and 4.5:1 regular-text contrast floors.
+
 Android Chrome uses the active palette for browser/PWA chrome through the dynamic `theme-color` metadata. The manifest remains standalone-installable, all three appearance buttons meet the 44px mobile touch-target minimum, and the System mode uses the standard `prefers-color-scheme` media query on Android, iOS, Windows, and other modern platforms.
 
 ## Streak behavior
