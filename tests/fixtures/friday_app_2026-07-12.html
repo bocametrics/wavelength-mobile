@@ -2,19 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" id="themeColorMeta" content="#0b0f1a">
 <meta name="color-scheme" content="light dark">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" id="appleStatusBarMeta" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Wavelength">
-<meta name="format-detection" content="telephone=no">
-<meta name="description" content="A daily health compass and habit tracker.">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-<link rel="shortcut icon" href="icons/favicon.ico">
 <title>Wavelength — Daily Health Compass</title>
 <script>
 const THEME_STORAGE_KEY = 'wavelength_theme';
@@ -64,8 +54,6 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   const themeColorMeta = document.getElementById('themeColorMeta');
   if (themeColorMeta) themeColorMeta.content = effectiveTheme === 'dark' ? '#0b0f1a' : '#f3f7f8';
-  const appleStatusBarMeta = document.getElementById('appleStatusBarMeta');
-  if (appleStatusBarMeta) appleStatusBarMeta.content = effectiveTheme === 'dark' ? 'black-translucent' : 'default';
 })();
 </script>
 <style>
@@ -108,9 +96,6 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     --shadow-toast: 0 8px 32px rgba(0,0,0,0.40);
     --danger-soft: rgba(240,106,138,0.10);
     --danger-border: rgba(240,106,138,0.30);
-    --gold-border: rgba(240,192,112,0.30);
-    --offline-bg: rgba(18,24,39,0.94);
-    --install-green: rgba(143,219,175,0.05);
     --radius: 14px;
     --radius-sm: 10px;
   }
@@ -150,9 +135,6 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     --shadow-toast: 0 8px 28px rgba(23,43,54,0.18);
     --danger-soft: rgba(184,66,93,0.10);
     --danger-border: rgba(184,66,93,0.34);
-    --gold-border: rgba(140,85,0,0.30);
-    --offline-bg: rgba(255,255,255,0.96);
-    --install-green: rgba(36,118,83,0.06);
   }
 
   body {
@@ -827,6 +809,11 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   }
 
   /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .streak-flame { display: none; }
+    .streak-info { min-width: 0; }
+  }
+
   @media (max-width: 480px) {
     body { padding: 18px 14px 40px; }
     .streak-bar { flex-wrap: wrap; }
@@ -1183,180 +1170,11 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     background: var(--surface-hover);
     color: var(--text2);
   }
-
-  /* ── iPhone / PWA experience ── */
-  html {
-    background: var(--bg);
-    -webkit-text-size-adjust: 100%;
-  }
-
-  body {
-    min-height: 100dvh;
-    padding-top: max(18px, env(safe-area-inset-top));
-    padding-right: max(14px, env(safe-area-inset-right));
-    padding-bottom: max(38px, env(safe-area-inset-bottom));
-    padding-left: max(14px, env(safe-area-inset-left));
-    overscroll-behavior-y: none;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  button, input, select { touch-action: manipulation; }
-
-  .install-card {
-    display: none;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 18px;
-    padding: 14px 16px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--accent-border);
-    background: linear-gradient(135deg, var(--accent-soft), var(--install-green));
-  }
-
-  .install-card.show { display: flex; }
-  .install-card .install-icon { font-size: 1.3rem; line-height: 1.2; }
-  .install-card .install-copy { flex: 1; min-width: 0; }
-  .install-card strong { display: block; font-size: 0.82rem; color: var(--text); margin-bottom: 3px; }
-  .install-card p { font-size: 0.74rem; line-height: 1.45; color: var(--text2); }
-  .install-dismiss {
-    min-width: 36px;
-    min-height: 36px;
-    margin: -6px -8px 0 0;
-    border: 0;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--text3);
-    font: inherit;
-    cursor: pointer;
-  }
-
-  .data-tools {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    padding: 0 22px 14px;
-  }
-
-  .data-tools .modal-btn { flex: 1; min-height: 42px; }
-  #importFile { display: none; }
-
-  .offline-pill {
-    position: fixed;
-    right: max(12px, env(safe-area-inset-right));
-    bottom: max(12px, env(safe-area-inset-bottom));
-    z-index: 250;
-    display: none;
-    padding: 7px 10px;
-    border: 1px solid var(--gold-border);
-    border-radius: 999px;
-    background: var(--offline-bg);
-    color: var(--accent3);
-    font-size: 0.68rem;
-    box-shadow: var(--shadow-toast);
-  }
-
-  .offline-pill.show { display: block; }
-
-  @media (max-width: 600px) {
-    header { margin-bottom: 24px; }
-    .date-display .day { font-size: 0.96rem; }
-    .date-display .label { font-size: 0.62rem; }
-    .greeting { margin-bottom: 22px; }
-    .greeting h1 { font-size: 1.3rem; }
-    .streak-bar { padding: 16px; gap: 13px; }
-    .streak-flame { display: none; }
-    .streak-info { min-width: 0; }
-
-    .category-tabs {
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      margin-left: calc(-1 * max(14px, env(safe-area-inset-left)));
-      margin-right: calc(-1 * max(14px, env(safe-area-inset-right)));
-      padding: 2px max(14px, env(safe-area-inset-left)) 8px;
-      scroll-snap-type: x proximity;
-      scrollbar-width: none;
-      -webkit-overflow-scrolling: touch;
-    }
-    .category-tabs::-webkit-scrollbar { display: none; }
-    .cat-tab {
-      min-height: 42px;
-      padding: 8px 14px;
-      flex: 0 0 auto;
-      scroll-snap-align: start;
-    }
-
-    .section-title { align-items: center; }
-    .manage-btn { min-height: 40px; padding: 8px 10px; }
-    .reorder-hint { margin-bottom: 12px; }
-
-    .habit {
-      min-height: 68px;
-      padding: 11px 10px;
-      gap: 9px;
-    }
-    .drag-handle {
-      min-width: 28px;
-      min-height: 44px;
-      place-content: center;
-      opacity: 0.58;
-      padding: 4px;
-      margin-left: 0;
-    }
-    .habit-icon { width: 26px; }
-    .checkbox { width: 24px; height: 24px; }
-    .habit-text { font-size: 0.9rem; }
-    .habit-note { font-size: 0.73rem; line-height: 1.35; }
-    .habit-badge { padding: 4px 7px; }
-    .move-btns { gap: 2px; }
-    .move-btn {
-      min-width: 34px;
-      min-height: 30px;
-      padding: 6px;
-      opacity: 0.72;
-      font-size: 0.72rem;
-    }
-
-    .modal-overlay {
-      align-items: flex-end;
-      padding: 0;
-    }
-    .modal {
-      max-height: calc(92dvh - env(safe-area-inset-top));
-      border-radius: 18px 18px 0 0;
-      padding-bottom: env(safe-area-inset-bottom);
-    }
-    .modal-header { padding: 16px 18px; }
-    .appearance-tools { padding: 12px 18px 14px; }
-    .appearance-heading { align-items: flex-start; flex-direction: column; gap: 3px; }
-    .theme-status { text-align: left; }
-    .modal-body { padding: 8px 18px 14px; }
-    .modal-footer { padding: 12px 18px; }
-    .modal-btn { min-height: 44px; }
-    .modal-close { min-width: 44px; min-height: 44px; }
-    .edit-habit .eh-fields input,
-    .edit-habit .eh-fields select { min-height: 44px; font-size: 16px; }
-    .data-tools { padding: 0 18px 12px; }
-  }
-
-  @media (display-mode: standalone) {
-    .install-card { display: none !important; }
-    header { padding-top: 4px; }
-  }
 </style>
 </head>
 <body>
 
 <div class="app" id="app">
-
-  <!-- iPhone install guidance (Safari only, hidden after install/dismiss) -->
-  <div class="install-card" id="installCard">
-    <div class="install-icon">📲</div>
-    <div class="install-copy">
-      <strong>Install Wavelength on your iPhone</strong>
-      <p>In Safari, tap Share <span aria-hidden="true">⤴</span>, then “Add to Home Screen.” It will open like a standalone app.</p>
-    </div>
-    <button class="install-dismiss" id="installDismiss" aria-label="Dismiss install tip">✕</button>
-  </div>
 
   <!-- Header -->
   <header>
@@ -1372,7 +1190,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   <!-- Greeting -->
   <div class="greeting">
-    <h1 id="greeting">Good morning ☀️</h1>
+    <h1 id="greeting">Good morning, David ☀️</h1>
     <p>Small waves make big tides. A few minutes today sets the tone for the whole week.</p>
   </div>
 
@@ -1469,19 +1287,12 @@ function getThemeStatusCopy(preference, effectiveTheme) {
       </div>
     </div>
     <div class="modal-body" id="modalBody"></div>
-    <div class="data-tools" aria-label="Habit data tools">
-      <button class="modal-btn" id="exportBtn">⇧ Backup / Share</button>
-      <button class="modal-btn" id="importBtn">⇩ Import backup</button>
-      <input type="file" id="importFile" accept="application/json,.json">
-    </div>
     <div class="modal-footer">
       <button class="modal-btn danger" id="modalReset">Reset defaults</button>
       <button class="modal-btn primary" id="modalSave">Save changes</button>
     </div>
   </div>
 </div>
-
-<div class="offline-pill" id="offlinePill" role="status">Offline — changes stay on this device</div>
 
 <script>
 // ═══════════════════════════════════════════════════════════════════
@@ -1778,8 +1589,6 @@ function applyThemePreference(preference, persist = true) {
 
   const themeColorMeta = document.getElementById('themeColorMeta');
   if (themeColorMeta) themeColorMeta.content = effectiveTheme === 'dark' ? '#0b0f1a' : '#f3f7f8';
-  const appleStatusBarMeta = document.getElementById('appleStatusBarMeta');
-  if (appleStatusBarMeta) appleStatusBarMeta.content = effectiveTheme === 'dark' ? 'black-translucent' : 'default';
 
   if (persist) {
     try { localStorage.setItem(THEME_STORAGE_KEY, safePreference); } catch (e) {}
@@ -2062,7 +1871,7 @@ function handlePointerDown(e) {
   clearLongPress();
   habitEl.classList.add('drag-press');
 
-  // If the finger wanders before the hold completes, it's not a long-press.
+  // If the pointer wanders before the hold completes, it's not a long-press.
   const onMove = (ev) => {
     if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > 10) {
       clearLongPress();
@@ -2263,7 +2072,7 @@ function updateGreeting() {
   const h = new Date().getHours();
   const greet = document.getElementById('greeting');
   const { text, icon } = getGreetingForHour(h);
-  greet.textContent = `${text} ${icon}`;
+  greet.textContent = `${text}, David ${icon}`;
 }
 
 function calculateLongestScheduledStreak(doneByDate, habits, throughDate = new Date(), baseTarget = 5) {
@@ -2563,108 +2372,11 @@ function saveManageModal() {
   }
   saveCustomHabits(overrides);
   reloadHabits();
+  // Merge custom order with new habits (same IDs, order preserved)
   renderHabits();
   closeManageModal();
   showToast('✓ Habits saved');
   return true;
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// IPHONE INSTALL, OFFLINE, AND DATA TRANSFER
-// ═══════════════════════════════════════════════════════════════════
-const BACKUP_VERSION = 1;
-const INSTALL_DISMISS_KEY = 'wavelength_install_tip_dismissed';
-
-function setupInstallTip() {
-  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-  const dismissed = localStorage.getItem(INSTALL_DISMISS_KEY) === '1';
-  const card = document.getElementById('installCard');
-  if (isIOS && !isStandalone && !dismissed) card.classList.add('show');
-  document.getElementById('installDismiss').addEventListener('click', () => {
-    localStorage.setItem(INSTALL_DISMISS_KEY, '1');
-    card.classList.remove('show');
-  });
-}
-
-function setupOfflineStatus() {
-  const pill = document.getElementById('offlinePill');
-  const update = () => pill.classList.toggle('show', !navigator.onLine);
-  window.addEventListener('online', update);
-  window.addEventListener('offline', update);
-  update();
-
-  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
-    navigator.serviceWorker.register('./sw.js').catch(err => {
-      console.warn('Offline setup unavailable:', err);
-    });
-  }
-}
-
-function createBackupPayload() {
-  return {
-    app: 'wavelength',
-    version: BACKUP_VERSION,
-    exportedAt: new Date().toISOString(),
-    state,
-    order: userOrder,
-    customHabits: loadCustomHabits() || {}
-  };
-}
-
-async function exportBackup() {
-  const json = JSON.stringify(createBackupPayload(), null, 2);
-  const filename = `wavelength-backup-${dateKey(new Date())}.json`;
-  const file = new File([json], filename, { type: 'application/json' });
-
-  try {
-    if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
-      await navigator.share({ title: 'Wavelength backup', text: 'Wavelength habit data backup', files: [file] });
-      showToast('✓ Backup shared');
-      return;
-    }
-  } catch (err) {
-    if (err && err.name === 'AbortError') return;
-  }
-
-  const url = URL.createObjectURL(file);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  showToast('✓ Backup downloaded');
-}
-
-async function importBackupFile(file) {
-  if (!file) return;
-  try {
-    const payload = JSON.parse(await file.text());
-    if (payload.app !== 'wavelength' || payload.version !== BACKUP_VERSION || !payload.state || !Array.isArray(payload.order)) {
-      throw new Error('This is not a compatible Wavelength backup.');
-    }
-
-    const validIds = DEFAULT_HABITS.map(h => h.id);
-    if (payload.order.length !== validIds.length || !validIds.every(id => payload.order.includes(id))) {
-      throw new Error('The backup habit list is not compatible with this version.');
-    }
-    const customHabits = normalizeCustomHabitOverrides(payload.customHabits || {}, DEFAULT_HABITS, true);
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload.state));
-    localStorage.setItem(ORDER_KEY, JSON.stringify(payload.order));
-    saveCustomHabits(customHabits);
-
-    state = loadState();
-    userOrder = loadOrder();
-    reloadHabits();
-    renderHabits();
-    renderManageModal();
-    showToast('✓ Backup imported');
-  } catch (err) {
-    showToast(`Import failed: ${err.message || 'invalid file'}`);
-  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2715,25 +2427,12 @@ function init() {
     closeManageModal();
     showToast('↻ Habits reset to defaults');
   });
-
-  // Backup and restore across devices
-  document.getElementById('exportBtn').addEventListener('click', exportBackup);
-  document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
-  document.getElementById('importFile').addEventListener('change', e => {
-    importBackupFile(e.target.files && e.target.files[0]);
-    e.target.value = '';
-  });
-
-  setupInstallTip();
-  setupOfflineStatus();
-
-  renderInsights();
-
   // Close on Escape
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && modalOpen) closeManageModal();
   });
 
+  renderInsights();
   renderHabits();
 }
 

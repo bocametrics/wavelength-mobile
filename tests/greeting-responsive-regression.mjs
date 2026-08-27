@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const builds = [
   ['mobile', path.resolve(here, '../index.html')],
-  ['desktop', path.resolve(here, '../../friday_app_2026-07-12.html')],
+  ['desktop', path.resolve(here, 'fixtures/friday_app_2026-07-12.html')],
 ];
 
 function extractFunction(source, name) {
