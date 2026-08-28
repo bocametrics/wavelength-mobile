@@ -42,6 +42,7 @@ const expected = [
 
 for (const [label, htmlPath] of builds) {
   const html = fs.readFileSync(htmlPath, 'utf8');
+  assert.doesNotMatch(html, /David/, `${label}: public build source must not expose a personal name`);
   const context = {};
   vm.createContext(context);
   vm.runInContext(`${extractFunction(html, 'getGreetingForHour')}\nglobalThis.fn = getGreetingForHour;`, context);

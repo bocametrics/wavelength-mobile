@@ -472,6 +472,56 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     margin-top: 2px;
   }
 
+  .habit-progress {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    margin-top: 8px;
+  }
+
+  .progress-meter { flex: 1; min-width: 88px; }
+  .progress-summary {
+    color: var(--text2);
+    font-size: 0.68rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .progress-track {
+    height: 3px;
+    margin-top: 5px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--ring-track);
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: var(--completion-blue);
+    transition: width 0.2s ease;
+  }
+  .progress-actions { display: flex; gap: 4px; margin-left: auto; }
+  .progress-step {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 6px 9px;
+    border: 1px solid var(--border2);
+    border-radius: 9px;
+    background: var(--surface-muted);
+    color: var(--text2);
+    font: 600 0.7rem/1 inherit;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .progress-step.progress-plus {
+    color: var(--accent);
+    border-color: var(--accent-border);
+    background: var(--accent-soft);
+  }
+  .progress-step:disabled { opacity: 0.35; cursor: default; }
+  .progress-step:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
   .habit-badge {
     font-size: 0.6rem;
     padding: 3px 8px;
@@ -1003,6 +1053,12 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     box-shadow: inset 0 0 0 1px var(--danger-border);
   }
 
+  .edit-habit.measurement-error {
+    border-radius: 10px;
+    background: var(--danger-soft);
+    box-shadow: inset 0 0 0 1px var(--danger-border);
+  }
+
   .edit-habit:last-child {
     border-bottom: none;
   }
@@ -1059,6 +1115,46 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   .edit-habit .eh-fields .eh-row select {
     width: auto;
     min-width: 80px;
+  }
+
+  .eh-measurement-block {
+    margin-top: 2px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--surface-muted);
+  }
+  .eh-measurement-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+    color: var(--text3);
+    font-size: 0.68rem;
+  }
+  .edit-habit .eh-fields .eh-measurement {
+    width: auto;
+    min-width: 120px;
+    padding-block: 7px;
+  }
+  .eh-measure-fields {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .eh-measure-fields[hidden],
+  .eh-measure-field[hidden] { display: none !important; }
+  .eh-measure-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: var(--text3);
+    font-size: 0.62rem;
+  }
+  .edit-habit .eh-fields .eh-measure-field input {
+    min-width: 0;
+    padding: 7px 8px;
   }
 
   .eh-schedule {
@@ -1190,7 +1286,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   <!-- Greeting -->
   <div class="greeting">
-    <h1 id="greeting">Good morning, David ☀️</h1>
+    <h1 id="greeting">Good morning ☀️</h1>
     <p>Small waves make big tides. A few minutes today sets the tone for the whole week.</p>
   </div>
 
@@ -1370,6 +1466,122 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
+function normalizeMeasurementConfig(habit) {
+  const fallback = { type:'check', target:1, step:1, unit:'' };
+  if (!habit || typeof habit !== 'object') return fallback;
+  if (habit.measurement === undefined || habit.measurement === 'check') return fallback;
+  if (habit.measurement === 'count') {
+    if (!Number.isInteger(habit.target) || habit.target < 1 || habit.target > 999) return fallback;
+    return { type:'count', target:habit.target, step:1, unit:'' };
+  }
+  if (habit.measurement === 'amount') {
+    if (typeof habit.target !== 'number' || typeof habit.step !== 'number') return fallback;
+    const target = habit.target;
+    const step = habit.step;
+    const unit = typeof habit.unit === 'string' ? habit.unit.trim() : '';
+    const hasSupportedPrecision = value => Math.abs(value * 100 - Math.round(value * 100)) < 0.000000001;
+    if (!Number.isFinite(target) || target < 0.01 || target > 1000000 || !hasSupportedPrecision(target) ||
+        !Number.isFinite(step) || step < 0.01 || step > target || !hasSupportedPrecision(step) ||
+        unit.length < 1 || unit.length > 12 || /[\u0000-\u001f\u007f]/.test(unit)) {
+      return fallback;
+    }
+    return { type:'amount', target, step, unit };
+  }
+  return fallback;
+}
+
+function getHabitProgress(dayDone, dayProgress, habit) {
+  const config = normalizeMeasurementConfig(habit);
+  if (config.type === 'check') return dayDone && dayDone[habit.id] ? 1 : 0;
+  const stored = dayProgress && dayProgress[habit.id];
+  if (Number.isFinite(stored) && stored >= 0) return stored;
+  return dayDone && dayDone[habit.id] ? config.target : 0;
+}
+
+function adjustHabitProgress(current, habit, direction) {
+  const config = normalizeMeasurementConfig(habit);
+  if (config.type === 'check') return current ? 0 : 1;
+  const value = Number.isFinite(current) && current > 0 ? current : 0;
+  if (direction > 0 && value >= config.target) return value;
+  const delta = direction > 0 ? config.step : -config.step;
+  return Number(Math.max(0, value + delta).toFixed(2));
+}
+
+function isHabitProgressComplete(habit, progress) {
+  const config = normalizeMeasurementConfig(habit);
+  return progress >= config.target;
+}
+
+function updateMeasuredHabitState(doneByDate, progressByDate, habits, date, id, direction) {
+  const habit = habits.find(item => item.id === id);
+  if (!habit || normalizeMeasurementConfig(habit).type === 'check') return null;
+  const key = dateKey(date);
+  const dayDone = doneByDate[key] || (doneByDate[key] = {});
+  const dayProgress = progressByDate[key] || (progressByDate[key] = {});
+  const current = getHabitProgress(dayDone, dayProgress, habit);
+  const progress = adjustHabitProgress(current, habit, direction);
+  const complete = isHabitProgressComplete(habit, progress);
+  if (progress > 0) dayProgress[id] = progress;
+  else delete dayProgress[id];
+  if (Object.keys(dayProgress).length === 0) delete progressByDate[key];
+  if (complete) dayDone[id] = true;
+  else delete dayDone[id];
+  return { progress, complete, changed:progress !== current };
+}
+
+function getMeasurementDisplay(habit, progress) {
+  const config = normalizeMeasurementConfig(habit);
+  const format = value => Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)));
+  const suffix = config.unit ? ` ${config.unit}` : '';
+  return {
+    summary: `${format(progress)} / ${format(config.target)}${suffix}`,
+    incrementLabel: `+${format(config.step)}${suffix}`,
+    pct: Math.min(100, Math.round((progress / config.target) * 100)),
+  };
+}
+
+function reconcileMeasuredDay(doneByDate, progressByDate, habits, date) {
+  const key = dateKey(date);
+  const dayDone = doneByDate[key] || (doneByDate[key] = {});
+  const dayProgress = progressByDate[key] || {};
+  habits.forEach(habit => {
+    if (normalizeMeasurementConfig(habit).type === 'check') return;
+    const progress = getHabitProgress(dayDone, dayProgress, habit);
+    if (isHabitProgressComplete(habit, progress)) dayDone[habit.id] = true;
+    else delete dayDone[habit.id];
+  });
+  return dayDone;
+}
+
+function reconcileMeasurementTypeChanges(doneByDate, progressByDate, previousHabits, nextHabits, date) {
+  const key = dateKey(date);
+  const previousById = new Map(previousHabits.map(habit => [habit.id, habit]));
+  const changes = nextHabits.map(habit => {
+    const previous = previousById.get(habit.id);
+    if (!previous) return null;
+    const oldType = normalizeMeasurementConfig(previous).type;
+    const newType = normalizeMeasurementConfig(habit).type;
+    return oldType === newType ? null : { habit, oldType, newType };
+  }).filter(Boolean);
+  const changedIds = new Set(changes.map(change => change.habit.id));
+  for (const [storedKey, storedProgress] of Object.entries(progressByDate)) {
+    changedIds.forEach(id => delete storedProgress[id]);
+    if (Object.keys(storedProgress).length === 0) delete progressByDate[storedKey];
+  }
+  const dayDone = doneByDate[key] || (doneByDate[key] = {});
+  const dayProgress = progressByDate[key] || {};
+  changes.forEach(({ habit, oldType, newType }) => {
+    if (oldType !== 'check' && newType !== 'check') {
+      delete dayDone[habit.id];
+    } else if (oldType === 'check' && newType !== 'check' && dayDone[habit.id] === true) {
+      dayProgress[habit.id] = normalizeMeasurementConfig(habit).target;
+    }
+  });
+  if (Object.keys(dayProgress).length === 0) delete progressByDate[key];
+  else progressByDate[key] = dayProgress;
+  return dayDone;
+}
+
 function normalizeCustomHabitOverrides(overrides, defaults, strict = false) {
   const invalid = message => {
     if (strict) throw new Error(message);
@@ -1381,7 +1593,7 @@ function normalizeCustomHabitOverrides(overrides, defaults, strict = false) {
   }
 
   const validIds = new Set(defaults.map(habit => habit.id));
-  const allowedFields = new Set(['text', 'note', 'weight', 'days']);
+  const allowedFields = new Set(['text', 'note', 'weight', 'days', 'measurement', 'target', 'step', 'unit']);
   const normalized = {};
 
   for (const [id, override] of Object.entries(overrides)) {
@@ -1421,6 +1633,30 @@ function normalizeCustomHabitOverrides(overrides, defaults, strict = false) {
         clean.days = days;
       }
     }
+    const hasMeasurementFields = ['measurement', 'target', 'step', 'unit']
+      .some(field => Object.hasOwn(override, field));
+    if (hasMeasurementFields) {
+      const config = normalizeMeasurementConfig(override);
+      const type = override.measurement;
+      const hasUnexpectedCheckFields = type === 'check' && ['target', 'step', 'unit']
+        .some(field => Object.hasOwn(override, field));
+      const hasUnexpectedCountFields = type === 'count' && ['step', 'unit']
+        .some(field => Object.hasOwn(override, field));
+      const valid = (type === 'check' && !hasUnexpectedCheckFields) ||
+        (type === 'count' && config.type === 'count' && !hasUnexpectedCountFields) ||
+        (type === 'amount' && config.type === 'amount');
+      if (!valid) {
+        invalid(`Invalid measurement settings for ${id}.`);
+      } else if (config.type === 'count') {
+        clean.measurement = 'count';
+        clean.target = config.target;
+      } else if (config.type === 'amount') {
+        clean.measurement = 'amount';
+        clean.target = config.target;
+        clean.step = config.step;
+        clean.unit = config.unit;
+      }
+    }
     if (Object.keys(clean).length > 0) normalized[id] = clean;
   }
   return normalized;
@@ -1440,15 +1676,20 @@ function getScheduledHabits(habits, date) {
   return habits.filter(habit => isHabitScheduledOn(habit, date));
 }
 
-function getDailyHabitStats(doneByDate, habits, date, baseTarget = 5) {
+function getDailyHabitStats(doneByDate, habits, date, baseTarget = 5, progressByDate) {
+  progressByDate = progressByDate || {};
   const scheduledHabits = getScheduledHabits(habits, date);
   const scheduledIds = scheduledHabits.map(habit => typeof habit === 'string' ? habit : habit.id);
   const dayDone = doneByDate[dateKey(date)] || {};
-  const doneCount = scheduledIds.filter(id => dayDone[id]).length;
+  const normalizedScheduledHabits = scheduledHabits.map(habit => typeof habit === 'string' ? { id:habit } : habit);
+  const completedIds = normalizedScheduledHabits
+    .filter(habit => dayDone[habit.id] === true)
+    .map(habit => habit.id);
+  const doneCount = completedIds.length;
   const scheduledCount = scheduledIds.length;
   const target = Math.min(baseTarget, scheduledCount);
   const pct = scheduledCount > 0 ? Math.round((doneCount / scheduledCount) * 100) : 0;
-  return { scheduledHabits, scheduledIds, scheduledCount, doneCount, target, pct };
+  return { scheduledHabits, scheduledIds, completedIds, scheduledCount, doneCount, target, pct };
 }
 
 const FLORIDA_FACTS = [
@@ -1635,12 +1876,135 @@ document.querySelectorAll('[data-theme-option]').forEach(button => {
 const STORAGE_KEY = 'wavelength_wpb';
 const ORDER_KEY = 'wavelength_wpb_order';
 
-function loadState() {
+function isValidDateKey(key) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return false;
+  const [year, month, day] = key.split('-').map(Number);
+  if (year < 2000 || year > 2100) return false;
+  const parsed = new Date(year, month - 1, day, 12);
+  return parsed.getFullYear() === year && parsed.getMonth() === month - 1 && parsed.getDate() === day;
+}
+
+function normalizeProgressByDate(progressByDate, habits, strict = false) {
+  const invalid = message => {
+    if (strict) throw new Error(message);
+  };
+  if (progressByDate === undefined || progressByDate === null) return {};
+  if (typeof progressByDate !== 'object' || Array.isArray(progressByDate)) {
+    invalid('Progress history must be an object.');
+    return {};
+  }
+  const habitById = new Map(habits.map(habit => [habit.id, habit]));
+  const normalized = {};
+  for (const [key, day] of Object.entries(progressByDate)) {
+    if (!isValidDateKey(key) || !day || typeof day !== 'object' || Array.isArray(day)) {
+      invalid(`Invalid progress date: ${key}.`);
+      continue;
+    }
+    const cleanDay = {};
+    for (const [id, value] of Object.entries(day)) {
+      const habit = habitById.get(id);
+      if (!habit) {
+        invalid(`Progress references unknown habit: ${id}.`);
+        continue;
+      }
+      if (!Number.isFinite(value) || value < 0 || value > 1000000000) {
+        invalid(`Invalid progress value for ${id}.`);
+        continue;
+      }
+      const measurement = normalizeMeasurementConfig(habit);
+      if (measurement.type === 'check') {
+        invalid(`Check once habit ${id} cannot have numeric progress.`);
+        continue;
+      }
+      if (measurement.type === 'count' && !Number.isInteger(value)) {
+        invalid(`Count progress for ${id} must be a whole number.`);
+        continue;
+      }
+      if (measurement.type === 'amount' && Math.abs(value * 100 - Math.round(value * 100)) >= 0.000000001) {
+        invalid(`Amount progress for ${id} exceeds supported precision.`);
+        continue;
+      }
+      cleanDay[id] = measurement.type === 'count' ? value : Number(value.toFixed(2));
+    }
+    if (Object.keys(cleanDay).length > 0) normalized[key] = cleanDay;
+  }
+  return normalized;
+}
+
+function normalizeStoredState(rawState, habits, strict = false) {
+  const invalid = message => {
+    if (strict) throw new Error(message);
+  };
+  if (!rawState || typeof rawState !== 'object' || Array.isArray(rawState)) {
+    invalid('Habit state must be an object.');
+    rawState = {};
+  }
+  const validIds = new Set(habits.map(habit => habit.id));
+  const done = {};
+  const rawDone = rawState.done === undefined ? {} : rawState.done;
+  if (!rawDone || typeof rawDone !== 'object' || Array.isArray(rawDone)) {
+    invalid('Completion history must be an object.');
+  } else {
+    for (const [key, day] of Object.entries(rawDone)) {
+      if (!isValidDateKey(key) || !day || typeof day !== 'object' || Array.isArray(day)) {
+        invalid(`Invalid completion date: ${key}.`);
+        continue;
+      }
+      const cleanDay = {};
+      for (const [id, value] of Object.entries(day)) {
+        if (!validIds.has(id)) {
+          invalid(`Completion references unknown habit: ${id}.`);
+          continue;
+        }
+        if (value !== true) {
+          invalid(`Invalid completion value for ${id}.`);
+          continue;
+        }
+        cleanDay[id] = true;
+      }
+      done[key] = cleanDay;
+    }
+  }
+  const normalizeCounter = name => {
+    if (rawState[name] === undefined) return 0;
+    if (!Number.isInteger(rawState[name]) || rawState[name] < 0) {
+      invalid(`${name} must be a nonnegative whole number.`);
+      return 0;
+    }
+    return rawState[name];
+  };
+  let week = rawState.week === undefined ? {} : rawState.week;
+  if (!week || typeof week !== 'object' || Array.isArray(week)) {
+    invalid('Week metadata must be an object.');
+    week = {};
+  }
+  let created = rawState.created === undefined ? Date.now() : rawState.created;
+  if (!Number.isFinite(created) || created < 0) {
+    invalid('Created timestamp must be a nonnegative number.');
+    created = Date.now();
+  }
+  return {
+    done,
+    progress: normalizeProgressByDate(rawState.progress, habits, strict),
+    streak: normalizeCounter('streak'),
+    longestStreak: normalizeCounter('longestStreak'),
+    week,
+    created,
+  };
+}
+
+function getActiveHabitsForStateValidation() {
+  const custom = loadCustomHabits() || {};
+  return DEFAULT_HABITS.map(habit => custom[habit.id] ? { ...habit, ...custom[habit.id] } : { ...habit });
+}
+
+function loadState(activeHabits) {
+  const habits = activeHabits || getActiveHabitsForStateValidation();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) return normalizeStoredState(JSON.parse(raw), habits, false);
   } catch(e) {}
-  return { done:{}, streak:0, longestStreak:0, week:{}, created:Date.now() };
+  return normalizeStoredState({}, habits, false);
 }
 
 function loadOrder() {
@@ -1685,6 +2049,13 @@ function dateKey(d) {
   return `${y}-${m}-${day}`;
 }
 
+function resetHabitDay(appState, date) {
+  const key = dateKey(date);
+  delete appState.done[key];
+  delete appState.progress[key];
+  return key;
+}
+
 function todayStr() {
   const d = new Date();
   const opts = { weekday:'long', month:'long', day:'numeric' };
@@ -1714,8 +2085,9 @@ let currentCat = 'all';
 function renderHabits() {
   const list = document.getElementById('habitList');
   const now = new Date();
-  const todayStats = getDailyHabitStats(state.done || {}, HABITS, now);
+  const todayStats = getDailyHabitStats(state.done || {}, HABITS, now, 5, state.progress || {});
   const todayDone = state.done[dateKey(now)] || {};
+  const todayProgress = (state.progress && state.progress[dateKey(now)]) || {};
 
   const filtered = currentCat === 'all'
     ? todayStats.scheduledHabits
@@ -1735,11 +2107,25 @@ function renderHabits() {
   list.innerHTML = sorted.length === 0
     ? `<div class="habit-empty">No ${currentCat === 'all' ? '' : `${currentCat} `}habits scheduled today.</div>`
     : sorted.map((h, i) => {
-    const isDone = !!todayDone[h.id];
+    const measurement = normalizeMeasurementConfig(h);
+    const progress = getHabitProgress(todayDone, todayProgress, h);
+    const isDone = isHabitProgressComplete(h, progress);
+    const measurementDisplay = measurement.type === 'check' ? null : getMeasurementDisplay(h, progress);
+    const progressMarkup = measurementDisplay ? `
+          <div class="habit-progress">
+            <div class="progress-meter" role="progressbar" aria-label="Progress for ${escapeHtml(h.text)}" aria-valuemin="0" aria-valuemax="${measurement.target}" aria-valuenow="${Math.min(progress, measurement.target)}">
+              <div class="progress-summary" aria-live="polite">${escapeHtml(measurementDisplay.summary)}</div>
+              <div class="progress-track"><div class="progress-fill" style="width:${measurementDisplay.pct}%"></div></div>
+            </div>
+            <div class="progress-actions">
+              <button type="button" class="progress-step progress-minus" data-progress-id="${escapeHtml(h.id)}" data-progress-direction="-1" aria-label="Subtract ${escapeHtml(measurementDisplay.incrementLabel.slice(1))} from ${escapeHtml(h.text)}" ${progress <= 0 ? 'disabled' : ''}>−</button>
+              <button type="button" class="progress-step progress-plus" data-progress-id="${escapeHtml(h.id)}" data-progress-direction="1" aria-label="Add ${escapeHtml(measurementDisplay.incrementLabel.slice(1))} to ${escapeHtml(h.text)}" ${isDone ? 'disabled' : ''}>${escapeHtml(measurementDisplay.incrementLabel)}</button>
+            </div>
+          </div>` : '';
     const isFirst = h.id === firstId;
     const isLast = h.id === lastId;
     return `
-      <div class="habit ${isDone ? 'done' : ''}" data-id="${escapeHtml(h.id)}" data-cat="${escapeHtml(h.cat)}">
+      <div class="habit ${measurementDisplay ? 'measured' : ''} ${isDone ? 'done' : ''}" data-id="${escapeHtml(h.id)}" data-cat="${escapeHtml(h.cat)}">
         <div class="habit-icon">${escapeHtml(h.icon)}</div>
         <div class="checkbox">
           <svg viewBox="0 0 12 12" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1749,6 +2135,7 @@ function renderHabits() {
         <div class="habit-body">
           <div class="habit-text">${escapeHtml(h.text)}</div>
           <div class="habit-note">${escapeHtml(h.note)}</div>
+          ${progressMarkup}
         </div>
         <span class="habit-badge">+${h.weight}</span>
         <div class="move-btns">
@@ -1772,10 +2159,19 @@ function renderHabits() {
     el.addEventListener('click', (e) => {
       if (e.target.closest('.drag-handle') ||
           e.target.closest('.move-btn') ||
-          e.target.closest('.habit-badge')) {
+          e.target.closest('.habit-badge') ||
+          e.target.closest('.progress-step')) {
         return;
       }
-      toggleHabit(el.dataset.id);
+      const habit = HABITS.find(item => item.id === el.dataset.id);
+      if (habit && normalizeMeasurementConfig(habit).type === 'check') toggleHabit(el.dataset.id);
+    });
+  });
+
+  list.querySelectorAll('.progress-step').forEach(button => {
+    button.addEventListener('click', event => {
+      event.stopPropagation();
+      adjustMeasuredHabit(button.dataset.progressId, Number(button.dataset.progressDirection));
     });
   });
 
@@ -2019,6 +2415,30 @@ function handlePointerUp(e) {
 // ═══════════════════════════════════════════════════════════════════
 // TOGGLE / STREAK / WEEKLY (unchanged)
 // ═══════════════════════════════════════════════════════════════════
+function adjustMeasuredHabit(id, direction) {
+  const now = new Date();
+  const key = dateKey(now);
+  state.progress = state.progress || {};
+  const wasComplete = !!(state.done[key] && state.done[key][id]);
+  const change = updateMeasuredHabitState(state.done, state.progress, HABITS, now, id, direction);
+  if (!change || !change.changed) return;
+  const habit = HABITS.find(item => item.id === id);
+  const display = getMeasurementDisplay(habit, change.progress);
+  const stats = getDailyHabitStats(state.done || {}, HABITS, now, 5, state.progress || {});
+  saveState();
+  renderHabits();
+  if (change.complete && !wasComplete && stats.scheduledCount > 0 && stats.doneCount === stats.scheduledCount) {
+    showToast('🎉 ALL DONE! You crushed it today!');
+    spawnConfetti();
+  } else if (change.complete && !wasComplete && stats.target > 0 && stats.doneCount === stats.target) {
+    showToast(`🔥 ${display.summary} — goal reached and streak safe.`);
+  } else if (change.complete && !wasComplete) {
+    showToast(`✓ ${display.summary} — goal reached.`);
+  } else {
+    showToast(display.summary);
+  }
+}
+
 function toggleHabit(id) {
   const todayKey = dateKey(new Date());
   if (!state.done[todayKey]) state.done[todayKey] = {};
@@ -2033,7 +2453,7 @@ function toggleHabit(id) {
   }
 
   today[id] = true;
-  const stats = getDailyHabitStats(state.done || {}, HABITS, new Date());
+  const stats = getDailyHabitStats(state.done || {}, HABITS, new Date(), 5, state.progress || {});
   const { doneCount, scheduledCount, target } = stats;
 
   saveState();
@@ -2072,12 +2492,13 @@ function updateGreeting() {
   const h = new Date().getHours();
   const greet = document.getElementById('greeting');
   const { text, icon } = getGreetingForHour(h);
-  greet.textContent = `${text}, David ${icon}`;
+  greet.textContent = `${text} ${icon}`;
 }
 
-function calculateLongestScheduledStreak(doneByDate, habits, throughDate = new Date(), baseTarget = 5) {
+function calculateLongestScheduledStreak(doneByDate, habits, throughDate = new Date(), baseTarget = 5, progressByDate) {
+  progressByDate = progressByDate || {};
   const throughKey = dateKey(throughDate);
-  const keys = Object.keys(doneByDate || {})
+  const keys = [...new Set([...Object.keys(doneByDate || {}), ...Object.keys(progressByDate)])]
     .filter(key => /^\d{4}-\d{2}-\d{2}$/.test(key) && key <= throughKey)
     .sort();
   if (keys.length === 0) return 0;
@@ -2089,7 +2510,7 @@ function calculateLongestScheduledStreak(doneByDate, habits, throughDate = new D
   let run = 0;
 
   while (cursor <= end) {
-    const stats = getDailyHabitStats(doneByDate, habits, cursor, baseTarget);
+    const stats = getDailyHabitStats(doneByDate, habits, cursor, baseTarget, progressByDate);
     if (stats.target > 0) {
       if (stats.doneCount >= stats.target) {
         run++;
@@ -2104,21 +2525,22 @@ function calculateLongestScheduledStreak(doneByDate, habits, throughDate = new D
 }
 
 function calculateLongestStreak() {
-  return calculateLongestScheduledStreak(state.done || {}, HABITS, new Date());
+  return calculateLongestScheduledStreak(state.done || {}, HABITS, new Date(), 5, state.progress || {});
 }
 
 function resolveLongestStreak(historicalBest, currentStreak) {
   return Math.max(historicalBest, currentStreak);
 }
 
-function calculateCurrentStreak(doneByDate, habits, today, baseTarget = 5) {
-  const historyKeys = Object.keys(doneByDate || {})
+function calculateCurrentStreak(doneByDate, habits, today, baseTarget = 5, progressByDate) {
+  progressByDate = progressByDate || {};
+  const historyKeys = [...new Set([...Object.keys(doneByDate || {}), ...Object.keys(progressByDate)])]
     .filter(key => /^\d{4}-\d{2}-\d{2}$/.test(key))
     .sort();
   if (historyKeys.length === 0) return 0;
   const earliestKey = historyKeys[0];
   const cursor = new Date(today);
-  const todayStats = getDailyHabitStats(doneByDate, habits, cursor, baseTarget);
+  const todayStats = getDailyHabitStats(doneByDate, habits, cursor, baseTarget, progressByDate);
   // Pending and rest days preserve the active chain through the previous
   // scheduled day instead of prematurely showing zero.
   if (todayStats.target === 0 || todayStats.doneCount < todayStats.target) {
@@ -2127,7 +2549,7 @@ function calculateCurrentStreak(doneByDate, habits, today, baseTarget = 5) {
 
   let streak = 0;
   while (dateKey(cursor) >= earliestKey) {
-    const stats = getDailyHabitStats(doneByDate, habits, cursor, baseTarget);
+    const stats = getDailyHabitStats(doneByDate, habits, cursor, baseTarget, progressByDate);
     if (stats.target === 0) {
       cursor.setDate(cursor.getDate() - 1);
       continue;
@@ -2156,8 +2578,8 @@ function getStreakStatusCopy(streak, todayCount, target = 5) {
 
 function updateStreak() {
   const now = new Date();
-  const todayStats = getDailyHabitStats(state.done || {}, HABITS, now);
-  const streak = calculateCurrentStreak(state.done || {}, HABITS, now);
+  const todayStats = getDailyHabitStats(state.done || {}, HABITS, now, 5, state.progress || {});
+  const streak = calculateCurrentStreak(state.done || {}, HABITS, now, 5, state.progress || {});
 
   document.getElementById('streakCount').textContent = streak;
   document.getElementById('streakEmoji').textContent = streak >= 7 ? '🔥' : streak >= 3 ? '🌊' : '💧';
@@ -2174,7 +2596,7 @@ function updateStreak() {
 }
 
 function updateRing() {
-  const stats = getDailyHabitStats(state.done || {}, HABITS, new Date());
+  const stats = getDailyHabitStats(state.done || {}, HABITS, new Date(), 5, state.progress || {});
   document.getElementById('ringPct').textContent = `${stats.pct}%`;
 
   const ring = document.querySelector('.streak-ring');
@@ -2195,7 +2617,7 @@ function updateWeekly() {
     const key = dateKey(d);
     const isToday = key === todayKey;
     const dayHabits = state.done[key] || {};
-    const stats = getDailyHabitStats(state.done || {}, HABITS, d);
+    const stats = getDailyHabitStats(state.done || {}, HABITS, d, 5, state.progress || {});
     const cnt = stats.doneCount;
     const pct = stats.pct;
 
@@ -2225,10 +2647,9 @@ function updateWeekly() {
   const catCounts = {};
   CATS.forEach(c => { if (c !== 'all') catCounts[c] = 0; });
   dates.forEach(d => {
-    const key = dateKey(d);
-    const dayHabits = state.done[key] || {};
+    const completedIds = new Set(getDailyHabitStats(state.done || {}, HABITS, d, 5, state.progress || {}).completedIds);
     getScheduledHabits(HABITS, d).forEach(h => {
-      if (dayHabits[h.id]) catCounts[h.cat] = (catCounts[h.cat] || 0) + 1;
+      if (completedIds.has(h.id)) catCounts[h.cat] = (catCounts[h.cat] || 0) + 1;
     });
   });
   const topCat = Object.entries(catCounts).sort((a,b) => b[1]-a[1])[0];
@@ -2297,10 +2718,20 @@ function updateScheduleRow(row) {
   row.classList.remove('schedule-error');
 }
 
+function updateMeasurementRow(row) {
+  const type = row.querySelector('.eh-measurement').value;
+  row.querySelector('.eh-measure-fields').hidden = type === 'check';
+  row.querySelector('.eh-step-field').hidden = type !== 'amount';
+  row.querySelector('.eh-unit-field').hidden = type !== 'amount';
+  row.querySelector('.eh-target').step = type === 'count' ? '1' : '0.01';
+  row.classList.remove('measurement-error');
+}
+
 function renderManageModal() {
   const body = document.getElementById('modalBody');
   body.innerHTML = HABITS.map(h => {
     const selectedDays = normalizeHabitDays(h.days);
+    const measurement = normalizeMeasurementConfig(h);
     return `
       <div class="edit-habit" data-id="${escapeHtml(h.id)}">
         <div class="eh-icon">${escapeHtml(h.icon)}</div>
@@ -2312,6 +2743,21 @@ function renderManageModal() {
               <option value="1" ${h.weight === 1 ? 'selected' : ''}>w1</option>
               <option value="2" ${h.weight === 2 ? 'selected' : ''}>w2</option>
             </select>
+          </div>
+          <div class="eh-measurement-block">
+            <label class="eh-measurement-label" for="measurement-${escapeHtml(h.id)}">
+              <span>Track as</span>
+              <select id="measurement-${escapeHtml(h.id)}" class="eh-measurement">
+                <option value="check" ${measurement.type === 'check' ? 'selected' : ''}>Check once</option>
+                <option value="count" ${measurement.type === 'count' ? 'selected' : ''}>Count</option>
+                <option value="amount" ${measurement.type === 'amount' ? 'selected' : ''}>Amount</option>
+              </select>
+            </label>
+            <div class="eh-measure-fields" ${measurement.type === 'check' ? 'hidden' : ''}>
+              <label class="eh-measure-field"><span>Goal</span><input class="eh-target" type="number" min="0.01" step="${measurement.type === 'count' ? '1' : '0.01'}" value="${measurement.target}"></label>
+              <label class="eh-measure-field eh-step-field" ${measurement.type !== 'amount' ? 'hidden' : ''}><span>Increment</span><input class="eh-step" type="number" min="0.01" step="0.01" value="${measurement.step}"></label>
+              <label class="eh-measure-field eh-unit-field" ${measurement.type !== 'amount' ? 'hidden' : ''}><span>Unit</span><input class="eh-unit" type="text" maxlength="12" value="${escapeHtml(measurement.unit)}" placeholder="oz, min…"></label>
+            </div>
           </div>
           <div class="eh-schedule">
             <div class="eh-schedule-label"><span>Repeat</span><span class="eh-schedule-summary">${getScheduleSummary(selectedDays)}</span></div>
@@ -2330,6 +2776,9 @@ function renderManageModal() {
       updateScheduleRow(button.closest('.edit-habit'));
     });
   });
+  body.querySelectorAll('.eh-measurement').forEach(select => {
+    select.addEventListener('change', () => updateMeasurementRow(select.closest('.edit-habit')));
+  });
 }
 
 function openManageModal() {
@@ -2345,12 +2794,14 @@ function closeManageModal() {
 
 function saveManageModal() {
   const overrides = {};
+  const previousHabits = HABITS.map(habit => ({ ...habit }));
   const allDays = normalizeHabitDays(undefined);
   for (const row of document.querySelectorAll('.edit-habit')) {
     const id = row.dataset.id;
     const text = row.querySelector('.eh-text').value.trim();
     const note = row.querySelector('.eh-note').value.trim();
     const weight = parseInt(row.querySelector('.eh-weight').value, 10);
+    const measurementType = row.querySelector('.eh-measurement').value;
     const days = [...row.querySelectorAll('.eh-day[aria-checked="true"]')]
       .map(button => Number(button.dataset.day))
       .sort((a, b) => a - b);
@@ -2364,14 +2815,47 @@ function saveManageModal() {
       return false;
     }
     const changes = {};
+    const candidate = { measurement:measurementType };
+    if (measurementType === 'count') candidate.target = Number(row.querySelector('.eh-target').value);
+    if (measurementType === 'amount') {
+      candidate.target = Number(row.querySelector('.eh-target').value);
+      candidate.step = Number(row.querySelector('.eh-step').value);
+      candidate.unit = row.querySelector('.eh-unit').value.trim();
+    }
+    const measurement = normalizeMeasurementConfig(candidate);
+    if (measurement.type !== measurementType) {
+      row.classList.add('measurement-error');
+      row.scrollIntoView({ behavior:'smooth', block:'center' });
+      const invalidInput = measurementType === 'amount' && !candidate.unit
+        ? row.querySelector('.eh-unit')
+        : row.querySelector('.eh-target');
+      invalidInput.focus();
+      showToast(measurementType === 'count'
+        ? 'Count goals must be positive whole numbers'
+        : 'Use positive values with up to 2 decimals and add a unit');
+      return false;
+    }
     if (text !== def.text) changes.text = text;
     if (note !== def.note) changes.note = note;
     if (weight !== def.weight) changes.weight = weight;
     if (days.join(',') !== allDays.join(',')) changes.days = days;
+    if (measurement.type !== 'check') {
+      changes.measurement = measurement.type;
+      changes.target = measurement.target;
+      if (measurement.type === 'amount') {
+        changes.step = measurement.step;
+        changes.unit = measurement.unit;
+      }
+    }
     if (Object.keys(changes).length > 0) overrides[id] = changes;
   }
   saveCustomHabits(overrides);
   reloadHabits();
+  state.progress = state.progress || {};
+  const editDate = new Date();
+  reconcileMeasurementTypeChanges(state.done, state.progress, previousHabits, HABITS, editDate);
+  reconcileMeasuredDay(state.done, state.progress, HABITS, editDate);
+  saveState();
   // Merge custom order with new habits (same IDs, order preserved)
   renderHabits();
   closeManageModal();
@@ -2407,7 +2891,8 @@ function init() {
 
   // Reset
   document.getElementById('resetBtn').addEventListener('click', () => {
-    delete state.done[dateKey(new Date())];
+    const resetDate = new Date();
+    resetHabitDay(state, resetDate);
     saveState();
     renderHabits();
     showToast('↻ Today reset. Fresh start.');
@@ -2421,8 +2906,14 @@ function init() {
   });
   document.getElementById('modalSave').addEventListener('click', saveManageModal);
   document.getElementById('modalReset').addEventListener('click', () => {
+    const previousHabits = HABITS.map(habit => ({ ...habit }));
+    const resetDate = new Date();
     saveCustomHabits(null);
     reloadHabits();
+    state.progress = state.progress || {};
+    reconcileMeasurementTypeChanges(state.done, state.progress, previousHabits, HABITS, resetDate);
+    reconcileMeasuredDay(state.done, state.progress, HABITS, resetDate);
+    saveState();
     renderHabits();
     closeManageModal();
     showToast('↻ Habits reset to defaults');

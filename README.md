@@ -11,7 +11,8 @@ This folder is the iPhone-first, installable version of Wavelength. Shared behav
 - Offline app shell via service worker
 - Backup/share and import controls under **Manage Habits**
 - Per-habit Monday–Sunday schedules under **Manage Habits**, with all seven days selected by default
-- Existing localStorage history and habit editing preserved; saved schedules are included in backups and strictly validated on import
+- Three per-habit measurement types: **Check once**, **Count**, and **Amount** with a configurable goal, increment, and unit
+- Existing localStorage history and habit editing preserved; saved schedules, measurement settings, and daily progress are included in backups and strictly validated on import
 - Pending-day-aware streaks: an unfinished today does not erase a qualifying streak through yesterday
 - Three appearance modes: **System**, **Day**, and **Night**, shared across iPhone, Android, and desktop
 - Time-consistent greeting icons and a roomier mobile streak card with the decorative left icon suppressed at widths up to 600px
@@ -30,6 +31,18 @@ Day mode keeps the completed-card background subtle, uses a brighter Night-famil
 
 Android Chrome uses the active palette for browser/PWA chrome through the dynamic `theme-color` metadata. The manifest remains standalone-installable, all three appearance buttons meet the 44px mobile touch-target minimum, and the System mode uses the standard `prefers-color-scheme` media query on Android, iOS, Windows, and other modern platforms.
 
+## Habit measurement types
+
+Open **Manage Habits → Track as** for any habit:
+
+- **Check once** preserves the original tap-to-complete behavior.
+- **Count** tracks whole-number repetitions toward a goal, such as 3 glasses or 2 sessions. Use the `−` and `+1` controls on the habit card.
+- **Amount** tracks a quantity toward a goal using a chosen increment and unit, such as 64 oz in 12 oz increments or 30 min in 10 min increments. Goals, increments, and recorded amounts support up to two decimal places.
+
+Count and Amount habits count as one completed habit only after their goal is reached. Their individual increments do not inflate Today's Habits, streaks, weekly percentages, or category totals. When an amount increment crosses the goal, Wavelength records the full amount, so 60 oz followed by `+12 oz` becomes 72 / 64 oz. The add control then stops; subtracting removes one full configured increment.
+
+Changing a goal recalculates today's completion from the amount already recorded without rewriting that amount or earlier completion history. Existing completed checkmarks remain completed if a habit is first converted to Count or Amount. Changing a habit's measurement type removes that habit's incompatible numeric progress across all dates, while prior completion snapshots remain intact for streaks and weekly totals. **Reset today** clears both checkmarks and measured progress for the current date.
+
 ## Streak behavior
 
 Only habits scheduled for a date appear in **Today's Habits** or count toward that date's totals. The displayed count, progress ring, weekly percentages, and category totals all use the scheduled set as their denominator. Changing a habit's selected weekdays recalculates those views immediately; an unscheduled completion remains stored but does not inflate the visible totals.
@@ -45,11 +58,12 @@ node tests/streak-regression.mjs
 node tests/theme-regression.mjs
 node tests/greeting-responsive-regression.mjs
 node tests/schedule-regression.mjs
+node tests/measurement-regression.mjs
 ```
 
 All cross-build suites use the tracked desktop fixture at `tests/fixtures/friday_app_2026-07-12.html`, so they run from a clean repository checkout. When shared behavior changes, update both the external standalone desktop file and this byte-identical fixture.
 
-Custom habit overrides are limited to text, note, weight, and valid nonempty weekday arrays. Imported structural fields are rejected, invalid legacy schedules safely fall back to every day, and displayed custom text is escaped before insertion into HTML.
+Custom habit overrides are limited to text, note, weight, valid nonempty weekday arrays, and valid measurement settings. Imported structural fields, invalid measurement combinations, and malformed progress are rejected. Invalid legacy schedules safely fall back to every day, legacy habits without measurement settings remain Check once, and displayed custom text is escaped before insertion into HTML.
 
 ## Requirement for iPhone installation
 

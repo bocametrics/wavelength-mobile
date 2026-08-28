@@ -56,6 +56,9 @@ function loadStreakFunctions(htmlPath) {
   const html = fs.readFileSync(htmlPath, 'utf8');
   const source = [
     extractFunction(html, 'dateKey'),
+    extractFunction(html, 'normalizeMeasurementConfig'),
+    extractFunction(html, 'getHabitProgress'),
+    extractFunction(html, 'isHabitProgressComplete'),
     extractFunction(html, 'normalizeHabitDays'),
     extractFunction(html, 'isHabitScheduledOn'),
     extractFunction(html, 'getScheduledHabits'),
