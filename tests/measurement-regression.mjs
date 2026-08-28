@@ -38,6 +38,7 @@ function extractFunction(source, name) {
 function loadFunctions(html) {
   const names = [
     'normalizeMeasurementConfig',
+    'isConciseRhythmNote',
     'normalizeRhythmConfig',
     'normalizeEnvironmentalReading',
     'normalizeHabitDays',
@@ -131,6 +132,8 @@ for (const [label, htmlPath] of builds) {
 
   const defaults = [{ id:'water' }, { id:'pushups' }];
   assert.equal(normalizeEnvironmentalReading(8.4), 8.4, `${label}: environmental readings retain decimal precision`);
+  assert.equal(normalizeEnvironmentalReading(-12.5), -12.5, `${label}: negative temperatures remain valid by default`);
+  assert.equal(normalizeEnvironmentalReading(-1, 0), null, `${label}: a nonnegative domain rejects negative readings`);
   for (const invalidReading of [null, undefined, '8.4', true, NaN, Infinity]) {
     assert.equal(
       normalizeEnvironmentalReading(invalidReading),
@@ -155,6 +158,40 @@ for (const [label, htmlPath] of builds) {
       `${label}: strict imports reject malformed rhythm threshold types`,
     );
   }
+  const legacyRhythms = plain(normalizeCustomHabitOverrides({
+    hydrate:{ rhythm:{ type:'temp-above', threshold:85, note:'Extra water; electrolytes after hours of sweating' } },
+    beach:{ rhythm:{ type:'aqi-below', threshold:100, note:'More favorable window for outdoor movement' } },
+    sunscreen:{ rhythm:{ type:'uv-above', threshold:3, note:'Sun protection matters now' } },
+  }, [{ id:'hydrate' }, { id:'beach' }, { id:'sunscreen' }], false));
+  assert.deepEqual(legacyRhythms, {
+    hydrate:{ rhythm:{ type:'temp-above', threshold:85, note:'Drink extra water' } },
+    beach:{ rhythm:{ type:'aqi-below', threshold:100 } },
+    sunscreen:{ rhythm:{ type:'uv-above', threshold:3, note:'Use sun protection' } },
+  }, `${label}: exact former default notes migrate before concise-note validation`);
+  for (const denseNote of [
+    'Hydrate; avoid heat — now',
+    'Anchor: move indoors',
+    'AQI is at most 50',
+    'Temperature exceeds 90',
+    'UV reached 3',
+    'X'.repeat(61),
+  ]) {
+    assert.equal(
+      normalizeRhythmConfig({ type:'temp-above', threshold:85, note:denseNote }, true),
+      null,
+      `${label}: strict rhythm validation rejects dense note copy`,
+    );
+    assert.deepEqual(
+      plain(normalizeRhythmConfig({ type:'temp-above', threshold:85, note:denseNote }, false)),
+      { type:'temp-above', threshold:85 },
+      `${label}: local legacy data keeps its anchor while dropping only an invalid note`,
+    );
+    assert.throws(
+      () => normalizeCustomHabitOverrides({ water:{ rhythm:{ type:'temp-above', threshold:85, note:denseNote } } }, defaults, true),
+      /rhythm|note/i,
+      `${label}: strict imports reject dense rhythm notes`,
+    );
+  }
   assert.equal(
     getRhythmAnchorText({ type:'aqi-below', threshold:50 }, { feel:92 }),
     'US AQI cue at or below 50',
@@ -172,14 +209,84 @@ for (const [label, htmlPath] of builds) {
   );
   assert.equal(
     getRhythmAnchorText({ type:'aqi-below', threshold:49.6 }, { aqi:49.5 }),
-    '🍃 AQI 49.5 is at most 49.6 — more favorable conditions for this habit',
-    `${label}: AQI labels preserve the exact decimal used for the decision`,
+    '🍃 AQI 49.5 · Good air quality',
+    `${label}: AQI labels preserve the exact decimal and explain the reading instead of the threshold math`,
   );
-  assert.match(
-    getRhythmAnchorText({ type:'uv-above', threshold:8.2 }, { uv:8.4 }),
-    /UV 8\.4 reached 8\.2/,
-    `${label}: environmental decisions use unrounded decimal readings`,
+  assert.equal(
+    getRhythmAnchorText({ type:'aqi-below', threshold:100 }, { aqi:78 }),
+    '🍃 AQI 78 · Moderate air quality',
+    `${label}: AQI copy names the standard category when the cue is active`,
   );
+  assert.equal(
+    getRhythmAnchorText({ type:'aqi-below', threshold:100 }, { aqi:121 }),
+    'AQI 121 · Unhealthy for sensitive groups',
+    `${label}: AQI copy remains useful when the configured cue is not active`,
+  );
+  assert.equal(
+    getRhythmAnchorText({ type:'aqi-below', threshold:100 }, { aqi:-1 }),
+    'US AQI cue at or below 100',
+    `${label}: negative AQI is invalid rather than favorable`,
+  );
+  for (const [aqi, category] of [
+    [50, 'Good air quality'], [50.1, 'Moderate air quality'],
+    [100, 'Moderate air quality'], [100.1, 'Unhealthy for sensitive groups'],
+    [150, 'Unhealthy for sensitive groups'], [150.1, 'Unhealthy air quality'],
+    [200, 'Unhealthy air quality'], [200.1, 'Very unhealthy air quality'],
+    [300, 'Very unhealthy air quality'], [300.1, 'Hazardous air quality'],
+  ]) {
+    assert.equal(
+      getRhythmAnchorText({ type:'aqi-below', threshold:500 }, { aqi }),
+      `🍃 AQI ${aqi} · ${category}`,
+      `${label}: AQI ${aqi} uses the correct category boundary`,
+    );
+  }
+  assert.equal(
+    getRhythmAnchorText({ type:'temp-above', threshold:85, note:'Drink extra water' }, { feel:96.2 }),
+    '🔥 Feels like 96.2°F · Drink extra water',
+    `${label}: active heat copy leads with the reading and a concise action`,
+  );
+  assert.equal(
+    getRhythmAnchorText({ type:'temp-above', threshold:85 }, { feel:78 }),
+    'Feels like 78°F · Below heat cue',
+    `${label}: inactive heat copy avoids restating threshold math`,
+  );
+  assert.equal(
+    getRhythmAnchorText({ type:'temp-below', threshold:50, note:'Add a warm layer' }, { feel:42 }),
+    '❄️ Feels like 42°F · Add a warm layer',
+    `${label}: active cold copy leads with the reading and a concise action`,
+  );
+  assert.equal(
+    getRhythmAnchorText({ type:'temp-below', threshold:50 }, { feel:55 }),
+    'Feels like 55°F · Above cold cue',
+    `${label}: inactive cold copy avoids restating threshold math`,
+  );
+  assert.equal(
+    getRhythmAnchorText({ type:'uv-above', threshold:3, note:'Use sun protection' }, { uv:3.9 }),
+    '☀️ UV 3.9 · Use sun protection',
+    `${label}: UV copy uses the same concise reading-and-action pattern`,
+  );
+  assert.equal(
+    getRhythmAnchorText({ type:'uv-above', threshold:3 }, { uv:2.1 }),
+    'UV 2.1 · Below sun cue',
+    `${label}: inactive UV copy avoids threshold narration`,
+  );
+  assert.equal(
+    getRhythmAnchorText({ type:'sunrise' }, { sunrise:'6:58 AM' }),
+    '🌅 Sunrise 6:58 AM · Get morning light',
+    `${label}: sunrise copy is concise and action-led`,
+  );
+  assert.equal(
+    getRhythmAnchorText({ type:'sunset' }, { sunset:'7:44 PM' }),
+    '🌇 Sunset 7:44 PM · Start winding down',
+    `${label}: sunset copy is concise and action-led`,
+  );
+  for (const text of [
+    getRhythmAnchorText({ type:'temp-above', threshold:85, note:'Drink extra water' }, { feel:96.2 }),
+    getRhythmAnchorText({ type:'uv-above', threshold:3, note:'Use sun protection' }, { uv:3.9 }),
+    getRhythmAnchorText({ type:'aqi-below', threshold:100 }, { aqi:42 }),
+  ]) {
+    assert.doesNotMatch(text, /—|;|is at most|exceeds|reached/, `${label}: live rhythm copy avoids dense comparison prose`);
+  }
   assert.deepEqual(
     plain(normalizeCustomHabitOverrides({
       water: { measurement:'amount', target:64, step:12, unit:'oz' },
@@ -492,15 +599,18 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /\.eh-rhythm-note\[hidden\]\s*\{\s*display:\s*none\s*!important;\s*\}/, `${label}: No anchor hides its inapplicable note field`);
   assert.match(html, /function updateRhythmRow\(row\)[\s\S]*noteInput\.hidden = type === 'none'/, `${label}: changing the anchor toggles its note field`);
   assert.match(html, /class=["']eh-rhythm-field eh-rhythm-threshold-field["'][\s\S]*?<input class=["']eh-rhythm-threshold["']/, `${label}: rhythm threshold wrapper and input use distinct selectors`);
+  assert.match(html, /class=["']eh-rhythm-note["'][^>]*maxlength=["']60["']/, `${label}: rhythm notes are capped at one concise clause in Manage`);
   assert.match(html, /querySelectorAll\(['"]\.eh-rhythm-threshold, \.eh-rhythm-note['"]\)[\s\S]*addEventListener\(['"]input['"][\s\S]*classList\.remove\(['"]measurement-error['"]\)/, `${label}: correcting rhythm fields clears validation styling`);
   assert.match(html, /class=["']rhythm-anchor-label["']/, `${label}: habit cards render a rhythm anchor label when anchored`);
   assert.match(html, /function updateRhythmAnchors/, `${label}: live weather data updates rhythm anchor labels on cards`);
   assert.match(html, /air-quality-api\.open-meteo\.com\/v1\/air-quality[^`]*current=us_aqi/, `${label}: air-quality anchors use Open-Meteo's live AQI feed`);
+  assert.match(html, /normalizeEnvironmentalReading\(d\.current\.us_aqi,\s*0\)/, `${label}: live AQI ingestion rejects negative values`);
   assert.match(html, /updateRhythmAnchors\(\{ \.\.\.rhythmWeatherData, aqi \}\)/, `${label}: live AQI merges into the existing rhythm context`);
   assert.match(html, /function renderHabits\(\)[\s\S]*if \(rhythmWeatherData\) updateRhythmAnchors\(rhythmWeatherData\);[\s\S]*?\n\}/, `${label}: card rerenders restore the latest live rhythm labels`);
   assert.match(html, /case 'uv-above':[\s\S]*!Number\.isFinite\(data\.uv\)[\s\S]*UV cue at \$\{rhythm\.threshold\} or higher[\s\S]*data\.uv >= rhythm\.threshold/, `${label}: partial forecast data keeps the configured UV threshold visible`);
   assert.match(html, /case 'aqi-below':[\s\S]*!Number\.isFinite\(data\.aqi\)[\s\S]*US AQI cue at or below \$\{rhythm\.threshold\}[\s\S]*data\.aqi <= rhythm\.threshold/, `${label}: partial air-quality data keeps the configured AQI threshold visible`);
   assert.match(html, /normalizeRhythmConfig/, `${label}: rhythm config is normalized for validation and rendering`);
+  assert.match(html, /JSON\.stringify\(rhythm\)\s*!==\s*JSON\.stringify\(defaultRhythm\)/, `${label}: Manage does not persist rhythm overrides identical to shipped defaults`);
   assert.match(html, /getElementById\('modalReset'\)[\s\S]*previousHabits[\s\S]*reconcileMeasurementTypeChanges[\s\S]*saveState\(\)[\s\S]*renderHabits\(\)/, `${label}: Reset defaults reconciles measured state and saves before rendering`);
   assert.match(html, /getDailyHabitStats\(state\.done \|\| \{\}, HABITS, [^;]+state\.progress \|\| \{\}\)/, `${label}: rendered totals pass measured progress to shared calculations`);
   if (label === 'mobile') {

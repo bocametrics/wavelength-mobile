@@ -1729,9 +1729,9 @@ const DEFAULT_HABITS = [
   { id:'wake',       cat:'morning',  icon:'⏰', text:'Wake at 6:30 AM',                    note:'Keep the wake time consistent', weight:2 },
   { id:'daylight',   cat:'morning',  icon:'🌤️', text:'Get outdoor light after waking',       note:'Step outside near the start of your day', weight:1, activeFrom:'2026-08-28', rhythm:{ type:'sunrise' } },
   { id:'affirm',     cat:'morning',  icon:'💬', text:'Start the day with an affirmation',    note:'Set a positive tone before the day begins', weight:1 },
-  { id:'hydrate',    cat:'morning',  icon:'💧', text:'Drink 16 oz water',                    note:'Water first; adapt for heat and exertion', weight:2, rhythm:{ type:'temp-above', threshold:85, note:'Extra water; electrolytes after hours of sweating' } },
+  { id:'hydrate',    cat:'morning',  icon:'💧', text:'Drink 16 oz water',                    note:'Water first; adapt for heat and exertion', weight:2, rhythm:{ type:'temp-above', threshold:85, note:'Drink extra water' } },
   { id:'stretch',    cat:'morning',  icon:'🧘', text:'10-min mobility',                      note:'Sun salutation or joint circles', weight:1 },
-  { id:'beach',      cat:'movement', icon:'🌊', text:'Outdoor walk or movement',             note:'Walk, roll, hike, swim, or paddle', weight:2, rhythm:{ type:'aqi-below', threshold:100, note:'More favorable window for outdoor movement' } },
+  { id:'beach',      cat:'movement', icon:'🌊', text:'Outdoor walk or movement',             note:'Walk, roll, hike, swim, or paddle', weight:2, rhythm:{ type:'aqi-below', threshold:100 } },
   { id:'strength',   cat:'movement', icon:'🏋️', text:'Strength session',                     note:'20+ min, bodyweight or bands', weight:2 },
   { id:'cardio',     cat:'movement', icon:'🏃', text:'Cardio burst',                         note:'15 min run, bike, or HIIT', weight:1 },
   { id:'meditate',   cat:'mind',     icon:'🧠', text:'Meditate 10 min',                      note:'Breath focus or body scan', weight:1 },
@@ -1743,7 +1743,7 @@ const DEFAULT_HABITS = [
   { id:'medication', cat:'fuel',     icon:'💊', text:'Take medication as prescribed',        note:'Follow your prescribed timing and instructions', weight:2 },
   { id:'lunch',      cat:'fuel',     icon:'🥗', text:'Green & lean lunch',                   note:'Half plate veggies, lean protein', weight:1 },
   { id:'dinner',     cat:'fuel',     icon:'🍳', text:'Early dinner (before 7)',              note:'Finish with enough time to wind down', weight:1 },
-  { id:'sunscreen',  cat:'hygiene',  icon:'🧴', text:'Sun protection before outdoor time',   note:'Shade, clothing, a hat, or sunscreen all count', weight:2, rhythm:{ type:'uv-above', threshold:3, note:'Sun protection matters now' } },
+  { id:'sunscreen',  cat:'hygiene',  icon:'🧴', text:'Sun protection before outdoor time',   note:'Shade, clothing, a hat, or sunscreen all count', weight:2, rhythm:{ type:'uv-above', threshold:3, note:'Use sun protection' } },
   { id:'floss',      cat:'hygiene',  icon:'🦷', text:'Floss',                                note:'Clean between teeth once a day', weight:1 },
   { id:'winddown',   cat:'evening',  icon:'🌙', text:'No screens 30 min before bed',         note:'Read, stretch, or just sit', weight:2 },
   { id:'gratitude',  cat:'evening',  icon:'✨', text:'Name 3 good things',                   note:'Notice what went well today', weight:1 },
@@ -1994,7 +1994,21 @@ function normalizeCustomHabitOverrides(overrides, defaults, strict = false) {
       if (override.rhythm === null) {
         clean.rhythm = null;
       } else {
-        const r = normalizeRhythmConfig(override.rhythm);
+        let rhythmCandidate = override.rhythm;
+        if (rhythmCandidate && typeof rhythmCandidate === 'object' && !Array.isArray(rhythmCandidate)) {
+          rhythmCandidate = { ...rhythmCandidate };
+          const legacyNotes = {
+            hydrate:['Extra water; electrolytes after hours of sweating', 'Drink extra water'],
+            beach:['More favorable window for outdoor movement', ''],
+            sunscreen:['Sun protection matters now', 'Use sun protection'],
+          };
+          const legacy = legacyNotes[id];
+          if (legacy && rhythmCandidate.note === legacy[0]) {
+            if (legacy[1]) rhythmCandidate.note = legacy[1];
+            else delete rhythmCandidate.note;
+          }
+        }
+        const r = normalizeRhythmConfig(rhythmCandidate, strict);
         if (r) clean.rhythm = r; else invalid(`Invalid rhythm anchor for ${id}.`);
       }
     }
@@ -2014,7 +2028,13 @@ const RHYTHM_LABELS = {
   'aqi-below': 'When US AQI is at most',
 };
 
-function normalizeRhythmConfig(rhythm) {
+function isConciseRhythmNote(note) {
+  if (typeof note !== 'string') return false;
+  const text = note.trim();
+  return text.length <= 60 && !/[;—]|Anchor:|is at most|exceeds|reached/i.test(text);
+}
+
+function normalizeRhythmConfig(rhythm, strict = false) {
   if (!rhythm || typeof rhythm !== 'object') return null;
   const type = RHYTHM_TYPES.includes(rhythm.type) ? rhythm.type : 'none';
   if (type === 'none') return null;
@@ -2023,13 +2043,19 @@ function normalizeRhythmConfig(rhythm) {
     if (typeof rhythm.threshold !== 'number' || !Number.isFinite(rhythm.threshold) || rhythm.threshold <= 0) return null;
     clean.threshold = rhythm.threshold;
   }
-  const note = typeof rhythm.note === 'string' ? rhythm.note.slice(0, 120) : '';
-  if (note) clean.note = note;
+  if (Object.hasOwn(rhythm, 'note')) {
+    if (!isConciseRhythmNote(rhythm.note)) {
+      if (strict) return null;
+    } else {
+      const note = rhythm.note.trim();
+      if (note) clean.note = note;
+    }
+  }
   return clean;
 }
 
-function normalizeEnvironmentalReading(value) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+function normalizeEnvironmentalReading(value, minimum = -Infinity) {
+  return typeof value === 'number' && Number.isFinite(value) && value >= minimum ? value : null;
 }
 
 function normalizeHabitDays(days) {
@@ -2192,7 +2218,7 @@ function renderInsights() {
         return r.json();
       })
       .then(d => {
-        const aqi = d && d.current ? normalizeEnvironmentalReading(d.current.us_aqi) : null;
+        const aqi = d && d.current ? normalizeEnvironmentalReading(d.current.us_aqi, 0) : null;
         if (aqi !== null) updateRhythmAnchors({ ...rhythmWeatherData, aqi });
       })
       .catch(() => { /* anchored cards retain the offline-safe fallback */ });
@@ -2225,29 +2251,36 @@ function getRhythmAnchorText(rhythm, data) {
   }
   switch (rhythm.type) {
     case 'sunrise':
-      return data.sunrise ? `🌅 Anchor: within 1 hr of sunrise (${data.sunrise})` : RHYTHM_LABELS.sunrise;
+      return data.sunrise ? `🌅 Sunrise ${data.sunrise} · ${rhythm.note || 'Get morning light'}` : RHYTHM_LABELS.sunrise;
     case 'sunset':
-      return data.sunset ? `🌇 Anchor: within 1 hr of sunset (${data.sunset})` : RHYTHM_LABELS.sunset;
+      return data.sunset ? `🌇 Sunset ${data.sunset} · ${rhythm.note || 'Start winding down'}` : RHYTHM_LABELS.sunset;
     case 'temp-above':
       if (!Number.isFinite(data.feel)) return `Heat cue above ${rhythm.threshold}°F`;
       return data.feel > rhythm.threshold
-        ? `🔥 Feels-like ${data.feel}°F exceeds ${rhythm.threshold}°F — ${rhythm.note || 'adapt this habit'}`
-        : `Feels-like ${data.feel}°F; heat cue starts above ${rhythm.threshold}°F`;
+        ? `🔥 Feels like ${data.feel}°F · ${rhythm.note || 'Heat cue active'}`
+        : `Feels like ${data.feel}°F · Below heat cue`;
     case 'temp-below':
       if (!Number.isFinite(data.feel)) return `Cold cue below ${rhythm.threshold}°F`;
       return data.feel < rhythm.threshold
-        ? `❄️ Feels-like ${data.feel}°F is below ${rhythm.threshold}°F — ${rhythm.note || 'adapt this habit'}`
-        : `Feels-like ${data.feel}°F; cold cue starts below ${rhythm.threshold}°F`;
+        ? `❄️ Feels like ${data.feel}°F · ${rhythm.note || 'Cold cue active'}`
+        : `Feels like ${data.feel}°F · Above cold cue`;
     case 'uv-above':
       if (!Number.isFinite(data.uv)) return `UV cue at ${rhythm.threshold} or higher`;
       return data.uv >= rhythm.threshold
-        ? `☀️ UV ${data.uv} reached ${rhythm.threshold} — ${rhythm.note || 'adapt this habit'}`
-        : `UV ${data.uv} is below ${rhythm.threshold}`;
-    case 'aqi-below':
-      if (!Number.isFinite(data.aqi)) return `US AQI cue at or below ${rhythm.threshold}`;
+        ? `☀️ UV ${data.uv} · ${rhythm.note || 'Sun cue active'}`
+        : `UV ${data.uv} · Below sun cue`;
+    case 'aqi-below': {
+      if (!Number.isFinite(data.aqi) || data.aqi < 0) return `US AQI cue at or below ${rhythm.threshold}`;
+      const category = data.aqi <= 50 ? 'Good air quality'
+        : data.aqi <= 100 ? 'Moderate air quality'
+        : data.aqi <= 150 ? 'Unhealthy for sensitive groups'
+        : data.aqi <= 200 ? 'Unhealthy air quality'
+        : data.aqi <= 300 ? 'Very unhealthy air quality'
+        : 'Hazardous air quality';
       return data.aqi <= rhythm.threshold
-        ? `🍃 AQI ${data.aqi} is at most ${rhythm.threshold} — ${rhythm.note || 'more favorable conditions for this habit'}`
-        : `AQI ${data.aqi} is above ${rhythm.threshold}`;
+        ? `🍃 AQI ${data.aqi} · ${rhythm.note || category}`
+        : `AQI ${data.aqi} · ${category}`;
+    }
     default:
       return '';
   }
@@ -3294,7 +3327,7 @@ function renderManageModal() {
             <label class="eh-rhythm-field eh-rhythm-threshold-field" ${normalizeRhythmConfig(h.rhythm)?.type !== 'temp-above' && normalizeRhythmConfig(h.rhythm)?.type !== 'temp-below' && normalizeRhythmConfig(h.rhythm)?.type !== 'uv-above' && normalizeRhythmConfig(h.rhythm)?.type !== 'aqi-below' ? 'hidden' : ''}>
               <span>Threshold</span><input class="eh-rhythm-threshold" type="number" min="0" step="0.1" value="${normalizeRhythmConfig(h.rhythm)?.threshold ?? ''}" placeholder="${normalizeRhythmConfig(h.rhythm)?.type === 'aqi-below' ? 'e.g. 50' : normalizeRhythmConfig(h.rhythm)?.type === 'uv-above' ? 'e.g. 8' : 'e.g. 90'}">
             </label>
-            <input type="text" class="eh-rhythm-note" maxlength="120" value="${escapeHtml(normalizeRhythmConfig(h.rhythm)?.note ?? '')}" placeholder="Optional: explain why this version of the habit (shown on the card)" ${normalizeRhythmConfig(h.rhythm) ? '' : 'hidden'}>
+            <input type="text" class="eh-rhythm-note" maxlength="60" value="${escapeHtml(normalizeRhythmConfig(h.rhythm)?.note ?? '')}" placeholder="Optional: one concise action" ${normalizeRhythmConfig(h.rhythm) ? '' : 'hidden'}>
           </div>
         </div>
       </div>
@@ -3394,16 +3427,23 @@ function saveManageModal() {
         rhythmCandidate.threshold = Number(row.querySelector('.eh-rhythm-threshold').value);
       }
       const rhythmNote = row.querySelector('.eh-rhythm-note').value.trim();
+      if (rhythmNote && !isConciseRhythmNote(rhythmNote)) {
+        row.classList.add('measurement-error');
+        row.scrollIntoView({ behavior:'smooth', block:'center' });
+        row.querySelector('.eh-rhythm-note').focus();
+        showToast('Use 60 characters or fewer; avoid semicolons, em dashes, “Anchor:”, and comparison phrases');
+        return false;
+      }
       if (rhythmNote) rhythmCandidate.note = rhythmNote;
-      const rhythm = normalizeRhythmConfig(rhythmCandidate);
-      if (!rhythm && rhythmType !== 'none' && rhythmType !== 'sunrise' && rhythmType !== 'sunset') {
+      const rhythm = normalizeRhythmConfig(rhythmCandidate, true);
+      if (!rhythm && rhythmType !== 'none') {
         row.classList.add('measurement-error');
         row.scrollIntoView({ behavior:'smooth', block:'center' });
         row.querySelector('.eh-rhythm-threshold').focus();
         showToast('Enter a positive threshold for the rhythm anchor');
         return false;
       }
-      if (rhythm) changes.rhythm = rhythm;
+      if (rhythm && JSON.stringify(rhythm) !== JSON.stringify(defaultRhythm)) changes.rhythm = rhythm;
     }
     if (Object.keys(changes).length > 0) overrides[id] = changes;
   }

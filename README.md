@@ -65,7 +65,7 @@ A habit can be anchored to an environmental condition so Wavelength can surface 
 | `uv-above` | UV index reaches or exceeds a threshold |
 | `aqi-below` | US AQI is at or below a threshold |
 
-When live environmental data loads from Open-Meteo, `updateRhythmAnchors()` updates a small accent-colored label on each anchored card. The forecast endpoint supplies feels-like temperature, sunrise, sunset, and UV index; Open-Meteo's air-quality endpoint supplies US AQI. If a request is unavailable, the label keeps a safe fallback instead of implying that a threshold was met. An optional note (e.g. "Indoor mobility suggested because it feels like 101°F") can explain why the habit's form should adapt.
+When live environmental data loads from Open-Meteo, `updateRhythmAnchors()` updates a small accent-colored label on each anchored card. The forecast endpoint supplies feels-like temperature, sunrise, sunset, and UV index; Open-Meteo's air-quality endpoint supplies US AQI. Live labels use a compact `reading · meaning/action` pattern, while no-data fallbacks retain the configured threshold. AQI labels name the standard US AQI category instead of narrating a numeric comparison. An optional custom action is limited to 60 characters and rejects dense comparison punctuation or phrasing; invalid local legacy notes are dropped without removing their anchor, while strict backup imports reject them. Exact former shipped notes migrate to the current concise defaults. Manage does not persist rhythm overrides that are identical to shipped defaults.
 
 Rhythm anchors do not change streaks, daily targets, or completion logic. They are advisory labels that help you choose the right form of the same intention.
 
@@ -80,7 +80,7 @@ Default habit names and notes are location-agnostic. If location is available, W
 | Habit | Default anchor | Purpose |
 |-------|----------------|---------|
 | Get outdoor light after waking | Sunrise | Connect the morning cue to local daylight |
-| Drink 16 oz water | Feels-like above 85°F | Surface extra water and prolonged-sweating electrolyte guidance during heat |
+| Drink 16 oz water | Feels-like above 85°F | Surface a concise extra-water cue during heat |
 | Outdoor walk or movement | US AQI at or below 100 | Identify a more favorable outdoor-air window |
 | Sun protection before outdoor time | UV index at or above 3 | Surface protection when UV reaches the configured cue |
 
@@ -107,7 +107,7 @@ node tests/default-habits-regression.mjs
 
 All cross-build suites use the tracked desktop fixture at `tests/fixtures/friday_app_2026-07-12.html`, so they run from a clean repository checkout. When shared behavior changes, update both the external standalone desktop file and this byte-identical fixture.
 
-Custom habit overrides are limited to text, note, weight, valid nonempty weekday arrays, valid measurement settings, and valid rhythm settings. Rhythm overrides require a supported anchor type; threshold-based anchors require finite positive numbers, optional rhythm notes are bounded to 120 characters, and `rhythm: null` records an explicit opt-out from a shipped default anchor. Imported structural fields, invalid measurement or rhythm combinations, and malformed progress are rejected. Invalid legacy schedules safely fall back to every day, legacy habits without measurement settings remain Check once, and displayed custom text is escaped before insertion into HTML.
+Custom habit overrides are limited to text, note, weight, valid nonempty weekday arrays, valid measurement settings, and valid rhythm settings. Rhythm overrides require a supported anchor type; threshold-based anchors require finite positive numbers, optional rhythm notes are limited to 60 characters and one concise clause, and `rhythm: null` records an explicit opt-out from a shipped default anchor. Imported structural fields, invalid measurement or rhythm combinations, and malformed progress are rejected. Invalid legacy schedules safely fall back to every day, legacy habits without measurement settings remain Check once, and displayed custom text is escaped before insertion into HTML.
 
 ## Requirement for iPhone installation
 

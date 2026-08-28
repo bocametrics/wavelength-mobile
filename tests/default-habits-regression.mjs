@@ -86,17 +86,16 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(byId.hydrate.rhythm, {
     type: 'temp-above',
     threshold: 85,
-    note: 'Extra water; electrolytes after hours of sweating',
+    note: 'Drink extra water',
   }, `${label}: hydration adapts to local feels-like heat`);
   assert.deepEqual(byId.beach.rhythm, {
     type: 'aqi-below',
     threshold: 100,
-    note: 'More favorable window for outdoor movement',
   }, `${label}: outdoor movement adapts to local US AQI`);
   assert.deepEqual(byId.sunscreen.rhythm, {
     type: 'uv-above',
     threshold: 3,
-    note: 'Sun protection matters now',
+    note: 'Use sun protection',
   }, `${label}: sun protection adapts to local UV`);
   assert.deepEqual(byId.daylight.rhythm, { type: 'sunrise' }, `${label}: the one new habit follows local sunrise`);
   assert.equal(byId.daylight.text, 'Get outdoor light after waking', `${label}: morning light is the one useful anchored addition`);
@@ -154,22 +153,22 @@ for (const [label, htmlPath] of builds) {
 
   assert.equal(
     getRhythmAnchorText(byId.sunscreen.rhythm, { uv:3 }),
-    '☀️ UV 3 reached 3 — Sun protection matters now',
+    '☀️ UV 3 · Use sun protection',
     `${label}: the CDC UV 3 cutoff is inclusive`,
   );
   assert.equal(
     getRhythmAnchorText(byId.beach.rhythm, { aqi:100 }),
-    '🍃 AQI 100 is at most 100 — More favorable window for outdoor movement',
+    '🍃 AQI 100 · Moderate air quality',
     `${label}: the satisfactory AQI 100 cutoff is inclusive`,
   );
   assert.equal(
     getRhythmAnchorText(byId.beach.rhythm, { aqi:101 }),
-    'AQI 101 is above 100',
-    `${label}: AQI above the default cutoff does not imply favorable conditions`,
+    'AQI 101 · Unhealthy for sensitive groups',
+    `${label}: AQI above the default cutoff names the relevant category without implying favorable conditions`,
   );
   assert.equal(
     getRhythmAnchorText(byId.hydrate.rhythm, { feel:82 }),
-    'Feels-like 82°F; heat cue starts above 85°F',
+    'Feels like 82°F · Below heat cue',
     `${label}: a cool-day hydration anchor reports context without implying the habit must wait`,
   );
   assert.equal(getRhythmAnchorText(byId.hydrate.rhythm, null), 'Heat cue above 85°F', `${label}: denied location keeps the hydration threshold visible`);
