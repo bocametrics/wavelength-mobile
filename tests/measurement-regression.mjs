@@ -38,6 +38,8 @@ function extractFunction(source, name) {
 function loadFunctions(html) {
   const names = [
     'normalizeMeasurementConfig',
+    'normalizeRhythmConfig',
+    'normalizeEnvironmentalReading',
     'normalizeHabitDays',
     'normalizeCustomHabitOverrides',
     'getHabitProgress',
@@ -57,11 +59,14 @@ function loadFunctions(html) {
     'calculateCurrentStreak',
     'resetHabitDay',
     'reconcileMeasurementTypeChanges',
+    'getRhythmAnchorText',
   ];
+  const rhythmPrelude = html.match(/const RHYTHM_TYPES\s*=\s*[^;]+;[\s\S]*?const RHYTHM_LABELS\s*=\s*\{[\s\S]*?\};/);
+  assert.ok(rhythmPrelude, 'rhythm constants are missing');
   const context = {};
   vm.createContext(context);
   vm.runInContext(
-    `${names.map(name => extractFunction(html, name)).join('\n')}\n` +
+    `${rhythmPrelude[0]}\n${names.map(name => extractFunction(html, name)).join('\n')}\n` +
     `globalThis.exports = { ${names.join(', ')} };`,
     context,
   );
@@ -72,6 +77,8 @@ for (const [label, htmlPath] of builds) {
   const html = fs.readFileSync(htmlPath, 'utf8');
   const {
     normalizeMeasurementConfig,
+    normalizeRhythmConfig,
+    normalizeEnvironmentalReading,
     normalizeCustomHabitOverrides,
     getHabitProgress,
     adjustHabitProgress,
@@ -87,6 +94,7 @@ for (const [label, htmlPath] of builds) {
     calculateCurrentStreak,
     resetHabitDay,
     reconcileMeasurementTypeChanges,
+    getRhythmAnchorText,
   } = loadFunctions(html);
   const plain = value => JSON.parse(JSON.stringify(value));
 
@@ -122,6 +130,51 @@ for (const [label, htmlPath] of builds) {
   );
 
   const defaults = [{ id:'water' }, { id:'pushups' }];
+  assert.equal(normalizeEnvironmentalReading(8.4), 8.4, `${label}: environmental readings retain decimal precision`);
+  for (const invalidReading of [null, undefined, '8.4', true, NaN, Infinity]) {
+    assert.equal(
+      normalizeEnvironmentalReading(invalidReading),
+      null,
+      `${label}: environmental readings reject null, coercible, and nonfinite values`,
+    );
+  }
+  assert.deepEqual(
+    plain(normalizeRhythmConfig({ type:'uv-above', threshold:8.2, note:'Move indoors' })),
+    { type:'uv-above', threshold:8.2, note:'Move indoors' },
+    `${label}: valid decimal rhythm thresholds retain decision precision`,
+  );
+  for (const malformedThreshold of ['50', true, null]) {
+    assert.equal(
+      normalizeRhythmConfig({ type:'aqi-below', threshold:malformedThreshold }),
+      null,
+      `${label}: rhythm thresholds reject coerced nonnumber values`,
+    );
+    assert.throws(
+      () => normalizeCustomHabitOverrides({ water:{ rhythm:{ type:'aqi-below', threshold:malformedThreshold } } }, defaults, true),
+      /rhythm|threshold/i,
+      `${label}: strict imports reject malformed rhythm threshold types`,
+    );
+  }
+  assert.equal(
+    getRhythmAnchorText({ type:'aqi-below', threshold:50 }, { aqi:null }),
+    'Air-quality data unavailable',
+    `${label}: null AQI never becomes a favorable zero reading`,
+  );
+  assert.equal(
+    getRhythmAnchorText({ type:'temp-below', threshold:50 }, { feel:null }),
+    'Waiting for feels-like below 50°F',
+    `${label}: null feels-like data never becomes a favorable zero reading`,
+  );
+  assert.equal(
+    getRhythmAnchorText({ type:'aqi-below', threshold:49.6 }, { aqi:49.5 }),
+    '🍃 AQI 49.5 is below 49.6 — good conditions for this habit',
+    `${label}: AQI labels preserve the exact decimal used for the decision`,
+  );
+  assert.match(
+    getRhythmAnchorText({ type:'uv-above', threshold:8.2 }, { uv:8.4 }),
+    /UV 8\.4 exceeds 8\.2/,
+    `${label}: environmental decisions use unrounded decimal readings`,
+  );
   assert.deepEqual(
     plain(normalizeCustomHabitOverrides({
       water: { measurement:'amount', target:64, step:12, unit:'oz' },
@@ -400,6 +453,8 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /class=["']eh-unit["']/, `${label}: amount habits expose a unit input`);
   assert.match(html, /class=["']progress-step progress-minus["']/, `${label}: measured cards need a subtract control`);
   assert.match(html, /class=["']progress-step progress-plus["']/, `${label}: measured cards need an add control`);
+  assert.match(html, /class=["']progress-stepper["'][^>]*>[\s\S]*?progress-plus[\s\S]*?progress-minus/, `${label}: plus button sits above minus in the stepper`);
+  assert.match(html, /\.progress-stepper\s*\{[^}]*transform:\s*translateY\(-2px\)/, `${label}: stepper is optically centered above the bottom progress bar`);
   assert.match(html, /class=["']progress-chip["']/, `${label}: measured cards display progress in a compact inline chip`);
   assert.match(html, /class=["']progress-step-copy["']/, `${label}: measured cards explain the per-tap increment outside the button`);
   assert.match(html, /class=["']progress-edge["']/, `${label}: measured cards place progress on the card bottom edge`);
@@ -420,6 +475,18 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /\.progress-stepper\s*\{[^}]*grid-template-rows:\s*40px 40px/s, `${label}: measured controls use a vertical 40px rail`);
   assert.match(html, /\.progress-step\s*\{[^}]*min-height:\s*40px/s, `${label}: measured card controls need mobile-sized targets`);
   assert.match(html, /const resetDate = new Date\(\);\s*resetHabitDay\(state, resetDate\);/, `${label}: Reset today captures one date for completion and progress`);
+  assert.match(html, /RHYTHM_TYPES.*'sunrise'.*'sunset'.*'temp-above'.*'uv-above'.*'aqi-below'/s, `${label}: rhythm anchor types include sunrise, sunset, temp, UV, and air quality`);
+  assert.match(html, /class=["']eh-rhythm["']/, `${label}: Manage modal exposes a rhythm anchor selector`);
+  assert.match(html, /class=["']eh-rhythm-note["']/, `${label}: Manage modal exposes an optional rhythm note field`);
+  assert.match(html, /class=["']eh-rhythm-field eh-rhythm-threshold-field["'][\s\S]*?<input class=["']eh-rhythm-threshold["']/, `${label}: rhythm threshold wrapper and input use distinct selectors`);
+  assert.match(html, /querySelectorAll\(['"]\.eh-rhythm-threshold, \.eh-rhythm-note['"]\)[\s\S]*addEventListener\(['"]input['"][\s\S]*classList\.remove\(['"]measurement-error['"]\)/, `${label}: correcting rhythm fields clears validation styling`);
+  assert.match(html, /class=["']rhythm-anchor-label["']/, `${label}: habit cards render a rhythm anchor label when anchored`);
+  assert.match(html, /function updateRhythmAnchors/, `${label}: live weather data updates rhythm anchor labels on cards`);
+  assert.match(html, /air-quality-api\.open-meteo\.com\/v1\/air-quality[^`]*current=us_aqi/, `${label}: air-quality anchors use Open-Meteo's live AQI feed`);
+  assert.match(html, /updateRhythmAnchors\(\{ \.\.\.rhythmWeatherData, aqi \}\)/, `${label}: live AQI merges into the existing rhythm context`);
+  assert.match(html, /function renderHabits\(\)[\s\S]*if \(rhythmWeatherData\) updateRhythmAnchors\(rhythmWeatherData\);[\s\S]*?\n\}/, `${label}: card rerenders restore the latest live rhythm labels`);
+  assert.match(html, /case 'aqi-below':[\s\S]*!Number\.isFinite\(data\.aqi\)[\s\S]*Air-quality data unavailable[\s\S]*data\.aqi < rhythm\.threshold/, `${label}: AQI anchors evaluate live data and fail safely when unavailable`);
+  assert.match(html, /normalizeRhythmConfig/, `${label}: rhythm config is normalized for validation and rendering`);
   assert.match(html, /getElementById\('modalReset'\)[\s\S]*previousHabits[\s\S]*reconcileMeasurementTypeChanges[\s\S]*saveState\(\)[\s\S]*renderHabits\(\)/, `${label}: Reset defaults reconciles measured state and saves before rendering`);
   assert.match(html, /getDailyHabitStats\(state\.done \|\| \{\}, HABITS, [^;]+state\.progress \|\| \{\}\)/, `${label}: rendered totals pass measured progress to shared calculations`);
   if (label === 'mobile') {

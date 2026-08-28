@@ -478,6 +478,18 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     margin-top: 2px;
   }
 
+  .rhythm-anchor-label {
+    font-size: 0.65rem;
+    color: var(--accent);
+    opacity: 0.75;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+    letter-spacing: 0.2px;
+  }
+
   .habit-progress {
     display: flex;
     align-items: center;
@@ -525,6 +537,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     gap: 4px;
     width: 40px;
     align-self: center;
+    transform: translateY(-2px);
   }
   .progress-step {
     width: 40px;
@@ -1200,7 +1213,81 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   }
 
   .eh-schedule {
-    margin-top: 2px;
+    margin-top: 6px;
+  }
+
+  .eh-rhythm-block {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .eh-rhythm-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.72rem;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  .eh-rhythm-label span {
+    flex-shrink: 0;
+  }
+
+  .eh-rhythm {
+    flex: 1;
+    padding: 4px 8px;
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    background: var(--surface2);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.78rem;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .eh-rhythm-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 0.72rem;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  .eh-rhythm-field span {
+    flex-shrink: 0;
+  }
+
+  .eh-rhythm-threshold {
+    flex: 1;
+    padding: 4px 8px;
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    background: var(--surface2);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.78rem;
+    text-transform: none;
+    letter-spacing: 0;
+    width: 100%;
+  }
+
+  .eh-rhythm-note {
+    width: 100%;
+    margin-top: 6px;
+    padding: 4px 8px;
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    background: var(--surface2);
+    color: var(--text);
+    font: inherit;
+    font-size: 0.78rem;
   }
 
   .eh-schedule-label {
@@ -1640,7 +1727,7 @@ function normalizeCustomHabitOverrides(overrides, defaults, strict = false) {
   }
 
   const validIds = new Set(defaults.map(habit => habit.id));
-  const allowedFields = new Set(['text', 'note', 'weight', 'days', 'measurement', 'target', 'step', 'unit']);
+  const allowedFields = new Set(['text', 'note', 'weight', 'days', 'measurement', 'target', 'step', 'unit', 'rhythm']);
   const normalized = {};
 
   for (const [id, override] of Object.entries(overrides)) {
@@ -1704,9 +1791,42 @@ function normalizeCustomHabitOverrides(overrides, defaults, strict = false) {
         clean.unit = config.unit;
       }
     }
+    if (Object.hasOwn(override, 'rhythm')) {
+      const r = normalizeRhythmConfig(override.rhythm);
+      if (r) clean.rhythm = r; else invalid(`Invalid rhythm anchor for ${id}.`);
+    }
     if (Object.keys(clean).length > 0) normalized[id] = clean;
   }
   return normalized;
+}
+
+const RHYTHM_TYPES = ['none', 'sunrise', 'sunset', 'temp-above', 'temp-below', 'uv-above', 'aqi-below'];
+const RHYTHM_LABELS = {
+  'none': 'No anchor',
+  'sunrise': 'Within 1 hr of sunrise',
+  'sunset': 'Within 1 hr of sunset',
+  'temp-above': 'When feels-like exceeds',
+  'temp-below': 'When feels-like is below',
+  'uv-above': 'When UV index exceeds',
+  'aqi-below': 'When US AQI is below',
+};
+
+function normalizeRhythmConfig(rhythm) {
+  if (!rhythm || typeof rhythm !== 'object') return null;
+  const type = RHYTHM_TYPES.includes(rhythm.type) ? rhythm.type : 'none';
+  if (type === 'none') return null;
+  const clean = { type };
+  if (type === 'temp-above' || type === 'temp-below' || type === 'uv-above' || type === 'aqi-below') {
+    if (typeof rhythm.threshold !== 'number' || !Number.isFinite(rhythm.threshold) || rhythm.threshold <= 0) return null;
+    clean.threshold = rhythm.threshold;
+  }
+  const note = typeof rhythm.note === 'string' ? rhythm.note.slice(0, 120) : '';
+  if (note) clean.note = note;
+  return clean;
+}
+
+function normalizeEnvironmentalReading(value) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
 function normalizeHabitDays(days) {
@@ -1834,19 +1954,85 @@ function renderInsights() {
     if (heatEl) heatEl.innerHTML = heatFallback;
 
     // 2) Live upgrade: today's real sunrise + heat index (feels-like) from Open-Meteo.
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature&daily=sunrise,sunset&timezone=auto&temperature_unit=fahrenheit`)
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,uv_index&daily=sunrise,sunset&timezone=auto&temperature_unit=fahrenheit`)
       .then(r => r.json())
       .then(d => {
         if (!d || !d.current) return;
-        const feel = Math.round(d.current.apparent_temperature);
-        const temp = Math.round(d.current.temperature_2m);
-        const hum = Math.round(d.current.relative_humidity_2m);
+        const feel = normalizeEnvironmentalReading(d.current.apparent_temperature);
+        const temp = normalizeEnvironmentalReading(d.current.temperature_2m);
+        const hum = normalizeEnvironmentalReading(d.current.relative_humidity_2m);
+        const uv = normalizeEnvironmentalReading(d.current.uv_index);
         const sunrise = (d.daily && d.daily.sunrise && d.daily.sunrise[0]) ? fmtClock(d.daily.sunrise[0]) : `${cli.sunrise} AM`;
-        if (sunEl) sunEl.innerHTML = `Sunrise today in ${loc.city} is <strong>${sunrise}</strong> — morning habits before 8 AM count as <strong>golden hours</strong>.`;
-        if (heatEl) heatEl.innerHTML = `Right now it feels like <strong>${feel}°F</strong> in ${loc.city} (${temp}°F, ${hum}% humidity). Hydration habits get <strong>bonus weight</strong> in your streak.`;
+        const sunset = (d.daily && d.daily.sunset && d.daily.sunset[0]) ? fmtClock(d.daily.sunset[0]) : '';
+        if (sunEl) sunEl.innerHTML = `Sunrise today in ${loc.city} is <strong>${sunrise}</strong>${sunset ? ` — sunset <strong>${sunset}</strong>` : ''}. Morning habits before 8 AM count as <strong>golden hours</strong>.`;
+        if (heatEl && feel !== null && temp !== null && hum !== null) {
+          const uvCopy = uv === null ? '' : `, UV ${Math.round(uv)}`;
+          heatEl.innerHTML = `Right now it feels like <strong>${Math.round(feel)}°F</strong> in ${loc.city} (${Math.round(temp)}°F, ${Math.round(hum)}% humidity${uvCopy}). Hydration habits get <strong>bonus weight</strong> in your streak.`;
+        }
+        const rhythmUpdate = { sunrise, sunset };
+        if (feel !== null) rhythmUpdate.feel = feel;
+        if (uv !== null) rhythmUpdate.uv = uv;
+        updateRhythmAnchors(rhythmUpdate);
       })
       .catch(() => { /* keep climatology fallback */ });
+
+    // Air quality is served by Open-Meteo's separate endpoint.
+    fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${loc.lat}&longitude=${loc.lon}&current=us_aqi&timezone=auto`)
+      .then(r => {
+        if (!r.ok) throw new Error('Air-quality request failed');
+        return r.json();
+      })
+      .then(d => {
+        const aqi = d && d.current ? normalizeEnvironmentalReading(d.current.us_aqi) : null;
+        if (aqi !== null) updateRhythmAnchors({ ...rhythmWeatherData, aqi });
+      })
+      .catch(() => { /* anchored cards retain the offline-safe fallback */ });
   });
+}
+
+let rhythmWeatherData = null;
+
+function updateRhythmAnchors(data) {
+  rhythmWeatherData = { ...(rhythmWeatherData || {}), ...(data || {}) };
+  document.querySelectorAll('.habit[data-id]').forEach(el => {
+    const habit = HABITS.find(h => h.id === el.dataset.id);
+    if (!habit) return;
+    const rhythm = normalizeRhythmConfig(habit.rhythm);
+    if (!rhythm) return;
+    const label = el.querySelector('.rhythm-anchor-label');
+    if (!label) return;
+    const text = getRhythmAnchorText(rhythm, rhythmWeatherData);
+    if (text) label.textContent = text;
+  });
+}
+
+function getRhythmAnchorText(rhythm, data) {
+  if (!data) return RHYTHM_LABELS[rhythm.type] || '';
+  switch (rhythm.type) {
+    case 'sunrise':
+      return data.sunrise ? `🌅 Anchor: within 1 hr of sunrise (${data.sunrise})` : RHYTHM_LABELS.sunrise;
+    case 'sunset':
+      return data.sunset ? `🌇 Anchor: within 1 hr of sunset (${data.sunset})` : RHYTHM_LABELS.sunset;
+    case 'temp-above':
+      return Number.isFinite(data.feel) && data.feel > rhythm.threshold
+        ? `🔥 Feels-like ${data.feel}°F exceeds ${rhythm.threshold}°F — ${rhythm.note || 'adapt this habit'}`
+        : `Waiting for feels-like above ${rhythm.threshold}°F`;
+    case 'temp-below':
+      return Number.isFinite(data.feel) && data.feel < rhythm.threshold
+        ? `❄️ Feels-like ${data.feel}°F is below ${rhythm.threshold}°F — ${rhythm.note || 'adapt this habit'}`
+        : `Waiting for feels-like below ${rhythm.threshold}°F`;
+    case 'uv-above':
+      return Number.isFinite(data.uv) && data.uv > rhythm.threshold
+        ? `☀️ UV ${data.uv} exceeds ${rhythm.threshold} — ${rhythm.note || 'adapt this habit'}`
+        : `Waiting for UV above ${rhythm.threshold}`;
+    case 'aqi-below':
+      if (!Number.isFinite(data.aqi)) return 'Air-quality data unavailable';
+      return data.aqi < rhythm.threshold
+        ? `🍃 AQI ${data.aqi} is below ${rhythm.threshold} — ${rhythm.note || 'good conditions for this habit'}`
+        : `AQI ${data.aqi} is not below ${rhythm.threshold}`;
+    default:
+      return '';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2167,8 +2353,8 @@ function renderHabits() {
           </div>` : '';
     const progressControls = measurementDisplay ? `
         <div class="progress-stepper">
-          <button type="button" class="progress-step progress-minus" data-progress-id="${escapeHtml(h.id)}" data-progress-direction="-1" aria-label="Subtract ${escapeHtml(measurementDisplay.incrementLabel.slice(1))} from ${escapeHtml(h.text)}" ${progress <= 0 ? 'disabled' : ''}>−</button>
           <button type="button" class="progress-step progress-plus" data-progress-id="${escapeHtml(h.id)}" data-progress-direction="1" aria-label="Add ${escapeHtml(measurementDisplay.incrementLabel.slice(1))} to ${escapeHtml(h.text)}" ${isDone ? 'disabled' : ''}>+</button>
+          <button type="button" class="progress-step progress-minus" data-progress-id="${escapeHtml(h.id)}" data-progress-direction="-1" aria-label="Subtract ${escapeHtml(measurementDisplay.incrementLabel.slice(1))} from ${escapeHtml(h.text)}" ${progress <= 0 ? 'disabled' : ''}>−</button>
         </div>` : '';
     const progressEdge = measurementDisplay ? `
         <div class="progress-edge" role="progressbar" aria-label="Progress for ${escapeHtml(h.text)}" aria-valuemin="0" aria-valuemax="${measurement.target}" aria-valuenow="${Math.min(progress, measurement.target)}">
@@ -2187,6 +2373,7 @@ function renderHabits() {
         <div class="habit-body">
           <div class="habit-text">${escapeHtml(h.text)}</div>
           <div class="habit-note">${escapeHtml(h.note)}</div>
+          ${normalizeRhythmConfig(h.rhythm) ? `<div class="rhythm-anchor-label" aria-live="polite">${escapeHtml(RHYTHM_LABELS[normalizeRhythmConfig(h.rhythm).type] || '')}</div>` : ''}
           ${progressMarkup}
         </div>
         ${progressControls}
@@ -2253,6 +2440,7 @@ function renderHabits() {
   updateWeekly();
   updateRing();
   updateGreeting();
+  if (rhythmWeatherData) updateRhythmAnchors(rhythmWeatherData);
 }
 
 function setReorderMode(enabled) {
@@ -2791,6 +2979,18 @@ function updateMeasurementRow(row) {
   row.classList.remove('measurement-error');
 }
 
+function updateRhythmRow(row) {
+  const type = row.querySelector('.eh-rhythm').value;
+  const thresholdField = row.querySelector('.eh-rhythm-threshold-field');
+  const thresholdInput = row.querySelector('.eh-rhythm-threshold');
+  const needsThreshold = type === 'temp-above' || type === 'temp-below' || type === 'uv-above' || type === 'aqi-below';
+  if (thresholdField) thresholdField.hidden = !needsThreshold;
+  if (needsThreshold && thresholdInput) {
+    thresholdInput.placeholder = type === 'aqi-below' ? 'e.g. 50' : type === 'uv-above' ? 'e.g. 8' : 'e.g. 90';
+  }
+  row.classList.remove('measurement-error');
+}
+
 function renderManageModal() {
   const body = document.getElementById('modalBody');
   body.innerHTML = HABITS.map(h => {
@@ -2829,6 +3029,18 @@ function renderManageModal() {
               ${SCHEDULE_DAYS.map(day => `<button type="button" class="eh-day" data-day="${day.value}" role="checkbox" aria-checked="${selectedDays.includes(day.value)}">${day.label}</button>`).join('')}
             </div>
           </div>
+          <div class="eh-rhythm-block">
+            <label class="eh-rhythm-label" for="rhythm-${escapeHtml(h.id)}">
+              <span>Rhythm anchor</span>
+              <select id="rhythm-${escapeHtml(h.id)}" class="eh-rhythm">
+                ${RHYTHM_TYPES.map(rt => `<option value="${rt}" ${normalizeRhythmConfig(h.rhythm)?.type === rt ? 'selected' : ''}>${RHYTHM_LABELS[rt]}</option>`).join('')}
+              </select>
+            </label>
+            <label class="eh-rhythm-field eh-rhythm-threshold-field" ${normalizeRhythmConfig(h.rhythm)?.type !== 'temp-above' && normalizeRhythmConfig(h.rhythm)?.type !== 'temp-below' && normalizeRhythmConfig(h.rhythm)?.type !== 'uv-above' && normalizeRhythmConfig(h.rhythm)?.type !== 'aqi-below' ? 'hidden' : ''}>
+              <span>Threshold</span><input class="eh-rhythm-threshold" type="number" min="0" step="0.1" value="${normalizeRhythmConfig(h.rhythm)?.threshold ?? ''}" placeholder="${normalizeRhythmConfig(h.rhythm)?.type === 'aqi-below' ? 'e.g. 50' : normalizeRhythmConfig(h.rhythm)?.type === 'uv-above' ? 'e.g. 8' : 'e.g. 90'}">
+            </label>
+            <input type="text" class="eh-rhythm-note" maxlength="120" value="${escapeHtml(normalizeRhythmConfig(h.rhythm)?.note ?? '')}" placeholder="Optional: explain why this version of the habit (shown on the card)">
+          </div>
         </div>
       </div>
     `;
@@ -2842,6 +3054,12 @@ function renderManageModal() {
   });
   body.querySelectorAll('.eh-measurement').forEach(select => {
     select.addEventListener('change', () => updateMeasurementRow(select.closest('.edit-habit')));
+  });
+  body.querySelectorAll('.eh-rhythm').forEach(select => {
+    select.addEventListener('change', () => updateRhythmRow(select.closest('.edit-habit')));
+  });
+  body.querySelectorAll('.eh-rhythm-threshold, .eh-rhythm-note').forEach(input => {
+    input.addEventListener('input', () => input.closest('.edit-habit').classList.remove('measurement-error'));
   });
 }
 
@@ -2910,6 +3128,24 @@ function saveManageModal() {
         changes.step = measurement.step;
         changes.unit = measurement.unit;
       }
+    }
+    const rhythmType = row.querySelector('.eh-rhythm').value;
+    if (rhythmType !== 'none') {
+      const rhythmCandidate = { type: rhythmType };
+      if (rhythmType === 'temp-above' || rhythmType === 'temp-below' || rhythmType === 'uv-above' || rhythmType === 'aqi-below') {
+        rhythmCandidate.threshold = Number(row.querySelector('.eh-rhythm-threshold').value);
+      }
+      const rhythmNote = row.querySelector('.eh-rhythm-note').value.trim();
+      if (rhythmNote) rhythmCandidate.note = rhythmNote;
+      const rhythm = normalizeRhythmConfig(rhythmCandidate);
+      if (!rhythm && rhythmType !== 'none' && rhythmType !== 'sunrise' && rhythmType !== 'sunset') {
+        row.classList.add('measurement-error');
+        row.scrollIntoView({ behavior:'smooth', block:'center' });
+        row.querySelector('.eh-rhythm-threshold').focus();
+        showToast('Enter a positive threshold for the rhythm anchor');
+        return false;
+      }
+      if (rhythm) changes.rhythm = rhythm;
     }
     if (Object.keys(changes).length > 0) overrides[id] = changes;
   }

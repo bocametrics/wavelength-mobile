@@ -51,6 +51,24 @@ The `weight` field (w1/w2) remains editable in Manage for stored-data compatibil
 
 **Reorder mode** is separate from tracking. Tap **↕ Reorder** to swap the `−/+` steppers for up/down arrows and a right-side drag grip; the hint line appears only in this mode. Tap **✓ Done** (or press Escape) to return to tracking. Card completion is suppressed while reordering.
 
+## Rhythm anchors
+
+A habit can be anchored to an environmental condition so Wavelength can surface context-aware guidance on the card. Manage offers three optional anchor families: solar timing, feels-like temperature, and environmental quality. Together they provide six concrete choices plus **No anchor**:
+
+| Type | Meaning |
+|------|---------|
+| `none` | No anchor (default) |
+| `sunrise` | Within 1 hour of sunrise |
+| `sunset` | Within 1 hour of sunset |
+| `temp-above` | Feels-like temperature exceeds a threshold |
+| `temp-below` | Feels-like temperature is below a threshold |
+| `uv-above` | UV index exceeds a threshold |
+| `aqi-below` | Air quality index is below a threshold |
+
+When live environmental data loads from Open-Meteo, `updateRhythmAnchors()` updates a small accent-colored label on each anchored card. The forecast endpoint supplies feels-like temperature, sunrise, sunset, and UV index; Open-Meteo's air-quality endpoint supplies US AQI. If a request is unavailable, the label keeps a safe fallback instead of implying that a threshold was met. An optional note (e.g. "Indoor mobility suggested because it feels like 101°F") can explain why the habit's form should adapt.
+
+Rhythm anchors do not change streaks, daily targets, or completion logic. They are advisory labels that help you choose the right form of the same intention.
+
 ## Streak behavior
 
 Only habits scheduled for a date appear in **Today's Habits** or count toward that date's totals. The displayed count, progress ring, weekly percentages, and category totals all use the scheduled set as their denominator. Changing a habit's selected weekdays recalculates those views immediately; an unscheduled completion remains stored but does not inflate the visible totals.
@@ -71,7 +89,7 @@ node tests/measurement-regression.mjs
 
 All cross-build suites use the tracked desktop fixture at `tests/fixtures/friday_app_2026-07-12.html`, so they run from a clean repository checkout. When shared behavior changes, update both the external standalone desktop file and this byte-identical fixture.
 
-Custom habit overrides are limited to text, note, weight, valid nonempty weekday arrays, and valid measurement settings. Imported structural fields, invalid measurement combinations, and malformed progress are rejected. Invalid legacy schedules safely fall back to every day, legacy habits without measurement settings remain Check once, and displayed custom text is escaped before insertion into HTML.
+Custom habit overrides are limited to text, note, weight, valid nonempty weekday arrays, valid measurement settings, and valid rhythm settings. Rhythm overrides require a supported anchor type; threshold-based anchors require finite positive numbers, and optional rhythm notes are bounded to 120 characters. Imported structural fields, invalid measurement or rhythm combinations, and malformed progress are rejected. Invalid legacy schedules safely fall back to every day, legacy habits without measurement settings remain Check once, and displayed custom text is escaped before insertion into HTML.
 
 ## Requirement for iPhone installation
 
