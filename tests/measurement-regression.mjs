@@ -479,6 +479,11 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /\.drag-handle\s*\{[^}]*min-width:\s*32px[^}]*min-height:\s*44px/s, `${label}: Reorder grip has a deliberate hold target`);
   assert.match(html, /\.progress-stepper\s*\{[^}]*grid-template-rows:\s*40px 40px/s, `${label}: measured controls use a vertical 40px rail`);
   assert.match(html, /\.progress-step\s*\{[^}]*min-height:\s*40px/s, `${label}: measured card controls need mobile-sized targets`);
+  assert.match(html, /\.habit-text\s*\{[^}]*white-space:\s*nowrap;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;/s, `${label}: habit titles stay on one line and ellipsize`);
+  assert.match(html, /\.habit-note\s*\{[^}]*white-space:\s*nowrap;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;/s, `${label}: habit descriptions stay on one line and ellipsize`);
+  assert.match(html, /\.rhythm-anchor-label\s*\{[^}]*white-space:\s*nowrap;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;/s, `${label}: anchor labels stay on one line and ellipsize`);
+  assert.match(html, /class=["']eh-text["'] maxlength=["']48["']/, `${label}: Manage keeps new habit titles concise`);
+  assert.match(html, /class=["']eh-note["'] maxlength=["']80["']/, `${label}: Manage keeps new habit descriptions concise`);
   assert.match(html, /const resetDate = new Date\(\);\s*resetHabitDay\(state, resetDate\);/, `${label}: Reset today captures one date for completion and progress`);
   assert.match(html, /RHYTHM_TYPES.*'sunrise'.*'sunset'.*'temp-above'.*'uv-above'.*'aqi-below'/s, `${label}: rhythm anchor types include sunrise, sunset, temp, UV, and air quality`);
   assert.match(html, /class=["']eh-rhythm["']/, `${label}: Manage modal exposes a rhythm anchor selector`);

@@ -69,6 +69,10 @@ When live environmental data loads from Open-Meteo, `updateRhythmAnchors()` upda
 
 Rhythm anchors do not change streaks, daily targets, or completion logic. They are advisory labels that help you choose the right form of the same intention.
 
+### Card copy
+
+Habit titles, descriptions, and rhythm labels stay on one line in daily cards and use an ellipsis when the available width is exhausted, including beside Count or Amount steppers. Manage limits new title edits to 48 characters and new description edits to 80 characters. Wider legacy custom values remain import-compatible and display safely with ellipsis rather than being silently destroyed.
+
 ### Reviewed default habits
 
 Default habit names and notes are location-agnostic. If location is available, Wavelength uses the user's actual local conditions for four defaults:
@@ -80,7 +84,7 @@ Default habit names and notes are location-agnostic. If location is available, W
 | Outdoor walk or movement | US AQI at or below 100 | Identify a more favorable outdoor-air window |
 | Sun protection before outdoor time | UV index at or above 3 | Surface protection when UV reaches the configured cue |
 
-The other 17 defaults intentionally have no anchor because their natural cue is a schedule, meal, prescription, or personal routine rather than an environmental condition. The new daylight habit starts on August 28, 2026, so it does not lower completion percentages for dates before it existed. Existing saved order is preserved with the new habit appended; backups created before this release import only when they contain the complete legacy 20-habit set, while missing legacy IDs, unknown IDs, and duplicate IDs remain invalid. If location permission is denied or unavailable, Wavelength stays location-neutral; it does not substitute West Palm Beach or any other city. Every habit remains usable, and environmental labels stay advisory. Choosing **No anchor** on any of the four anchored defaults is saved as an explicit opt-out and survives reloads, backups, and imports.
+The other 18 defaults intentionally have no anchor because their natural cue is a schedule, meal, prescription, supplement routine, or personal routine rather than an environmental condition. The daylight and supplements habits start on August 28, 2026, so they do not lower completion percentages for earlier dates. Existing saved order is preserved with new habits appended. Current 22-habit backups import unchanged, 21-habit backups append `supplements`, and older 20-habit backups append `daylight` then `supplements`; any other missing, unknown, or duplicate IDs remain invalid. If location permission is denied or unavailable, Wavelength stays location-neutral; it does not substitute West Palm Beach or any other city. Every habit remains usable, and environmental labels stay advisory. Choosing **No anchor** on any of the four anchored defaults is saved as an explicit opt-out and survives reloads, backups, and imports.
 
 ## Streak behavior
 

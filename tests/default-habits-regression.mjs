@@ -66,13 +66,20 @@ for (const [label, htmlPath] of builds) {
   const byId = Object.fromEntries(habits.map(habit => [habit.id, habit]));
   const { normalizeCustomHabitOverrides, normalizeRhythmConfig, reconcileHabitOrder, normalizeImportedHabitOrder, getRhythmAnchorText } = loadOverrideFunctions(html);
 
-  assert.equal(habits.length, 21, `${label}: the reviewed library adds only one new default habit`);
+  assert.equal(habits.length, 22, `${label}: the reviewed library includes daylight and supplements additions`);
   assert.equal(new Set(habits.map(habit => habit.id)).size, habits.length, `${label}: default habit IDs stay unique`);
 
   const publicCopy = habits.map(habit => `${habit.text} ${habit.note}`).join(' ');
   assert.doesNotMatch(publicCopy, /Florida|WPB|West Palm|coloring book|markets, bio/i, `${label}: default habit copy is location and project agnostic`);
   assert.equal(byId.beach.text, 'Outdoor walk or movement', `${label}: the beach-specific habit becomes universally usable`);
   assert.equal(byId.medication.note, 'Follow your prescribed timing and instructions', `${label}: medication copy never assumes it should be taken with food`);
+  assert.equal(byId.supplements.cat, 'fuel', `${label}: supplements live in Fuel`);
+  assert.equal(byId.supplements.text, 'Take supplements', `${label}: supplements are distinct from prescribed medication`);
+  assert.equal(byId.supplements.note, 'Follow your personal supplement routine', `${label}: supplements avoid dosage or medical-timing advice`);
+  assert.equal(byId.supplements.activeFrom, '2026-08-28', `${label}: supplements do not rewrite pre-release history`);
+  assert.doesNotMatch(`${byId.supplements.text} ${byId.supplements.note}`, /medication|prescrib/i, `${label}: supplement copy stays distinct from medicine`);
+  assert.ok(habits.every(habit => habit.text.length <= 48), `${label}: default titles fit the concise Manage limit`);
+  assert.ok(habits.every(habit => habit.note.length <= 80), `${label}: default descriptions fit the concise Manage limit`);
   assert.equal(byId.sleep.note, 'Protect at least 7 hours for sleep', `${label}: sleep copy uses a general adult minimum rather than local sunrise`);
   assert.equal(byId.gratitude.note, 'Notice what went well today', `${label}: gratitude copy avoids an unsupported neurological claim`);
 
@@ -103,11 +110,17 @@ for (const [label, htmlPath] of builds) {
   assert.equal(normalizeRhythmConfig({ ...byId.hydrate, ...optOut.hydrate }.rhythm), null, `${label}: explicit No anchor overrides the shipped heat cue`);
   assert.match(html, /const defaultRhythm = normalizeRhythmConfig\(def\.rhythm\);[\s\S]*rhythmType === 'none' && defaultRhythm[\s\S]*changes\.rhythm = null/, `${label}: Manage persists No anchor when the default has an anchor`);
 
-  const priorCustomOrder = habits.filter(habit => habit.id !== 'daylight').map(habit => habit.id).reverse();
+  const prior21Order = habits.filter(habit => habit.id !== 'supplements').map(habit => habit.id).reverse();
+  const legacy20Order = habits.filter(habit => habit.id !== 'daylight' && habit.id !== 'supplements').map(habit => habit.id).reverse();
   assert.deepEqual(
-    JSON.parse(JSON.stringify(reconcileHabitOrder(priorCustomOrder, habits))),
-    [...priorCustomOrder, 'daylight'],
-    `${label}: a new default appends without resetting an existing custom order`,
+    JSON.parse(JSON.stringify(reconcileHabitOrder(prior21Order, habits))),
+    [...prior21Order, 'supplements'],
+    `${label}: supplements append without resetting the current custom order`,
+  );
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(reconcileHabitOrder(legacy20Order, habits))),
+    [...legacy20Order, 'daylight', 'supplements'],
+    `${label}: both additions append to an older custom order in release order`,
   );
   assert.deepEqual(
     JSON.parse(JSON.stringify(reconcileHabitOrder(['wake', 'wake', 'retired-id'], habits))),
@@ -115,9 +128,14 @@ for (const [label, htmlPath] of builds) {
     `${label}: order migration removes duplicates and retired IDs before appending missing defaults`,
   );
   assert.deepEqual(
-    JSON.parse(JSON.stringify(normalizeImportedHabitOrder(priorCustomOrder, habits))),
-    [...priorCustomOrder, 'daylight'],
-    `${label}: a pre-release 20-habit backup imports with the new ID appended`,
+    JSON.parse(JSON.stringify(normalizeImportedHabitOrder(prior21Order, habits))),
+    [...prior21Order, 'supplements'],
+    `${label}: a 21-habit backup imports with supplements appended`,
+  );
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(normalizeImportedHabitOrder(legacy20Order, habits))),
+    [...legacy20Order, 'daylight', 'supplements'],
+    `${label}: a 20-habit backup imports with both released IDs appended`,
   );
   assert.deepEqual(
     JSON.parse(JSON.stringify(normalizeImportedHabitOrder(habits.map(habit => habit.id), habits))),
@@ -125,7 +143,8 @@ for (const [label, htmlPath] of builds) {
     `${label}: a complete current backup order imports unchanged`,
   );
   assert.throws(() => normalizeImportedHabitOrder(['wake'], habits), /not compatible/i, `${label}: backup order rejects an arbitrary one-ID subset`);
-  assert.throws(() => normalizeImportedHabitOrder(priorCustomOrder.slice(1), habits), /not compatible/i, `${label}: backup order rejects a 19-ID subset missing a legacy habit`);
+  assert.throws(() => normalizeImportedHabitOrder(prior21Order.filter(id => id !== 'medication'), habits), /not compatible/i, `${label}: backup order rejects a 20-ID set missing supplements plus a legacy habit`);
+  assert.throws(() => normalizeImportedHabitOrder(legacy20Order.slice(1), habits), /not compatible/i, `${label}: backup order rejects a 19-ID subset missing a legacy habit`);
   assert.throws(() => normalizeImportedHabitOrder(['wake', 'wake'], habits), /not compatible/i, `${label}: backup order rejects duplicate IDs`);
   assert.throws(() => normalizeImportedHabitOrder(['wake', 'future-id'], habits), /not compatible/i, `${label}: backup order rejects unknown IDs`);
   if (label === 'mobile') {

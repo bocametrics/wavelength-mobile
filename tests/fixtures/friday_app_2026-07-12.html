@@ -469,6 +469,9 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   .habit-text {
     font-size: 0.88rem;
     font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     transition: color 0.2s ease;
   }
 
@@ -476,6 +479,9 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     font-size: 0.72rem;
     color: var(--text3);
     margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .rhythm-anchor-label {
@@ -1544,6 +1550,7 @@ const DEFAULT_HABITS = [
   { id:'journal',    cat:'mind',     icon:'✍️', text:'Journal one insight',                  note:'Sentence or page — no wrong answer', weight:1 },
   { id:'goals',      cat:'mind',     icon:'🎯', text:'Write down goals for today',           note:'Name the few outcomes that matter most', weight:1 },
   { id:'breakfast',  cat:'fuel',     icon:'🥑', text:'Whole-food breakfast',                 note:'Protein + healthy fat + produce', weight:1 },
+  { id:'supplements',cat:'fuel',     icon:'🧬', text:'Take supplements',                      note:'Follow your personal supplement routine', weight:1, activeFrom:'2026-08-28' },
   { id:'medication', cat:'fuel',     icon:'💊', text:'Take medication as prescribed',        note:'Follow your prescribed timing and instructions', weight:2 },
   { id:'lunch',      cat:'fuel',     icon:'🥗', text:'Green & lean lunch',                   note:'Half plate veggies, lean protein', weight:1 },
   { id:'dinner',     cat:'fuel',     icon:'🍳', text:'Early dinner (before 7)',              note:'Finish with enough time to wind down', weight:1 },
@@ -2292,9 +2299,10 @@ function normalizeImportedHabitOrder(savedOrder, defaults) {
     throw new Error('The backup habit list is not compatible with this version.');
   }
   const missingIds = allIds.filter(id => !uniqueIds.has(id));
-  const isCurrentOrder = missingIds.length === 0 && savedOrder.length === allIds.length;
-  const isLegacyOrder = missingIds.length === 1 && missingIds[0] === 'daylight' && savedOrder.length === allIds.length - 1;
-  if (!isCurrentOrder && !isLegacyOrder) {
+  const missingKey = missingIds.join(',');
+  const compatibleMissingSets = new Set(['', 'supplements', 'daylight,supplements']);
+  const isCompatibleOrder = compatibleMissingSets.has(missingKey) && savedOrder.length === allIds.length - missingIds.length;
+  if (!isCompatibleOrder) {
     throw new Error('The backup habit list is not compatible with this version.');
   }
   return reconcileHabitOrder(savedOrder, defaults);
@@ -3056,9 +3064,9 @@ function renderManageModal() {
       <div class="edit-habit" data-id="${escapeHtml(h.id)}">
         <div class="eh-icon">${escapeHtml(h.icon)}</div>
         <div class="eh-fields">
-          <input type="text" class="eh-text" maxlength="160" value="${escapeHtml(h.text)}" placeholder="Habit name">
+          <input type="text" class="eh-text" maxlength="48" value="${escapeHtml(h.text)}" placeholder="Habit name">
           <div class="eh-row">
-            <input type="text" class="eh-note" maxlength="280" value="${escapeHtml(h.note)}" placeholder="Note">
+            <input type="text" class="eh-note" maxlength="80" value="${escapeHtml(h.note)}" placeholder="Note">
             <select class="eh-weight">
               <option value="1" ${h.weight === 1 ? 'selected' : ''}>w1</option>
               <option value="2" ${h.weight === 2 ? 'selected' : ''}>w2</option>
