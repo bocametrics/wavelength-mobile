@@ -156,23 +156,28 @@ for (const [label, htmlPath] of builds) {
     );
   }
   assert.equal(
-    getRhythmAnchorText({ type:'aqi-below', threshold:50 }, { aqi:null }),
-    'Air-quality data unavailable',
-    `${label}: null AQI never becomes a favorable zero reading`,
+    getRhythmAnchorText({ type:'aqi-below', threshold:50 }, { feel:92 }),
+    'US AQI cue at or below 50',
+    `${label}: a forecast-only partial result keeps the AQI threshold visible`,
+  );
+  assert.equal(
+    getRhythmAnchorText({ type:'uv-above', threshold:3 }, { aqi:43 }),
+    'UV cue at 3 or higher',
+    `${label}: an AQI-only partial result keeps the UV threshold visible`,
   );
   assert.equal(
     getRhythmAnchorText({ type:'temp-below', threshold:50 }, { feel:null }),
-    'Waiting for feels-like below 50°F',
+    'Cold cue below 50°F',
     `${label}: null feels-like data never becomes a favorable zero reading`,
   );
   assert.equal(
     getRhythmAnchorText({ type:'aqi-below', threshold:49.6 }, { aqi:49.5 }),
-    '🍃 AQI 49.5 is below 49.6 — good conditions for this habit',
+    '🍃 AQI 49.5 is at most 49.6 — more favorable conditions for this habit',
     `${label}: AQI labels preserve the exact decimal used for the decision`,
   );
   assert.match(
     getRhythmAnchorText({ type:'uv-above', threshold:8.2 }, { uv:8.4 }),
-    /UV 8\.4 exceeds 8\.2/,
+    /UV 8\.4 reached 8\.2/,
     `${label}: environmental decisions use unrounded decimal readings`,
   );
   assert.deepEqual(
@@ -478,6 +483,9 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /RHYTHM_TYPES.*'sunrise'.*'sunset'.*'temp-above'.*'uv-above'.*'aqi-below'/s, `${label}: rhythm anchor types include sunrise, sunset, temp, UV, and air quality`);
   assert.match(html, /class=["']eh-rhythm["']/, `${label}: Manage modal exposes a rhythm anchor selector`);
   assert.match(html, /class=["']eh-rhythm-note["']/, `${label}: Manage modal exposes an optional rhythm note field`);
+  assert.match(html, /\.eh-rhythm-field\[hidden\]\s*\{\s*display:\s*none\s*!important;\s*\}/, `${label}: hidden rhythm threshold fields stay hidden despite the field display rule`);
+  assert.match(html, /\.eh-rhythm-note\[hidden\]\s*\{\s*display:\s*none\s*!important;\s*\}/, `${label}: No anchor hides its inapplicable note field`);
+  assert.match(html, /function updateRhythmRow\(row\)[\s\S]*noteInput\.hidden = type === 'none'/, `${label}: changing the anchor toggles its note field`);
   assert.match(html, /class=["']eh-rhythm-field eh-rhythm-threshold-field["'][\s\S]*?<input class=["']eh-rhythm-threshold["']/, `${label}: rhythm threshold wrapper and input use distinct selectors`);
   assert.match(html, /querySelectorAll\(['"]\.eh-rhythm-threshold, \.eh-rhythm-note['"]\)[\s\S]*addEventListener\(['"]input['"][\s\S]*classList\.remove\(['"]measurement-error['"]\)/, `${label}: correcting rhythm fields clears validation styling`);
   assert.match(html, /class=["']rhythm-anchor-label["']/, `${label}: habit cards render a rhythm anchor label when anchored`);
@@ -485,7 +493,8 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /air-quality-api\.open-meteo\.com\/v1\/air-quality[^`]*current=us_aqi/, `${label}: air-quality anchors use Open-Meteo's live AQI feed`);
   assert.match(html, /updateRhythmAnchors\(\{ \.\.\.rhythmWeatherData, aqi \}\)/, `${label}: live AQI merges into the existing rhythm context`);
   assert.match(html, /function renderHabits\(\)[\s\S]*if \(rhythmWeatherData\) updateRhythmAnchors\(rhythmWeatherData\);[\s\S]*?\n\}/, `${label}: card rerenders restore the latest live rhythm labels`);
-  assert.match(html, /case 'aqi-below':[\s\S]*!Number\.isFinite\(data\.aqi\)[\s\S]*Air-quality data unavailable[\s\S]*data\.aqi < rhythm\.threshold/, `${label}: AQI anchors evaluate live data and fail safely when unavailable`);
+  assert.match(html, /case 'uv-above':[\s\S]*!Number\.isFinite\(data\.uv\)[\s\S]*UV cue at \$\{rhythm\.threshold\} or higher[\s\S]*data\.uv >= rhythm\.threshold/, `${label}: partial forecast data keeps the configured UV threshold visible`);
+  assert.match(html, /case 'aqi-below':[\s\S]*!Number\.isFinite\(data\.aqi\)[\s\S]*US AQI cue at or below \$\{rhythm\.threshold\}[\s\S]*data\.aqi <= rhythm\.threshold/, `${label}: partial air-quality data keeps the configured AQI threshold visible`);
   assert.match(html, /normalizeRhythmConfig/, `${label}: rhythm config is normalized for validation and rendering`);
   assert.match(html, /getElementById\('modalReset'\)[\s\S]*previousHabits[\s\S]*reconcileMeasurementTypeChanges[\s\S]*saveState\(\)[\s\S]*renderHabits\(\)/, `${label}: Reset defaults reconciles measured state and saves before rendering`);
   assert.match(html, /getDailyHabitStats\(state\.done \|\| \{\}, HABITS, [^;]+state\.progress \|\| \{\}\)/, `${label}: rendered totals pass measured progress to shared calculations`);

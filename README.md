@@ -57,17 +57,30 @@ A habit can be anchored to an environmental condition so Wavelength can surface 
 
 | Type | Meaning |
 |------|---------|
-| `none` | No anchor (default) |
+| `none` | No anchor; explicitly choosing it overrides a shipped default |
 | `sunrise` | Within 1 hour of sunrise |
 | `sunset` | Within 1 hour of sunset |
 | `temp-above` | Feels-like temperature exceeds a threshold |
 | `temp-below` | Feels-like temperature is below a threshold |
-| `uv-above` | UV index exceeds a threshold |
-| `aqi-below` | Air quality index is below a threshold |
+| `uv-above` | UV index reaches or exceeds a threshold |
+| `aqi-below` | US AQI is at or below a threshold |
 
 When live environmental data loads from Open-Meteo, `updateRhythmAnchors()` updates a small accent-colored label on each anchored card. The forecast endpoint supplies feels-like temperature, sunrise, sunset, and UV index; Open-Meteo's air-quality endpoint supplies US AQI. If a request is unavailable, the label keeps a safe fallback instead of implying that a threshold was met. An optional note (e.g. "Indoor mobility suggested because it feels like 101°F") can explain why the habit's form should adapt.
 
 Rhythm anchors do not change streaks, daily targets, or completion logic. They are advisory labels that help you choose the right form of the same intention.
+
+### Reviewed default habits
+
+Default habit names and notes are location-agnostic. If location is available, Wavelength uses the user's actual local conditions for four defaults:
+
+| Habit | Default anchor | Purpose |
+|-------|----------------|---------|
+| Get outdoor light after waking | Sunrise | Connect the morning cue to local daylight |
+| Drink 16 oz water | Feels-like above 85°F | Surface extra water and prolonged-sweating electrolyte guidance during heat |
+| Outdoor walk or movement | US AQI at or below 100 | Identify a more favorable outdoor-air window |
+| Sun protection before outdoor time | UV index at or above 3 | Surface protection when UV reaches the configured cue |
+
+The other 17 defaults intentionally have no anchor because their natural cue is a schedule, meal, prescription, or personal routine rather than an environmental condition. The new daylight habit starts on August 28, 2026, so it does not lower completion percentages for dates before it existed. Existing saved order is preserved with the new habit appended; backups created before this release import only when they contain the complete legacy 20-habit set, while missing legacy IDs, unknown IDs, and duplicate IDs remain invalid. If location permission is denied or unavailable, Wavelength stays location-neutral; it does not substitute West Palm Beach or any other city. Every habit remains usable, and environmental labels stay advisory. Choosing **No anchor** on any of the four anchored defaults is saved as an explicit opt-out and survives reloads, backups, and imports.
 
 ## Streak behavior
 
@@ -85,11 +98,12 @@ node tests/theme-regression.mjs
 node tests/greeting-responsive-regression.mjs
 node tests/schedule-regression.mjs
 node tests/measurement-regression.mjs
+node tests/default-habits-regression.mjs
 ```
 
 All cross-build suites use the tracked desktop fixture at `tests/fixtures/friday_app_2026-07-12.html`, so they run from a clean repository checkout. When shared behavior changes, update both the external standalone desktop file and this byte-identical fixture.
 
-Custom habit overrides are limited to text, note, weight, valid nonempty weekday arrays, valid measurement settings, and valid rhythm settings. Rhythm overrides require a supported anchor type; threshold-based anchors require finite positive numbers, and optional rhythm notes are bounded to 120 characters. Imported structural fields, invalid measurement or rhythm combinations, and malformed progress are rejected. Invalid legacy schedules safely fall back to every day, legacy habits without measurement settings remain Check once, and displayed custom text is escaped before insertion into HTML.
+Custom habit overrides are limited to text, note, weight, valid nonempty weekday arrays, valid measurement settings, and valid rhythm settings. Rhythm overrides require a supported anchor type; threshold-based anchors require finite positive numbers, optional rhythm notes are bounded to 120 characters, and `rhythm: null` records an explicit opt-out from a shipped default anchor. Imported structural fields, invalid measurement or rhythm combinations, and malformed progress are rejected. Invalid legacy schedules safely fall back to every day, legacy habits without measurement settings remain Check once, and displayed custom text is escaped before insertion into HTML.
 
 ## Requirement for iPhone installation
 

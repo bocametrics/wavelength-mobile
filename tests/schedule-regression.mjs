@@ -121,6 +121,10 @@ for (const [label, htmlPath] of builds) {
   assert.equal(fns.getScheduledHabits(habits, monday).map(h => h.id).join(','), 'daily,cardio', `${label}: Monday filters the visible library`);
   assert.equal(fns.getScheduledHabits(habits, tuesday).map(h => h.id).join(','), 'daily,strength', `${label}: Tuesday filters the visible library`);
 
+  const introducedHabit = { id:'daylight', activeFrom:'2026-08-28' };
+  assert.equal(fns.isHabitScheduledOn(introducedHabit, new Date(2026, 7, 27, 12)), false, `${label}: a newly shipped default is absent from pre-introduction history`);
+  assert.equal(fns.isHabitScheduledOn(introducedHabit, new Date(2026, 7, 28, 12)), true, `${label}: a newly shipped default begins on its introduction date`);
+
   const done = { '2026-08-24': { daily: true, strength: true } };
   let stats = fns.getDailyHabitStats(done, habits, monday);
   assert.deepEqual(

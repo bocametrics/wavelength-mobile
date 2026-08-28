@@ -1249,6 +1249,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     letter-spacing: 0;
   }
 
+  .eh-rhythm-field[hidden] { display: none !important; }
   .eh-rhythm-field {
     display: flex;
     align-items: center;
@@ -1278,6 +1279,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     width: 100%;
   }
 
+  .eh-rhythm-note[hidden] { display: none !important; }
   .eh-rhythm-note {
     width: 100%;
     margin-top: 6px;
@@ -1472,7 +1474,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   <!-- Insights -->
   <div class="insights">
-    <h3>🌊 Your Florida rhythm</h3>
+    <h3 id="insightsHeading">🌊 Your local rhythm</h3>
     <div id="insights">
       <div class="insight-card">
         <div class="insight-icon">🌅</div>
@@ -1529,26 +1531,27 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 // DATA
 // ═══════════════════════════════════════════════════════════════════
 const DEFAULT_HABITS = [
-  { id:'wake',       cat:'morning',  icon:'⏰', text:'Wake at 6:30 AM',                    note:'Before the Florida heat sets in', weight:2 },
+  { id:'wake',       cat:'morning',  icon:'⏰', text:'Wake at 6:30 AM',                    note:'Keep the wake time consistent', weight:2 },
+  { id:'daylight',   cat:'morning',  icon:'🌤️', text:'Get outdoor light after waking',       note:'Step outside near the start of your day', weight:1, activeFrom:'2026-08-28', rhythm:{ type:'sunrise' } },
   { id:'affirm',     cat:'morning',  icon:'💬', text:'Start the day with an affirmation',    note:'Set a positive tone before the day begins', weight:1 },
-  { id:'hydrate',    cat:'morning',  icon:'💧', text:'Drink 16 oz water',                    note:'Electrolytes in the Florida heat', weight:2 },
+  { id:'hydrate',    cat:'morning',  icon:'💧', text:'Drink 16 oz water',                    note:'Water first; adapt for heat and exertion', weight:2, rhythm:{ type:'temp-above', threshold:85, note:'Extra water; electrolytes after hours of sweating' } },
   { id:'stretch',    cat:'morning',  icon:'🧘', text:'10-min mobility',                      note:'Sun salutation or joint circles', weight:1 },
-  { id:'beach',      cat:'movement', icon:'🌊', text:'Beach walk or paddle',                 note:'Sunrise or sunset, just move', weight:2 },
+  { id:'beach',      cat:'movement', icon:'🌊', text:'Outdoor walk or movement',             note:'Walk, roll, hike, swim, or paddle', weight:2, rhythm:{ type:'aqi-below', threshold:100, note:'More favorable window for outdoor movement' } },
   { id:'strength',   cat:'movement', icon:'🏋️', text:'Strength session',                     note:'20+ min, bodyweight or bands', weight:2 },
   { id:'cardio',     cat:'movement', icon:'🏃', text:'Cardio burst',                         note:'15 min run, bike, or HIIT', weight:1 },
   { id:'meditate',   cat:'mind',     icon:'🧠', text:'Meditate 10 min',                      note:'Breath focus or body scan', weight:1 },
-  { id:'learn',      cat:'mind',     icon:'📖', text:'Read or learn 20 min',                 note:'Coloring book research, markets, bio', weight:1 },
+  { id:'learn',      cat:'mind',     icon:'📖', text:'Read or learn 20 min',                 note:'Book, course, or focused research', weight:1 },
   { id:'journal',    cat:'mind',     icon:'✍️', text:'Journal one insight',                  note:'Sentence or page — no wrong answer', weight:1 },
   { id:'goals',      cat:'mind',     icon:'🎯', text:'Write down goals for today',           note:'Name the few outcomes that matter most', weight:1 },
   { id:'breakfast',  cat:'fuel',     icon:'🥑', text:'Whole-food breakfast',                 note:'Protein + healthy fat + produce', weight:1 },
-  { id:'medication', cat:'fuel',     icon:'💊', text:'Take Medication',                      note:'With food, as prescribed', weight:2 },
+  { id:'medication', cat:'fuel',     icon:'💊', text:'Take medication as prescribed',        note:'Follow your prescribed timing and instructions', weight:2 },
   { id:'lunch',      cat:'fuel',     icon:'🥗', text:'Green & lean lunch',                   note:'Half plate veggies, lean protein', weight:1 },
-  { id:'dinner',     cat:'fuel',     icon:'🍳', text:'Early dinner (before 7)',              note:'Lighter meal, better sleep', weight:1 },
-  { id:'sunscreen',  cat:'hygiene',  icon:'🧴', text:'SPF 50+ applied',                      note:'Non-negotiable in WPB summer', weight:2 },
-  { id:'floss',      cat:'hygiene',  icon:'🦷', text:'Floss',                                note:'30 seconds, non-negotiable', weight:1 },
+  { id:'dinner',     cat:'fuel',     icon:'🍳', text:'Early dinner (before 7)',              note:'Finish with enough time to wind down', weight:1 },
+  { id:'sunscreen',  cat:'hygiene',  icon:'🧴', text:'Sun protection before outdoor time',   note:'Shade, clothing, a hat, or sunscreen all count', weight:2, rhythm:{ type:'uv-above', threshold:3, note:'Sun protection matters now' } },
+  { id:'floss',      cat:'hygiene',  icon:'🦷', text:'Floss',                                note:'Clean between teeth once a day', weight:1 },
   { id:'winddown',   cat:'evening',  icon:'🌙', text:'No screens 30 min before bed',         note:'Read, stretch, or just sit', weight:2 },
-  { id:'gratitude',  cat:'evening',  icon:'✨', text:'Name 3 good things',                   note:'Gratitude rewires the brain', weight:1 },
-  { id:'sleep',      cat:'evening',  icon:'🛌', text:'In bed by 10 PM',                      note:'7-8 hours before sunrise', weight:2 },
+  { id:'gratitude',  cat:'evening',  icon:'✨', text:'Name 3 good things',                   note:'Notice what went well today', weight:1 },
+  { id:'sleep',      cat:'evening',  icon:'🛌', text:'In bed by 10 PM',                      note:'Protect at least 7 hours for sleep', weight:2 },
 ];
 
 // ── Runtime habits (editable via Manage modal) ──
@@ -1792,8 +1795,12 @@ function normalizeCustomHabitOverrides(overrides, defaults, strict = false) {
       }
     }
     if (Object.hasOwn(override, 'rhythm')) {
-      const r = normalizeRhythmConfig(override.rhythm);
-      if (r) clean.rhythm = r; else invalid(`Invalid rhythm anchor for ${id}.`);
+      if (override.rhythm === null) {
+        clean.rhythm = null;
+      } else {
+        const r = normalizeRhythmConfig(override.rhythm);
+        if (r) clean.rhythm = r; else invalid(`Invalid rhythm anchor for ${id}.`);
+      }
     }
     if (Object.keys(clean).length > 0) normalized[id] = clean;
   }
@@ -1807,8 +1814,8 @@ const RHYTHM_LABELS = {
   'sunset': 'Within 1 hr of sunset',
   'temp-above': 'When feels-like exceeds',
   'temp-below': 'When feels-like is below',
-  'uv-above': 'When UV index exceeds',
-  'aqi-below': 'When US AQI is below',
+  'uv-above': 'When UV index reaches',
+  'aqi-below': 'When US AQI is at most',
 };
 
 function normalizeRhythmConfig(rhythm) {
@@ -1836,6 +1843,7 @@ function normalizeHabitDays(days) {
 
 function isHabitScheduledOn(habit, date) {
   if (typeof habit === 'string') return true;
+  if (typeof habit.activeFrom === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(habit.activeFrom) && dateKey(date) < habit.activeFrom) return false;
   return normalizeHabitDays(habit.days).includes(date.getDay());
 }
 
@@ -1859,76 +1867,67 @@ function getDailyHabitStats(doneByDate, habits, date, baseTarget = 5, progressBy
   return { scheduledHabits, scheduledIds, completedIds, scheduledCount, doneCount, target, pct };
 }
 
-const FLORIDA_FACTS = [
-  { icon:'🌴', text:'July is the <strong>rainy season</strong> in South Florida — afternoon showers are predictable. Morning habits are your best bet.' },
-  { icon:'🐚', text:'West Palm Beach <strong>water temperature</strong> in July averages 84°F — perfect for paddleboarding without a wetsuit.' },
-  { icon:'🌊', text:'The <strong>Gulf Stream</strong> passes closest to shore near Palm Beach — ocean workouts have a natural cooling current.' },
-  { icon:'☀️', text:'Florida UV index hits <strong>11+</strong> in July. Your sunscreen habit isn\'t vanity — it\'s survival for anyone spending time outside.' },
-  { icon:'🦩', text:'<strong>Roseate spoonbills</strong> are nesting now in the Loxahatchee preserve — make one of your outdoor habits double as birdwatching.' },
-];
-
 // ═══════════════════════════════════════════════════════════════════
-// DYNAMIC INSIGHTS — "Your Florida rhythm" (month + location aware)
+// DYNAMIC INSIGHTS — live and location aware
 // ═══════════════════════════════════════════════════════════════════
-const DEFAULT_LOC = { lat: 26.7153, lon: -80.0534, city: 'West Palm Beach' };
 const LOC_CACHE_KEY = 'wavelength_loc';
 const LOC_CACHE_TTL = 7 * 86400000; // re-ask geolocation at most weekly
 
-// Typical afternoon heat index (°F) + typical sunrise (local) per month, WPB normals.
-// Used for the instant, offline-safe render and as the fallback when live data is unavailable.
-const MONTHLY_CLIMATE = [
-  { heat: 77,  sunrise: '7:08' }, // Jan
-  { heat: 79,  sunrise: '6:53' }, // Feb
-  { heat: 81,  sunrise: '7:28' }, // Mar
-  { heat: 85,  sunrise: '6:57' }, // Apr
-  { heat: 91,  sunrise: '6:34' }, // May
-  { heat: 96,  sunrise: '6:26' }, // Jun
-  { heat: 100, sunrise: '6:36' }, // Jul
-  { heat: 100, sunrise: '6:52' }, // Aug
-  { heat: 97,  sunrise: '7:05' }, // Sep
-  { heat: 91,  sunrise: '7:18' }, // Oct
-  { heat: 85,  sunrise: '6:37' }, // Nov
-  { heat: 79,  sunrise: '7:01' }  // Dec
-];
+function normalizeLocation(loc) {
+  if (!loc || typeof loc !== 'object') return null;
+  const lat = loc.lat;
+  const lon = loc.lon;
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lon) || lon < -180 || lon > 180) return null;
+  const city = typeof loc.city === 'string' ? loc.city.trim().slice(0, 80) : '';
+  return { lat, lon, city };
+}
 
 function cachedLoc() {
   try {
     const raw = localStorage.getItem(LOC_CACHE_KEY);
     if (!raw) return null;
     const loc = JSON.parse(raw);
-    if (Date.now() - loc.ts > LOC_CACHE_TTL) return null;
-    return loc;
+    if (!Number.isFinite(loc.ts) || Date.now() - loc.ts > LOC_CACHE_TTL) return null;
+    return normalizeLocation(loc);
   } catch (e) { return null; }
 }
 function cacheLoc(loc) {
-  try { localStorage.setItem(LOC_CACHE_KEY, JSON.stringify(Object.assign({}, loc, { ts: Date.now() }))); } catch (e) {}
+  const normalized = normalizeLocation(loc);
+  if (!normalized) return;
+  try { localStorage.setItem(LOC_CACHE_KEY, JSON.stringify({ ...normalized, ts: Date.now() })); } catch (e) {}
 }
 
-// Resolve the user's location: cached → geolocation + reverse geocode → WPB default.
-// Never rejects; always resolves to a {lat, lon, city}.
+// Resolve the user's actual location. Denial or failure stays location-neutral.
 function getLocation() {
   const cached = cachedLoc();
   if (cached) return Promise.resolve(cached);
   return new Promise(resolve => {
-    if (!navigator.geolocation) { resolve(DEFAULT_LOC); return; }
+    if (!navigator.geolocation) { resolve(null); return; }
     try {
       navigator.geolocation.getCurrentPosition(
         pos => {
-          const { latitude: lat, longitude: lon } = pos.coords;
-          fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`)
-            .then(r => r.json())
+          const coordinates = normalizeLocation({ lat:pos.coords.latitude, lon:pos.coords.longitude, city:'' });
+          if (!coordinates) { resolve(null); return; }
+          fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coordinates.lat}&longitude=${coordinates.lon}&localityLanguage=en`)
+            .then(r => {
+              if (!r.ok) throw new Error('Reverse-geocode request failed');
+              return r.json();
+            })
             .then(d => {
-              const city = (d.locality || d.city || '').trim() || DEFAULT_LOC.city;
-              const loc = { lat, lon, city };
+              const city = typeof (d.locality || d.city) === 'string' ? (d.locality || d.city).trim() : '';
+              const loc = { ...coordinates, city };
               cacheLoc(loc);
               resolve(loc);
             })
-            .catch(() => resolve({ lat, lon, city: DEFAULT_LOC.city }));
+            .catch(() => {
+              cacheLoc(coordinates);
+              resolve(coordinates);
+            });
         },
-        () => resolve(DEFAULT_LOC),
-        { timeout: 6000, maximumAge: 300000 }
+        () => resolve(null),
+        { timeout:6000, maximumAge:300000 }
       );
-    } catch (e) { resolve(DEFAULT_LOC); }
+    } catch (e) { resolve(null); }
   });
 }
 
@@ -1939,42 +1938,56 @@ function fmtClock(isoStr) {
 }
 
 function renderInsights() {
-  const now = new Date();
-  const monthIdx = now.getMonth();
-  const monthName = now.toLocaleDateString('en-US', { month: 'long' });
-  const cli = MONTHLY_CLIMATE[monthIdx];
+  const heading = document.getElementById('insightsHeading');
   const sunEl = document.getElementById('insightSunrise');
   const heatEl = document.getElementById('insightHeat');
 
   getLocation().then(loc => {
-    // 1) Instant, offline-safe render from monthly normals.
-    const sunFallback = `Typical ${monthName} sunrise in ${loc.city} is around <strong>${cli.sunrise} AM</strong> — morning habits before 8 AM count as <strong>golden hours</strong>.`;
-    const heatFallback = `The ${monthName} heat index in ${loc.city} typically hits <strong>${cli.heat}°F+</strong>. Hydration habits get <strong>bonus weight</strong> in your streak.`;
-    if (sunEl) sunEl.innerHTML = sunFallback;
-    if (heatEl) heatEl.innerHTML = heatFallback;
+    if (!loc) {
+      if (heading) heading.textContent = '🌊 Your local rhythm';
+      if (sunEl) sunEl.textContent = 'Enable location to connect sunrise and sunset anchors to your day.';
+      if (heatEl) heatEl.textContent = 'Heat, UV, and air-quality cues are optional; every habit still works without location.';
+      return;
+    }
 
-    // 2) Live upgrade: today's real sunrise + heat index (feels-like) from Open-Meteo.
+    const place = loc.city ? ` in ${loc.city}` : ' near you';
+    const safePlace = escapeHtml(place);
+    if (heading) heading.textContent = loc.city ? `🌊 Your ${loc.city} rhythm` : '🌊 Your local rhythm';
+    if (sunEl) sunEl.textContent = 'Checking today’s local daylight…';
+    if (heatEl) heatEl.textContent = 'Checking current heat and UV…';
+
     fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,uv_index&daily=sunrise,sunset&timezone=auto&temperature_unit=fahrenheit`)
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error('Forecast request failed');
+        return r.json();
+      })
       .then(d => {
-        if (!d || !d.current) return;
-        const feel = normalizeEnvironmentalReading(d.current.apparent_temperature);
-        const temp = normalizeEnvironmentalReading(d.current.temperature_2m);
-        const hum = normalizeEnvironmentalReading(d.current.relative_humidity_2m);
-        const uv = normalizeEnvironmentalReading(d.current.uv_index);
-        const sunrise = (d.daily && d.daily.sunrise && d.daily.sunrise[0]) ? fmtClock(d.daily.sunrise[0]) : `${cli.sunrise} AM`;
-        const sunset = (d.daily && d.daily.sunset && d.daily.sunset[0]) ? fmtClock(d.daily.sunset[0]) : '';
-        if (sunEl) sunEl.innerHTML = `Sunrise today in ${loc.city} is <strong>${sunrise}</strong>${sunset ? ` — sunset <strong>${sunset}</strong>` : ''}. Morning habits before 8 AM count as <strong>golden hours</strong>.`;
+        if (!d) return;
+        const current = d.current || {};
+        const feel = normalizeEnvironmentalReading(current.apparent_temperature);
+        const temp = normalizeEnvironmentalReading(current.temperature_2m);
+        const hum = normalizeEnvironmentalReading(current.relative_humidity_2m);
+        const uv = normalizeEnvironmentalReading(current.uv_index);
+        const sunrise = d.daily && d.daily.sunrise && d.daily.sunrise[0] ? fmtClock(d.daily.sunrise[0]) : '';
+        const sunset = d.daily && d.daily.sunset && d.daily.sunset[0] ? fmtClock(d.daily.sunset[0]) : '';
+        if (sunEl && sunrise) {
+          sunEl.innerHTML = `Sunrise today${safePlace} is <strong>${escapeHtml(sunrise)}</strong>${sunset ? `; sunset is <strong>${escapeHtml(sunset)}</strong>` : ''}. Use local daylight as a cue, not a requirement.`;
+        }
         if (heatEl && feel !== null && temp !== null && hum !== null) {
           const uvCopy = uv === null ? '' : `, UV ${Math.round(uv)}`;
-          heatEl.innerHTML = `Right now it feels like <strong>${Math.round(feel)}°F</strong> in ${loc.city} (${Math.round(temp)}°F, ${Math.round(hum)}% humidity${uvCopy}). Hydration habits get <strong>bonus weight</strong> in your streak.`;
+          heatEl.innerHTML = `Right now it feels like <strong>${Math.round(feel)}°F</strong>${safePlace} (${Math.round(temp)}°F, ${Math.round(hum)}% humidity${uvCopy}). Anchored habits adapt the cue without changing the goal.`;
         }
-        const rhythmUpdate = { sunrise, sunset };
+        const rhythmUpdate = {};
+        if (sunrise) rhythmUpdate.sunrise = sunrise;
+        if (sunset) rhythmUpdate.sunset = sunset;
         if (feel !== null) rhythmUpdate.feel = feel;
         if (uv !== null) rhythmUpdate.uv = uv;
         updateRhythmAnchors(rhythmUpdate);
       })
-      .catch(() => { /* keep climatology fallback */ });
+      .catch(() => {
+        if (sunEl) sunEl.textContent = 'Local daylight data is unavailable; sunrise and sunset anchors stay advisory.';
+        if (heatEl) heatEl.textContent = 'Local weather data is unavailable; habits still work with their standard goals.';
+      });
 
     // Air quality is served by Open-Meteo's separate endpoint.
     fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${loc.lat}&longitude=${loc.lon}&current=us_aqi&timezone=auto`)
@@ -2007,29 +2020,38 @@ function updateRhythmAnchors(data) {
 }
 
 function getRhythmAnchorText(rhythm, data) {
-  if (!data) return RHYTHM_LABELS[rhythm.type] || '';
+  if (!data) {
+    if (rhythm.type === 'temp-above') return `Heat cue above ${rhythm.threshold}°F`;
+    if (rhythm.type === 'temp-below') return `Cold cue below ${rhythm.threshold}°F`;
+    if (rhythm.type === 'uv-above') return `UV cue at ${rhythm.threshold} or higher`;
+    if (rhythm.type === 'aqi-below') return `US AQI cue at or below ${rhythm.threshold}`;
+    return RHYTHM_LABELS[rhythm.type] || '';
+  }
   switch (rhythm.type) {
     case 'sunrise':
       return data.sunrise ? `🌅 Anchor: within 1 hr of sunrise (${data.sunrise})` : RHYTHM_LABELS.sunrise;
     case 'sunset':
       return data.sunset ? `🌇 Anchor: within 1 hr of sunset (${data.sunset})` : RHYTHM_LABELS.sunset;
     case 'temp-above':
-      return Number.isFinite(data.feel) && data.feel > rhythm.threshold
+      if (!Number.isFinite(data.feel)) return `Heat cue above ${rhythm.threshold}°F`;
+      return data.feel > rhythm.threshold
         ? `🔥 Feels-like ${data.feel}°F exceeds ${rhythm.threshold}°F — ${rhythm.note || 'adapt this habit'}`
-        : `Waiting for feels-like above ${rhythm.threshold}°F`;
+        : `Feels-like ${data.feel}°F; heat cue starts above ${rhythm.threshold}°F`;
     case 'temp-below':
-      return Number.isFinite(data.feel) && data.feel < rhythm.threshold
+      if (!Number.isFinite(data.feel)) return `Cold cue below ${rhythm.threshold}°F`;
+      return data.feel < rhythm.threshold
         ? `❄️ Feels-like ${data.feel}°F is below ${rhythm.threshold}°F — ${rhythm.note || 'adapt this habit'}`
-        : `Waiting for feels-like below ${rhythm.threshold}°F`;
+        : `Feels-like ${data.feel}°F; cold cue starts below ${rhythm.threshold}°F`;
     case 'uv-above':
-      return Number.isFinite(data.uv) && data.uv > rhythm.threshold
-        ? `☀️ UV ${data.uv} exceeds ${rhythm.threshold} — ${rhythm.note || 'adapt this habit'}`
-        : `Waiting for UV above ${rhythm.threshold}`;
+      if (!Number.isFinite(data.uv)) return `UV cue at ${rhythm.threshold} or higher`;
+      return data.uv >= rhythm.threshold
+        ? `☀️ UV ${data.uv} reached ${rhythm.threshold} — ${rhythm.note || 'adapt this habit'}`
+        : `UV ${data.uv} is below ${rhythm.threshold}`;
     case 'aqi-below':
-      if (!Number.isFinite(data.aqi)) return 'Air-quality data unavailable';
-      return data.aqi < rhythm.threshold
-        ? `🍃 AQI ${data.aqi} is below ${rhythm.threshold} — ${rhythm.note || 'good conditions for this habit'}`
-        : `AQI ${data.aqi} is not below ${rhythm.threshold}`;
+      if (!Number.isFinite(data.aqi)) return `US AQI cue at or below ${rhythm.threshold}`;
+      return data.aqi <= rhythm.threshold
+        ? `🍃 AQI ${data.aqi} is at most ${rhythm.threshold} — ${rhythm.note || 'more favorable conditions for this habit'}`
+        : `AQI ${data.aqi} is above ${rhythm.threshold}`;
     default:
       return '';
   }
@@ -2240,19 +2262,50 @@ function loadState(activeHabits) {
   return normalizeStoredState({}, habits, false);
 }
 
+function reconcileHabitOrder(savedOrder, defaults) {
+  const allIds = defaults.map(habit => habit.id);
+  const validIds = new Set(allIds);
+  const seen = new Set();
+  const reconciled = [];
+  if (Array.isArray(savedOrder)) {
+    savedOrder.forEach(id => {
+      if (validIds.has(id) && !seen.has(id)) {
+        seen.add(id);
+        reconciled.push(id);
+      }
+    });
+  }
+  allIds.forEach(id => {
+    if (!seen.has(id)) reconciled.push(id);
+  });
+  return reconciled;
+}
+
+function normalizeImportedHabitOrder(savedOrder, defaults) {
+  if (!Array.isArray(savedOrder) || savedOrder.length === 0) {
+    throw new Error('The backup habit list is not compatible with this version.');
+  }
+  const allIds = defaults.map(habit => habit.id);
+  const validIds = new Set(allIds);
+  const uniqueIds = new Set(savedOrder);
+  if (uniqueIds.size !== savedOrder.length || savedOrder.some(id => typeof id !== 'string' || !validIds.has(id))) {
+    throw new Error('The backup habit list is not compatible with this version.');
+  }
+  const missingIds = allIds.filter(id => !uniqueIds.has(id));
+  const isCurrentOrder = missingIds.length === 0 && savedOrder.length === allIds.length;
+  const isLegacyOrder = missingIds.length === 1 && missingIds[0] === 'daylight' && savedOrder.length === allIds.length - 1;
+  if (!isCurrentOrder && !isLegacyOrder) {
+    throw new Error('The backup habit list is not compatible with this version.');
+  }
+  return reconcileHabitOrder(savedOrder, defaults);
+}
+
 function loadOrder() {
   try {
     const raw = localStorage.getItem(ORDER_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      // Validate: must contain all current habit IDs
-      const allIds = DEFAULT_HABITS.map(h => h.id);
-      if (parsed.length === allIds.length && allIds.every(id => parsed.includes(id))) {
-        return parsed;
-      }
-    }
+    if (raw) return reconcileHabitOrder(JSON.parse(raw), DEFAULT_HABITS);
   } catch(e) {}
-  return DEFAULT_HABITS.map(h => h.id);
+  return reconcileHabitOrder([], DEFAULT_HABITS);
 }
 
 let state = loadState();
@@ -2343,6 +2396,7 @@ function renderHabits() {
     ? `<div class="habit-empty">No ${currentCat === 'all' ? '' : `${currentCat} `}habits scheduled today.</div>`
     : sorted.map((h, i) => {
     const measurement = normalizeMeasurementConfig(h);
+    const rhythm = normalizeRhythmConfig(h.rhythm);
     const progress = getHabitProgress(todayDone, todayProgress, h);
     const isDone = isHabitProgressComplete(h, progress);
     const measurementDisplay = measurement.type === 'check' ? null : getMeasurementDisplay(h, progress);
@@ -2373,7 +2427,7 @@ function renderHabits() {
         <div class="habit-body">
           <div class="habit-text">${escapeHtml(h.text)}</div>
           <div class="habit-note">${escapeHtml(h.note)}</div>
-          ${normalizeRhythmConfig(h.rhythm) ? `<div class="rhythm-anchor-label" aria-live="polite">${escapeHtml(RHYTHM_LABELS[normalizeRhythmConfig(h.rhythm).type] || '')}</div>` : ''}
+          ${rhythm ? `<div class="rhythm-anchor-label" aria-live="polite">${escapeHtml(getRhythmAnchorText(rhythm, rhythmWeatherData))}</div>` : ''}
           ${progressMarkup}
         </div>
         ${progressControls}
@@ -2983,8 +3037,10 @@ function updateRhythmRow(row) {
   const type = row.querySelector('.eh-rhythm').value;
   const thresholdField = row.querySelector('.eh-rhythm-threshold-field');
   const thresholdInput = row.querySelector('.eh-rhythm-threshold');
+  const noteInput = row.querySelector('.eh-rhythm-note');
   const needsThreshold = type === 'temp-above' || type === 'temp-below' || type === 'uv-above' || type === 'aqi-below';
   if (thresholdField) thresholdField.hidden = !needsThreshold;
+  if (noteInput) noteInput.hidden = type === 'none';
   if (needsThreshold && thresholdInput) {
     thresholdInput.placeholder = type === 'aqi-below' ? 'e.g. 50' : type === 'uv-above' ? 'e.g. 8' : 'e.g. 90';
   }
@@ -3039,7 +3095,7 @@ function renderManageModal() {
             <label class="eh-rhythm-field eh-rhythm-threshold-field" ${normalizeRhythmConfig(h.rhythm)?.type !== 'temp-above' && normalizeRhythmConfig(h.rhythm)?.type !== 'temp-below' && normalizeRhythmConfig(h.rhythm)?.type !== 'uv-above' && normalizeRhythmConfig(h.rhythm)?.type !== 'aqi-below' ? 'hidden' : ''}>
               <span>Threshold</span><input class="eh-rhythm-threshold" type="number" min="0" step="0.1" value="${normalizeRhythmConfig(h.rhythm)?.threshold ?? ''}" placeholder="${normalizeRhythmConfig(h.rhythm)?.type === 'aqi-below' ? 'e.g. 50' : normalizeRhythmConfig(h.rhythm)?.type === 'uv-above' ? 'e.g. 8' : 'e.g. 90'}">
             </label>
-            <input type="text" class="eh-rhythm-note" maxlength="120" value="${escapeHtml(normalizeRhythmConfig(h.rhythm)?.note ?? '')}" placeholder="Optional: explain why this version of the habit (shown on the card)">
+            <input type="text" class="eh-rhythm-note" maxlength="120" value="${escapeHtml(normalizeRhythmConfig(h.rhythm)?.note ?? '')}" placeholder="Optional: explain why this version of the habit (shown on the card)" ${normalizeRhythmConfig(h.rhythm) ? '' : 'hidden'}>
           </div>
         </div>
       </div>
@@ -3130,7 +3186,10 @@ function saveManageModal() {
       }
     }
     const rhythmType = row.querySelector('.eh-rhythm').value;
-    if (rhythmType !== 'none') {
+    const defaultRhythm = normalizeRhythmConfig(def.rhythm);
+    if (rhythmType === 'none' && defaultRhythm) {
+      changes.rhythm = null;
+    } else if (rhythmType !== 'none') {
       const rhythmCandidate = { type: rhythmType };
       if (rhythmType === 'temp-above' || rhythmType === 'temp-below' || rhythmType === 'uv-above' || rhythmType === 'aqi-below') {
         rhythmCandidate.threshold = Number(row.querySelector('.eh-rhythm-threshold').value);
