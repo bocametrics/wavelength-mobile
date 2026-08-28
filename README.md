@@ -43,6 +43,14 @@ Count and Amount habits count as one completed habit only after their goal is re
 
 Changing a goal recalculates today's completion from the amount already recorded without rewriting that amount or earlier completion history. Existing completed checkmarks remain completed if a habit is first converted to Count or Amount. Changing a habit's measurement type removes that habit's incompatible numeric progress across all dates, while prior completion snapshots remain intact for streaks and weekly totals. **Reset today** clears both checkmarks and measured progress for the current date.
 
+## Card layout and Reorder mode
+
+Every habit card uses the same fixed height (104px on a 390px iPhone viewport), regardless of measurement type. Measured progress appears as a compact chip inline with the habit note, plus a 3px progress bar along the card's bottom edge — not a full-width meter that grows the card. The `−` and `+` controls sit in a vertical 40px rail on the right.
+
+The `weight` field (w1/w2) remains editable in Manage for stored-data compatibility, but no longer appears on the daily card — it never entered a computation (daily count, streaks, ring).
+
+**Reorder mode** is separate from tracking. Tap **↕ Reorder** to swap the `−/+` steppers for up/down arrows and a right-side drag grip; the hint line appears only in this mode. Tap **✓ Done** (or press Escape) to return to tracking. Card completion is suppressed while reordering.
+
 ## Streak behavior
 
 Only habits scheduled for a date appear in **Today's Habits** or count toward that date's totals. The displayed count, progress ring, weekly percentages, and category totals all use the scheduled set as their denominator. Changing a habit's selected weekdays recalculates those views immediately; an unscheduled completion remains stored but does not inflate the visible totals.

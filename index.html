@@ -369,10 +369,13 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   }
 
   .habit {
-    display: flex;
+    display: grid;
+    grid-template-columns: 28px 22px minmax(0, 1fr) auto;
     align-items: center;
+    height: 104px;
+    min-height: 104px;
     gap: 8px;
-    padding: 14px 16px;
+    padding: 10px 12px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
@@ -382,6 +385,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     -webkit-user-select: none;
     -webkit-touch-callout: none;
     position: relative;
+    overflow: hidden;
   }
 
   .habit:hover {
@@ -410,7 +414,9 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   /* ── Drag Handle ── */
   .drag-handle {
-    display: grid;
+    display: none;
+    min-width: 32px;
+    min-height: 44px;
     grid-template-columns: repeat(2, auto);
     align-content: center;
     gap: 2px;
@@ -492,25 +498,37 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   .habit-progress {
     display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 6px 10px;
-    margin-top: 8px;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    margin-top: 5px;
   }
 
-  .progress-meter { flex: 1; min-width: 88px; }
-  .progress-summary {
-    color: var(--text2);
+  .progress-chip {
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
     font-size: 0.68rem;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
-  .progress-track {
-    height: 3px;
-    margin-top: 5px;
+  .progress-step-copy {
+    min-width: 0;
     overflow: hidden;
-    border-radius: 999px;
+    color: var(--text3);
+    font-size: 0.64rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .progress-edge {
+    position: absolute;
+    right: 12px;
+    bottom: 0;
+    left: 12px;
+    height: 3px;
+    overflow: hidden;
+    border-radius: 999px 999px 0 0;
     background: var(--ring-track);
   }
   .progress-fill {
@@ -519,16 +537,23 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     background: var(--completion-blue);
     transition: width 0.2s ease;
   }
-  .progress-actions { display: flex; gap: 4px; margin-left: auto; }
+  .progress-stepper {
+    display: grid;
+    grid-template-rows: 40px 40px;
+    gap: 4px;
+    width: 40px;
+    align-self: center;
+  }
   .progress-step {
+    width: 40px;
     min-width: 40px;
     min-height: 40px;
-    padding: 6px 9px;
+    padding: 0;
     border: 1px solid var(--border2);
     border-radius: 9px;
     background: var(--surface-muted);
     color: var(--text2);
-    font: 600 0.7rem/1 inherit;
+    font: 600 0.9rem/1 inherit;
     cursor: pointer;
     touch-action: manipulation;
   }
@@ -557,7 +582,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   /* ── Move Buttons ── */
   .move-btns {
-    display: flex;
+    display: none;
     flex-direction: column;
     gap: 1px;
     flex-shrink: 0;
@@ -565,10 +590,12 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   .move-btn {
     background: none;
+    min-width: 40px;
+    min-height: 40px;
     border: none;
     color: var(--text3);
     cursor: pointer;
-    padding: 2px 4px;
+    padding: 0;
     border-radius: 4px;
     font-size: 0.7rem;
     line-height: 1;
@@ -810,6 +837,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   /* ── Reorder hint ── */
   .reorder-hint {
+    display: none;
     font-size: 0.7rem;
     color: var(--text3);
     text-align: center;
@@ -817,6 +845,20 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     opacity: 0.6;
     letter-spacing: 0.3px;
   }
+
+  .reorder-hint.show { display: block; }
+
+  .habits.reorder-mode .habit {
+    grid-template-columns: 28px 22px minmax(0, 1fr) auto auto;
+    border-style: dashed;
+  }
+
+  .habits.reorder-mode .progress-stepper,
+  .habits.reorder-mode .habit-progress,
+  .habits.reorder-mode .progress-edge { display: none; }
+
+  .habits.reorder-mode .move-btns { display: flex; }
+  .habits.reorder-mode .drag-handle { display: grid; }
 
   .reorder-hint .grip-icon {
     fill: currentColor;
@@ -1280,6 +1322,11 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     color: var(--text2);
   }
 
+  .manage-btn[aria-pressed="true"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
   /* ── iPhone / PWA experience ── */
   html {
     background: var(--bg);
@@ -1501,11 +1548,11 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   <!-- Habits -->
   <div class="section-title">
-    <h2>Today's habits <button class="manage-btn" id="manageBtn">✎ Manage</button></h2>
+    <h2>Today's habits <button class="manage-btn" id="manageBtn">✎ Manage</button><button class="manage-btn" id="reorderBtn" type="button" aria-pressed="false">↕ Reorder</button></h2>
     <span class="count" id="doneCount">0 / 20</span>
   </div>
 
-  <div class="reorder-hint"><svg class="grip-icon" width="12" height="15" viewBox="0 0 12 15" aria-hidden="true" focusable="false"><circle cx="3" cy="2.5" r="1.4"/><circle cx="9" cy="2.5" r="1.4"/><circle cx="3" cy="7.5" r="1.4"/><circle cx="9" cy="7.5" r="1.4"/><circle cx="3" cy="12.5" r="1.4"/><circle cx="9" cy="12.5" r="1.4"/></svg> Hold the right grip to drag — or use ↑↓ arrows</div>
+  <div class="reorder-hint" id="reorderHint"><svg class="grip-icon" width="12" height="15" viewBox="0 0 12 15" aria-hidden="true" focusable="false"><circle cx="3" cy="2.5" r="1.4"/><circle cx="9" cy="2.5" r="1.4"/><circle cx="3" cy="7.5" r="1.4"/><circle cx="9" cy="7.5" r="1.4"/><circle cx="3" cy="12.5" r="1.4"/><circle cx="9" cy="12.5" r="1.4"/></svg> Hold the right grip to drag — or use ↑↓ arrows</div>
 
   <div class="habits" id="habitList"></div>
 
@@ -2272,9 +2319,11 @@ function getWeekDates() {
 // RENDER
 // ═══════════════════════════════════════════════════════════════════
 let currentCat = 'all';
+let reorderMode = false;
 
 function renderHabits() {
   const list = document.getElementById('habitList');
+  list.classList.toggle('reorder-mode', reorderMode);
   const now = new Date();
   const todayStats = getDailyHabitStats(state.done || {}, HABITS, now, 5, state.progress || {});
   const todayDone = state.done[dateKey(now)] || {};
@@ -2304,15 +2353,18 @@ function renderHabits() {
     const measurementDisplay = measurement.type === 'check' ? null : getMeasurementDisplay(h, progress);
     const progressMarkup = measurementDisplay ? `
           <div class="habit-progress">
-            <div class="progress-meter" role="progressbar" aria-label="Progress for ${escapeHtml(h.text)}" aria-valuemin="0" aria-valuemax="${measurement.target}" aria-valuenow="${Math.min(progress, measurement.target)}">
-              <div class="progress-summary" aria-live="polite">${escapeHtml(measurementDisplay.summary)}</div>
-              <div class="progress-track"><div class="progress-fill" style="width:${measurementDisplay.pct}%"></div></div>
-            </div>
-            <div class="progress-actions">
-              <button type="button" class="progress-step progress-minus" data-progress-id="${escapeHtml(h.id)}" data-progress-direction="-1" aria-label="Subtract ${escapeHtml(measurementDisplay.incrementLabel.slice(1))} from ${escapeHtml(h.text)}" ${progress <= 0 ? 'disabled' : ''}>−</button>
-              <button type="button" class="progress-step progress-plus" data-progress-id="${escapeHtml(h.id)}" data-progress-direction="1" aria-label="Add ${escapeHtml(measurementDisplay.incrementLabel.slice(1))} to ${escapeHtml(h.text)}" ${isDone ? 'disabled' : ''}>${escapeHtml(measurementDisplay.incrementLabel)}</button>
-            </div>
+            <span class="progress-chip" aria-live="polite">${escapeHtml(measurementDisplay.summary)}</span>
+            <span class="progress-step-copy">${escapeHtml(measurementDisplay.incrementLabel)} each tap</span>
           </div>` : '';
+    const progressControls = measurementDisplay ? `
+        <div class="progress-stepper">
+          <button type="button" class="progress-step progress-minus" data-progress-id="${escapeHtml(h.id)}" data-progress-direction="-1" aria-label="Subtract ${escapeHtml(measurementDisplay.incrementLabel.slice(1))} from ${escapeHtml(h.text)}" ${progress <= 0 ? 'disabled' : ''}>−</button>
+          <button type="button" class="progress-step progress-plus" data-progress-id="${escapeHtml(h.id)}" data-progress-direction="1" aria-label="Add ${escapeHtml(measurementDisplay.incrementLabel.slice(1))} to ${escapeHtml(h.text)}" ${isDone ? 'disabled' : ''}>+</button>
+        </div>` : '';
+    const progressEdge = measurementDisplay ? `
+        <div class="progress-edge" role="progressbar" aria-label="Progress for ${escapeHtml(h.text)}" aria-valuemin="0" aria-valuemax="${measurement.target}" aria-valuenow="${Math.min(progress, measurement.target)}">
+          <div class="progress-fill" style="width:${measurementDisplay.pct}%"></div>
+        </div>` : '';
     const isFirst = h.id === firstId;
     const isLast = h.id === lastId;
     return `
@@ -2328,7 +2380,7 @@ function renderHabits() {
           <div class="habit-note">${escapeHtml(h.note)}</div>
           ${progressMarkup}
         </div>
-        <span class="habit-badge">+${h.weight}</span>
+        ${progressControls}
         <div class="move-btns">
           <button class="move-btn" data-move="${h.id}" data-dir="up" ${isFirst ? 'disabled' : ''} title="Move up">▲</button>
           <button class="move-btn" data-move="${h.id}" data-dir="down" ${isLast ? 'disabled' : ''} title="Move down">▼</button>
@@ -2341,6 +2393,7 @@ function renderHabits() {
           <div class="drag-handle-dot"></div>
           <div class="drag-handle-dot"></div>
         </div>
+        ${progressEdge}
       </div>
       `;
     }).join('');
@@ -2348,6 +2401,7 @@ function renderHabits() {
   // Attach click-to-toggle on the habit card (skip clicks on handle, buttons, badge)
   list.querySelectorAll('.habit').forEach(el => {
     el.addEventListener('click', (e) => {
+      if (reorderMode) return;
       if (e.target.closest('.drag-handle') ||
           e.target.closest('.move-btn') ||
           e.target.closest('.habit-badge') ||
@@ -2390,6 +2444,16 @@ function renderHabits() {
   updateWeekly();
   updateRing();
   updateGreeting();
+}
+
+function setReorderMode(enabled) {
+  reorderMode = Boolean(enabled);
+  const button = document.getElementById('reorderBtn');
+  const hint = document.getElementById('reorderHint');
+  button.setAttribute('aria-pressed', String(reorderMode));
+  button.textContent = reorderMode ? '✓ Done' : '↕ Reorder';
+  hint.classList.toggle('show', reorderMode);
+  renderHabits();
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -3192,8 +3256,12 @@ function init() {
     showToast('↻ Today reset. Fresh start.');
   });
 
-  // Manage button
-  document.getElementById('manageBtn').addEventListener('click', openManageModal);
+  // Manage and Reorder modes
+  document.getElementById('manageBtn').addEventListener('click', () => {
+    setReorderMode(false);
+    openManageModal();
+  });
+  document.getElementById('reorderBtn').addEventListener('click', () => setReorderMode(!reorderMode));
   document.getElementById('modalClose').addEventListener('click', closeManageModal);
   document.getElementById('modalOverlay').addEventListener('click', e => {
     if (e.target === e.currentTarget) closeManageModal();
@@ -3229,6 +3297,7 @@ function init() {
   // Close on Escape
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && modalOpen) closeManageModal();
+    else if (e.key === 'Escape' && reorderMode) setReorderMode(false);
   });
 
   renderHabits();

@@ -390,6 +390,8 @@ for (const [label, htmlPath] of builds) {
   );
 
   assert.match(html, /class=["']eh-measurement["']/, `${label}: Manage rows need a measurement type selector`);
+  assert.doesNotMatch(html, /<span class=["']habit-badge["']>/, `${label}: daily cards must not display unused weight metadata`);
+  assert.match(html, /class=["']eh-weight["']/, `${label}: Manage retains weight metadata for stored-data compatibility`);
   assert.match(html, /value=["']check["'][^>]*>Check once</, `${label}: Manage supports check-once habits`);
   assert.match(html, /value=["']count["'][^>]*>Count</, `${label}: Manage supports count habits`);
   assert.match(html, /value=["']amount["'][^>]*>Amount</, `${label}: Manage supports amount habits`);
@@ -398,6 +400,24 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /class=["']eh-unit["']/, `${label}: amount habits expose a unit input`);
   assert.match(html, /class=["']progress-step progress-minus["']/, `${label}: measured cards need a subtract control`);
   assert.match(html, /class=["']progress-step progress-plus["']/, `${label}: measured cards need an add control`);
+  assert.match(html, /class=["']progress-chip["']/, `${label}: measured cards display progress in a compact inline chip`);
+  assert.match(html, /class=["']progress-step-copy["']/, `${label}: measured cards explain the per-tap increment outside the button`);
+  assert.match(html, /class=["']progress-edge["']/, `${label}: measured cards place progress on the card bottom edge`);
+  assert.match(html, /class=["']progress-stepper["']/, `${label}: measured controls use a dedicated trailing rail`);
+  assert.doesNotMatch(html, /<div class=["']progress-meter["']/, `${label}: measured cards must not render the wrapping meter row`);
+  assert.match(html, /\.habit\s*\{[^}]*height:\s*104px[^}]*min-height:\s*104px/s, `${label}: every habit card uses the same fixed height`);
+  assert.match(html, /id=["']reorderBtn["'][^>]*aria-pressed=["']false["']/, `${label}: the list exposes an accessible Reorder-mode toggle`);
+  assert.match(html, /let reorderMode = false;/, `${label}: tracking mode is the default`);
+  assert.match(html, /classList\.toggle\(['"]reorder-mode['"], reorderMode\)/, `${label}: list rendering exposes Reorder mode to CSS`);
+  assert.match(html, /if \(reorderMode\) return;/, `${label}: card completion is disabled while reordering`);
+  assert.match(html, /\.move-btns\s*\{[^}]*display:\s*none/s, `${label}: arrows are hidden in tracking mode`);
+  assert.match(html, /\.drag-handle\s*\{[^}]*display:\s*none/s, `${label}: grips are hidden in tracking mode`);
+  assert.match(html, /\.habits\.reorder-mode \.move-btns\s*\{[^}]*display:\s*flex/s, `${label}: arrows appear only in Reorder mode`);
+  assert.match(html, /\.habits\.reorder-mode \.drag-handle\s*\{[^}]*display:\s*grid/s, `${label}: grips appear only in Reorder mode`);
+  assert.match(html, /\.habits\.reorder-mode \.progress-stepper,[\s\S]*?display:\s*none;/, `${label}: measurement controls leave the rail in Reorder mode`);
+  assert.match(html, /\.move-btn\s*\{[^}]*min-width:\s*40px[^}]*min-height:\s*40px/s, `${label}: Reorder arrows use mobile-sized targets`);
+  assert.match(html, /\.drag-handle\s*\{[^}]*min-width:\s*32px[^}]*min-height:\s*44px/s, `${label}: Reorder grip has a deliberate hold target`);
+  assert.match(html, /\.progress-stepper\s*\{[^}]*grid-template-rows:\s*40px 40px/s, `${label}: measured controls use a vertical 40px rail`);
   assert.match(html, /\.progress-step\s*\{[^}]*min-height:\s*40px/s, `${label}: measured card controls need mobile-sized targets`);
   assert.match(html, /const resetDate = new Date\(\);\s*resetHabitDay\(state, resetDate\);/, `${label}: Reset today captures one date for completion and progress`);
   assert.match(html, /getElementById\('modalReset'\)[\s\S]*previousHabits[\s\S]*reconcileMeasurementTypeChanges[\s\S]*saveState\(\)[\s\S]*renderHabits\(\)/, `${label}: Reset defaults reconciles measured state and saves before rendering`);
