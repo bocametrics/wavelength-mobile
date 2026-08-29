@@ -203,7 +203,7 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /ghost\.textContent\s*=/, `${label}: drag ghost content must not use innerHTML`);
   assert.match(html, /state\.longestStreak\s*=\s*resolveLongestStreak\(historicalBest, streak\)/, `${label}: longest streak must recalculate under the current schedule`);
   assert.doesNotMatch(html, /const TODAY_KEY\s*=/, `${label}: daily actions must not freeze the date at page load`);
-  assert.match(html, /function toggleHabit\(id\)[\s\S]*?const todayKey = dateKey\(new Date\(\)\)/, `${label}: habit toggles must resolve today's key at interaction time`);
+  assert.match(html, /function toggleHabit\(id\) \{\s*const now = new Date\(\);\s*const todayKey = dateKey\(now\);[\s\S]*getDailyHabitStats\(state\.done \|\| \{\}, HABITS, now, 5, state\.progress \|\| \{\}\)/, `${label}: habit toggles capture one interaction timestamp for the key and statistics`);
 }
 
 console.log('weekday schedule regression tests passed for mobile and desktop');

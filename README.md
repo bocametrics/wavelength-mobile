@@ -67,7 +67,17 @@ A habit can be anchored to an environmental condition so Wavelength can surface 
 
 When live environmental data loads from Open-Meteo, `updateRhythmAnchors()` updates a small accent-colored label on each anchored card. The forecast endpoint supplies feels-like temperature, sunrise, sunset, and UV index; Open-Meteo's air-quality endpoint supplies US AQI. Live labels use a compact `reading · meaning/action` pattern, while no-data fallbacks retain the configured threshold. AQI labels name the standard US AQI category instead of narrating a numeric comparison. An optional custom action is limited to 60 characters and rejects dense comparison punctuation or phrasing; invalid local legacy notes are dropped without removing their anchor, while strict backup imports reject them. Exact former shipped notes migrate to the current concise defaults. Manage does not persist rhythm overrides that are identical to shipped defaults.
 
-Rhythm anchors do not change streaks, daily targets, or completion logic. They are advisory labels that help you choose the right form of the same intention.
+Rhythm anchors do not change streaks, daily targets, or completion logic. They remain advisory context for choosing the right form of the same intention.
+
+### Your next wave
+
+The bottom rhythm dashboard is replaced by a single **Your next wave** recommendation. It considers only habits that are scheduled today and not yet complete, then combines their state with the current time and available environmental readings. The priority order is: adapt activity when AQI is unfavorable, protect against active UV, use time-sensitive daylight, surface a favorable outdoor window, reinforce hydration in heat, then offer one time-appropriate open habit. When every scheduled habit is complete, the card changes to a calm completion message.
+
+The recommendation leads with the habit action and keeps the condition secondary, for example **Now is a good time for your outdoor walk** with `Good air quality · AQI 43` beneath it. **View habit** selects the relevant category, scrolls to that habit, and briefly highlights it without changing completion. Completing or updating a habit immediately advances the recommendation. If location is denied or data is unavailable, the card still chooses a helpful habit-based fallback rather than showing a technical weather error.
+
+AQI health guidance always follows the fixed US AQI bands: a custom movement threshold may be stricter than 100, but it can never loosen the outdoor-opportunity safety ceiling above 100. An explicit `rhythm: null` suppresses environmental opportunity copy for that habit, including sunrise-specific daylight advice. Wavelength schedules a refresh just after local midnight and also checks the date on `visibilitychange` and `pageshow`, so an installed app resumed after sleeping does not retain yesterday’s habits or recommendation.
+
+The checked-in 390px Edge flow is `tests/browser/next-wave-e2e.cjs`. On the WSL/Windows test host, copy it to `C:\Temp\wavelength-next-wave-e2e.cjs`, serve the repository on port 8773, then run `cmd.exe /c "cd /d C:\Temp && node wavelength-next-wave-e2e.cjs"`. Set `WAVELENGTH_ORIGIN` and `WAVELENGTH_URL` to rerun the same assertions against the deployed Pages build.
 
 ### Card copy
 
@@ -103,6 +113,7 @@ node tests/greeting-responsive-regression.mjs
 node tests/schedule-regression.mjs
 node tests/measurement-regression.mjs
 node tests/default-habits-regression.mjs
+node tests/next-wave-regression.mjs
 ```
 
 All cross-build suites use the tracked desktop fixture at `tests/fixtures/friday_app_2026-07-12.html`, so they run from a clean repository checkout. When shared behavior changes, update both the external standalone desktop file and this byte-identical fixture.

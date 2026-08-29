@@ -49,7 +49,7 @@ function extractFunction(source, name) {
 function loadOverrideFunctions(source) {
   const rhythmPrelude = source.match(/const RHYTHM_TYPES\s*=\s*[^;]+;[\s\S]*?const RHYTHM_LABELS\s*=\s*\{[\s\S]*?\};/);
   assert.ok(rhythmPrelude, 'rhythm constants are missing');
-  const names = ['normalizeMeasurementConfig', 'normalizeHabitDays', 'normalizeCustomHabitOverrides', 'normalizeRhythmConfig', 'reconcileHabitOrder', 'normalizeImportedHabitOrder', 'getRhythmAnchorText'];
+  const names = ['normalizeMeasurementConfig', 'normalizeHabitDays', 'normalizeCustomHabitOverrides', 'normalizeRhythmConfig', 'reconcileHabitOrder', 'normalizeImportedHabitOrder', 'getAqiCategory', 'getRhythmAnchorText'];
   const context = {};
   vm.createContext(context);
   vm.runInContext(
@@ -179,7 +179,8 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /'uv-above': 'When UV index reaches'/, `${label}: Manage describes the inclusive UV comparison accurately`);
   assert.match(html, /'aqi-below': 'When US AQI is at most'/, `${label}: Manage describes the inclusive AQI comparison accurately`);
 
-  assert.match(html, /id=["']insightsHeading["'][^>]*>🌊 Your local rhythm</, `${label}: insight heading is location agnostic before permission`);
+  assert.match(html, /id=["']insightsHeading["'][^>]*>🌊 Your next wave</, `${label}: Next Wave heading stays habit-focused before and after location permission`);
+  assert.doesNotMatch(html, /insightSunrise|insightHeat|Your \$\{loc\.city\} rhythm/, `${label}: the retired weather dashboard does not return`);
   assert.doesNotMatch(html, /const DEFAULT_LOC|const MONTHLY_CLIMATE|const FLORIDA_FACTS/, `${label}: denied location never falls back to invented West Palm Beach conditions`);
 }
 

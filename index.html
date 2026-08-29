@@ -782,12 +782,8 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     color: var(--text3);
   }
 
-  /* ── Insights ── */
+  /* ── Your Next Wave ── */
   .insights {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
     margin-bottom: 24px;
   }
 
@@ -800,34 +796,82 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     margin-bottom: 12px;
   }
 
-  .insight-card {
+  .next-wave-card {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    align-items: start;
+    gap: 14px;
+    padding: 18px;
+    background: linear-gradient(135deg, var(--accent-soft), var(--surface) 72%);
+    border: 1px solid var(--accent-border);
+    border-radius: var(--radius);
+  }
+
+  .next-wave-icon {
+    width: 44px;
+    height: 44px;
     display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 12px 0;
-    border-bottom: 1px solid var(--border);
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    font-size: 1.25rem;
+    line-height: 1;
   }
 
-  .insight-card:last-child {
-    border-bottom: none;
-    padding-bottom: 0;
+  .next-wave-body { min-width: 0; }
+
+  .next-wave-eyebrow {
+    color: var(--accent);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 5px;
   }
 
-  .insight-icon {
-    font-size: 1.1rem;
-    flex-shrink: 0;
-    margin-top: 2px;
-  }
-
-  .insight-text {
-    font-size: 0.82rem;
-    color: var(--text2);
-    line-height: 1.5;
-  }
-
-  .insight-text strong {
+  .next-wave-title {
     color: var(--text);
-    font-weight: 500;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.35;
+    margin-bottom: 5px;
+  }
+
+  .next-wave-detail {
+    color: var(--text2);
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  .next-wave-action {
+    min-height: 40px;
+    margin-top: 12px;
+    padding: 0 14px;
+    border: 1px solid var(--accent-border-strong);
+    border-radius: 20px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .next-wave-action:hover { background: var(--accent-medium); }
+  .next-wave-action[hidden] { display: none; }
+
+  .habit.next-wave-focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .habit.next-wave-focus { animation: nextWaveFocus 1.2s ease; }
+    @keyframes nextWaveFocus {
+      0%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-2px); }
+    }
   }
 
   /* ── Reset Button ── */
@@ -1660,24 +1704,19 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     <div class="week-grid" id="weekGrid"></div>
   </div>
 
-  <!-- Insights -->
-  <div class="insights">
-    <h3 id="insightsHeading">🌊 Your local rhythm</h3>
-    <div id="insights">
-      <div class="insight-card">
-        <div class="insight-icon">🌅</div>
-        <div class="insight-text" id="insightSunrise">Warming up the sunrise data…</div>
-      </div>
-      <div class="insight-card">
-        <div class="insight-icon">💧</div>
-        <div class="insight-text" id="insightHeat">Warming up the heat data…</div>
-      </div>
-      <div class="insight-card">
-        <div class="insight-icon">🏖️</div>
-        <div class="insight-text">Your top habit category this week: <strong id="topCategory">—</strong></div>
+  <!-- Your Next Wave -->
+  <section class="insights" aria-labelledby="insightsHeading">
+    <h3 id="insightsHeading">🌊 Your next wave</h3>
+    <div class="next-wave-card" id="nextWaveCard" aria-live="polite">
+      <div class="next-wave-icon" id="nextWaveIcon" aria-hidden="true">🌊</div>
+      <div class="next-wave-body">
+        <div class="next-wave-eyebrow" id="nextWaveEyebrow">Finding your next step</div>
+        <div class="next-wave-title" id="nextWaveTitle">Looking at today’s open habits…</div>
+        <div class="next-wave-detail" id="nextWaveDetail">Conditions stay in the background until they can help.</div>
+        <button type="button" class="next-wave-action" id="nextWaveAction" hidden>View habit</button>
       </div>
     </div>
-  </div>
+  </section>
 
   <!-- Reset -->
   <div class="reset-area">
@@ -2058,6 +2097,16 @@ function normalizeEnvironmentalReading(value, minimum = -Infinity) {
   return typeof value === 'number' && Number.isFinite(value) && value >= minimum ? value : null;
 }
 
+function getAqiCategory(aqi) {
+  if (!Number.isFinite(aqi) || aqi < 0) return '';
+  if (aqi <= 50) return 'Good air quality';
+  if (aqi <= 100) return 'Moderate air quality';
+  if (aqi <= 150) return 'Unhealthy for sensitive groups';
+  if (aqi <= 200) return 'Unhealthy air quality';
+  if (aqi <= 300) return 'Very unhealthy air quality';
+  return 'Hazardous air quality';
+}
+
 function normalizeHabitDays(days) {
   if (!Array.isArray(days)) return [0,1,2,3,4,5,6];
   return [...new Set(days.filter(day => Number.isInteger(day) && day >= 0 && day <= 6))].sort((a, b) => a - b);
@@ -2159,57 +2208,173 @@ function fmtClock(isoStr) {
   return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
-function renderInsights() {
-  const heading = document.getElementById('insightsHeading');
-  const sunEl = document.getElementById('insightSunrise');
-  const heatEl = document.getElementById('insightHeat');
+function getNextDateRolloverDelay(now) {
+  const nextDate = new Date(now);
+  nextDate.setHours(24, 0, 0, 50);
+  return Math.max(0, nextDate.getTime() - now.getTime());
+}
 
+function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data) {
+  doneByDate = doneByDate || {};
+  progressByDate = progressByDate || {};
+  const key = dateKey(date);
+  const dayDone = doneByDate[key] || {};
+  const dayProgress = progressByDate[key] || {};
+  const scheduled = getScheduledHabits(habits, date);
+  const openHabits = scheduled.filter(habit => {
+    const progress = getHabitProgress(dayDone, dayProgress, habit);
+    return !isHabitProgressComplete(habit, progress);
+  });
+  const result = (habit, eyebrow, title, detail) => ({
+    habitId:habit.id,
+    category:habit.cat,
+    icon:habit.icon,
+    eyebrow,
+    title,
+    detail,
+    action:'View habit',
+  });
+
+  if (scheduled.length === 0) {
+    return { habitId:null, category:null, icon:'○', eyebrow:'A quiet day', title:'No habits are scheduled today.', detail:'Use the space in whatever way feels restorative.', action:null };
+  }
+  if (openHabits.length === 0) {
+    return { habitId:null, category:null, icon:'✓', eyebrow:'You’re caught up', title:'Today’s habits are complete.', detail:'You followed through on every scheduled habit.', action:null };
+  }
+
+  const openById = id => openHabits.find(habit => habit.id === id);
+  const anchoredById = (id, type) => {
+    const habit = openById(id);
+    const rhythm = habit ? normalizeRhythmConfig(habit.rhythm) : null;
+    return habit && rhythm && rhythm.type === type ? { habit, rhythm } : null;
+  };
+  const snapshot = data && typeof data === 'object' ? data : {};
+  const aqi = Number.isFinite(snapshot.aqi) && snapshot.aqi >= 0 ? snapshot.aqi : null;
+  const uv = Number.isFinite(snapshot.uv) && snapshot.uv >= 0 ? snapshot.uv : null;
+  const feel = Number.isFinite(snapshot.feel) ? snapshot.feel : null;
+  const hour = date.getHours();
+
+  const movement = anchoredById('beach', 'aqi-below');
+  if (movement && aqi !== null && aqi > 100) {
+    const category = getAqiCategory(aqi);
+    const title = aqi <= 150
+      ? "If you're sensitive to air quality, move indoors today."
+      : 'Move today’s activity indoors.';
+    return result(movement.habit, 'Adapt today', title, `${category} · AQI ${aqi}`);
+  }
+
+  const sunscreen = anchoredById('sunscreen', 'uv-above');
+  if (sunscreen && uv !== null && uv >= sunscreen.rhythm.threshold) {
+    return result(sunscreen.habit, 'Suggested now', 'Use sun protection before heading out.', `UV ${uv} · Sun protection matters now`);
+  }
+
+  const daylight = anchoredById('daylight', 'sunrise');
+  if (daylight && hour < 11) {
+    const detail = snapshot.sunrise ? `Sunrise today · ${snapshot.sunrise}` : 'Your morning light habit is still open.';
+    return result(daylight.habit, 'Suggested now', 'Step outside for your morning light.', detail);
+  }
+
+  if (movement && aqi !== null && aqi <= 100 && aqi <= movement.rhythm.threshold) {
+    const category = getAqiCategory(aqi);
+    const title = aqi <= 50 ? 'Now is a good time for your outdoor walk.' : 'Outdoor movement could fit now.';
+    return result(movement.habit, 'Suggested now', title, `${category} · AQI ${aqi}`);
+  }
+
+  const hydration = anchoredById('hydrate', 'temp-above');
+  if (hydration && feel !== null && feel > hydration.rhythm.threshold) {
+    return result(hydration.habit, 'Suggested now', 'Have your next glass of water.', `Feels like ${feel}°F`);
+  }
+
+  const sunsetHabit = openHabits.find(habit => normalizeRhythmConfig(habit.rhythm)?.type === 'sunset');
+  if (sunsetHabit && hour >= 16) {
+    const detail = snapshot.sunset ? `Sunset today · ${snapshot.sunset}` : 'Your evening cue is still open.';
+    return result(sunsetHabit, 'Suggested now', sunsetHabit.text, detail);
+  }
+
+  const openHydration = openById('hydrate');
+  if (openHydration && hour < 12) {
+    return result(openHydration, 'A simple next step', 'Start with your water habit.', 'A calm way to begin the day.');
+  }
+
+  const preferredCategories = hour < 11
+    ? ['morning','mind','movement','fuel','hygiene','evening']
+    : hour < 17
+      ? ['mind','movement','fuel','hygiene','morning','evening']
+      : ['evening','hygiene','mind','movement','fuel','morning'];
+  let next = null;
+  for (const category of preferredCategories) {
+    next = openHabits.find(habit => habit.cat === category && !(habit.id === 'wake' && hour >= 11));
+    if (next) break;
+  }
+  next = next || openHabits[0];
+  return result(next, 'Your next small win', next.text, 'One open habit that fits this part of your day.');
+}
+
+function renderNextWave(now = new Date()) {
+  const suggestion = getNextWaveSuggestion(HABITS, state.done || {}, state.progress || {}, now, rhythmWeatherData);
+  const icon = document.getElementById('nextWaveIcon');
+  const eyebrow = document.getElementById('nextWaveEyebrow');
+  const title = document.getElementById('nextWaveTitle');
+  const detail = document.getElementById('nextWaveDetail');
+  const action = document.getElementById('nextWaveAction');
+  if (!icon || !eyebrow || !title || !detail || !action) return;
+  icon.textContent = suggestion.icon;
+  eyebrow.textContent = suggestion.eyebrow;
+  title.textContent = suggestion.title;
+  detail.textContent = suggestion.detail;
+  action.hidden = !suggestion.action;
+  action.textContent = suggestion.action || '';
+  action.dataset.habitId = suggestion.habitId || '';
+}
+
+function focusNextWaveHabit() {
+  const habitId = document.getElementById('nextWaveAction')?.dataset.habitId;
+  const habit = HABITS.find(item => item.id === habitId);
+  if (!habit) return;
+  currentCat = habit.cat;
+  document.querySelectorAll('.cat-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.cat === currentCat);
+  });
+  if (reorderMode) setReorderMode(false);
+  else renderHabits();
+  requestAnimationFrame(() => {
+    const target = [...document.querySelectorAll('.habit[data-id]')].find(element => element.dataset.id === habitId);
+    if (!target) return;
+    const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    target.scrollIntoView({ behavior:reduceMotion ? 'auto' : 'smooth', block:'center' });
+    target.classList.add('next-wave-focus');
+    setTimeout(() => target.classList.remove('next-wave-focus'), 1400);
+  });
+}
+
+function renderInsights(now = new Date()) {
+  const generation = ++rhythmWeatherGeneration;
+  renderNextWave(now);
   getLocation().then(loc => {
-    if (!loc) {
-      if (heading) heading.textContent = '🌊 Your local rhythm';
-      if (sunEl) sunEl.textContent = 'Enable location to connect sunrise and sunset anchors to your day.';
-      if (heatEl) heatEl.textContent = 'Heat, UV, and air-quality cues are optional; every habit still works without location.';
-      return;
-    }
+    if (!loc) return;
+    if (generation !== rhythmWeatherGeneration) return;
 
-    const place = loc.city ? ` in ${loc.city}` : ' near you';
-    const safePlace = escapeHtml(place);
-    if (heading) heading.textContent = loc.city ? `🌊 Your ${loc.city} rhythm` : '🌊 Your local rhythm';
-    if (sunEl) sunEl.textContent = 'Checking today’s local daylight…';
-    if (heatEl) heatEl.textContent = 'Checking current heat and UV…';
-
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,uv_index&daily=sunrise,sunset&timezone=auto&temperature_unit=fahrenheit`)
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=apparent_temperature,uv_index&daily=sunrise,sunset&timezone=auto&temperature_unit=fahrenheit`)
       .then(r => {
         if (!r.ok) throw new Error('Forecast request failed');
         return r.json();
       })
       .then(d => {
+        if (generation !== rhythmWeatherGeneration) return;
         if (!d) return;
         const current = d.current || {};
         const feel = normalizeEnvironmentalReading(current.apparent_temperature);
-        const temp = normalizeEnvironmentalReading(current.temperature_2m);
-        const hum = normalizeEnvironmentalReading(current.relative_humidity_2m);
         const uv = normalizeEnvironmentalReading(current.uv_index);
         const sunrise = d.daily && d.daily.sunrise && d.daily.sunrise[0] ? fmtClock(d.daily.sunrise[0]) : '';
         const sunset = d.daily && d.daily.sunset && d.daily.sunset[0] ? fmtClock(d.daily.sunset[0]) : '';
-        if (sunEl && sunrise) {
-          sunEl.innerHTML = `Sunrise today${safePlace} is <strong>${escapeHtml(sunrise)}</strong>${sunset ? `; sunset is <strong>${escapeHtml(sunset)}</strong>` : ''}. Use local daylight as a cue, not a requirement.`;
-        }
-        if (heatEl && feel !== null && temp !== null && hum !== null) {
-          const uvCopy = uv === null ? '' : `, UV ${Math.round(uv)}`;
-          heatEl.innerHTML = `Right now it feels like <strong>${Math.round(feel)}°F</strong>${safePlace} (${Math.round(temp)}°F, ${Math.round(hum)}% humidity${uvCopy}). Anchored habits adapt the cue without changing the goal.`;
-        }
         const rhythmUpdate = {};
         if (sunrise) rhythmUpdate.sunrise = sunrise;
         if (sunset) rhythmUpdate.sunset = sunset;
         if (feel !== null) rhythmUpdate.feel = feel;
         if (uv !== null) rhythmUpdate.uv = uv;
-        updateRhythmAnchors(rhythmUpdate);
+        updateRhythmAnchors(rhythmUpdate, now);
       })
-      .catch(() => {
-        if (sunEl) sunEl.textContent = 'Local daylight data is unavailable; sunrise and sunset anchors stay advisory.';
-        if (heatEl) heatEl.textContent = 'Local weather data is unavailable; habits still work with their standard goals.';
-      });
+      .catch(() => { /* Next Wave keeps its habit-based fallback. */ });
 
     // Air quality is served by Open-Meteo's separate endpoint.
     fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${loc.lat}&longitude=${loc.lon}&current=us_aqi&timezone=auto`)
@@ -2218,17 +2383,23 @@ function renderInsights() {
         return r.json();
       })
       .then(d => {
+        if (generation !== rhythmWeatherGeneration) return;
         const aqi = d && d.current ? normalizeEnvironmentalReading(d.current.us_aqi, 0) : null;
-        if (aqi !== null) updateRhythmAnchors({ ...rhythmWeatherData, aqi });
+        if (aqi !== null) updateRhythmAnchors({ ...rhythmWeatherData, aqi }, now);
       })
       .catch(() => { /* anchored cards retain the offline-safe fallback */ });
   });
 }
 
 let rhythmWeatherData = null;
+let rhythmWeatherGeneration = 0;
 
-function updateRhythmAnchors(data) {
-  rhythmWeatherData = { ...(rhythmWeatherData || {}), ...(data || {}) };
+function mergeRhythmWeatherData(current, update) {
+  return { ...(current || {}), ...(update || {}) };
+}
+
+function updateRhythmAnchors(data, now = new Date()) {
+  rhythmWeatherData = mergeRhythmWeatherData(rhythmWeatherData, data);
   document.querySelectorAll('.habit[data-id]').forEach(el => {
     const habit = HABITS.find(h => h.id === el.dataset.id);
     if (!habit) return;
@@ -2239,6 +2410,7 @@ function updateRhythmAnchors(data) {
     const text = getRhythmAnchorText(rhythm, rhythmWeatherData);
     if (text) label.textContent = text;
   });
+  renderNextWave(now);
 }
 
 function getRhythmAnchorText(rhythm, data) {
@@ -2271,12 +2443,7 @@ function getRhythmAnchorText(rhythm, data) {
         : `UV ${data.uv} · Below sun cue`;
     case 'aqi-below': {
       if (!Number.isFinite(data.aqi) || data.aqi < 0) return `US AQI cue at or below ${rhythm.threshold}`;
-      const category = data.aqi <= 50 ? 'Good air quality'
-        : data.aqi <= 100 ? 'Moderate air quality'
-        : data.aqi <= 150 ? 'Unhealthy for sensitive groups'
-        : data.aqi <= 200 ? 'Unhealthy air quality'
-        : data.aqi <= 300 ? 'Very unhealthy air quality'
-        : 'Hazardous air quality';
+      const category = getAqiCategory(data.aqi);
       return data.aqi <= rhythm.threshold
         ? `🍃 AQI ${data.aqi} · ${rhythm.note || category}`
         : `AQI ${data.aqi} · ${category}`;
@@ -2574,15 +2741,13 @@ function resetHabitDay(appState, date) {
   return key;
 }
 
-function todayStr() {
-  const d = new Date();
+function todayStr(d = new Date()) {
   const opts = { weekday:'long', month:'long', day:'numeric' };
   return d.toLocaleDateString('en-US', opts);
 }
 
 // Week dates (Mon-Sun)
-function getWeekDates() {
-  const now = new Date();
+function getWeekDates(now = new Date()) {
   const day = now.getDay(); // 0=Sun
   const mon = new Date(now);
   mon.setDate(now.getDate() - ((day + 6) % 7));
@@ -2600,11 +2765,43 @@ function getWeekDates() {
 // ═══════════════════════════════════════════════════════════════════
 let currentCat = 'all';
 let reorderMode = false;
+let lastRenderedDateKey = null;
+let dateRolloverTimer = null;
 
-function renderHabits() {
+function updateDateDisplay(now = new Date()) {
+  document.getElementById('dateDay').textContent = todayStr(now);
+  const start = new Date(now.getFullYear(), 0, 1);
+  const weekNum = Math.ceil((((now - start) / 86400000) + start.getDay() + 1) / 7);
+  document.getElementById('dateLabel').textContent = `Week ${weekNum} · ${now.toLocaleDateString('en-US', { month:'long' })}`;
+}
+
+function refreshForDateRollover(now = new Date()) {
+  if (dateKey(now) === lastRenderedDateKey) return false;
+  rhythmWeatherData = {
+    feel: rhythmWeatherData && rhythmWeatherData.feel,
+    uv: rhythmWeatherData && rhythmWeatherData.uv,
+    aqi: rhythmWeatherData && rhythmWeatherData.aqi,
+  };
+  rhythmWeatherGeneration++;
+  updateDateDisplay(now);
+  renderHabits(now);
+  renderInsights(now);
+  return true;
+}
+
+function scheduleNextDateRollover(now = new Date()) {
+  if (dateRolloverTimer !== null) clearTimeout(dateRolloverTimer);
+  dateRolloverTimer = setTimeout(() => {
+    const rolloverNow = new Date();
+    refreshForDateRollover(rolloverNow);
+    scheduleNextDateRollover(rolloverNow);
+  }, getNextDateRolloverDelay(now));
+}
+
+function renderHabits(now = new Date()) {
+  lastRenderedDateKey = dateKey(now);
   const list = document.getElementById('habitList');
   list.classList.toggle('reorder-mode', reorderMode);
-  const now = new Date();
   const todayStats = getDailyHabitStats(state.done || {}, HABITS, now, 5, state.progress || {});
   const todayDone = state.done[dateKey(now)] || {};
   const todayProgress = (state.progress && state.progress[dateKey(now)]) || {};
@@ -2722,11 +2919,12 @@ function renderHabits() {
     });
   });
 
-  updateStreak();
-  updateWeekly();
-  updateRing();
-  updateGreeting();
-  if (rhythmWeatherData) updateRhythmAnchors(rhythmWeatherData);
+  updateStreak(now);
+  updateWeekly(now);
+  updateRing(now);
+  updateGreeting(now);
+  if (rhythmWeatherData) updateRhythmAnchors(rhythmWeatherData, now);
+  else renderNextWave(now);
 }
 
 function setReorderMode(enabled) {
@@ -2964,7 +3162,7 @@ function adjustMeasuredHabit(id, direction) {
   const display = getMeasurementDisplay(habit, change.progress);
   const stats = getDailyHabitStats(state.done || {}, HABITS, now, 5, state.progress || {});
   saveState();
-  renderHabits();
+  renderHabits(now);
   if (change.complete && !wasComplete && stats.scheduledCount > 0 && stats.doneCount === stats.scheduledCount) {
     showToast('🎉 ALL DONE! You crushed it today!');
     spawnConfetti();
@@ -2978,24 +3176,25 @@ function adjustMeasuredHabit(id, direction) {
 }
 
 function toggleHabit(id) {
-  const todayKey = dateKey(new Date());
+  const now = new Date();
+  const todayKey = dateKey(now);
   if (!state.done[todayKey]) state.done[todayKey] = {};
   const today = state.done[todayKey];
 
   if (today[id]) {
     delete today[id];
     saveState();
-    renderHabits();
+    renderHabits(now);
     showToast('Unmarked — that\'s okay. Fresh starts welcome.');
     return;
   }
 
   today[id] = true;
-  const stats = getDailyHabitStats(state.done || {}, HABITS, new Date(), 5, state.progress || {});
+  const stats = getDailyHabitStats(state.done || {}, HABITS, now, 5, state.progress || {});
   const { doneCount, scheduledCount, target } = stats;
 
   saveState();
-  renderHabits();
+  renderHabits(now);
 
   if (scheduledCount > 0 && doneCount === scheduledCount) {
     showToast('🎉 ALL DONE! You crushed it today!');
@@ -3026,8 +3225,8 @@ function getGreetingForHour(hour) {
   return { text: 'Good evening', icon: '🌙' };
 }
 
-function updateGreeting() {
-  const h = new Date().getHours();
+function updateGreeting(now = new Date()) {
+  const h = now.getHours();
   const greet = document.getElementById('greeting');
   const { text, icon } = getGreetingForHour(h);
   greet.textContent = `${text} ${icon}`;
@@ -3062,8 +3261,8 @@ function calculateLongestScheduledStreak(doneByDate, habits, throughDate = new D
   return longest;
 }
 
-function calculateLongestStreak() {
-  return calculateLongestScheduledStreak(state.done || {}, HABITS, new Date(), 5, state.progress || {});
+function calculateLongestStreak(now = new Date()) {
+  return calculateLongestScheduledStreak(state.done || {}, HABITS, now, 5, state.progress || {});
 }
 
 function resolveLongestStreak(historicalBest, currentStreak) {
@@ -3114,15 +3313,14 @@ function getStreakStatusCopy(streak, todayCount, target = 5) {
   return `✅ ${streak}-day streak secured!`;
 }
 
-function updateStreak() {
-  const now = new Date();
+function updateStreak(now = new Date()) {
   const todayStats = getDailyHabitStats(state.done || {}, HABITS, now, 5, state.progress || {});
   const streak = calculateCurrentStreak(state.done || {}, HABITS, now, 5, state.progress || {});
 
   document.getElementById('streakCount').textContent = streak;
   document.getElementById('streakEmoji').textContent = streak >= 7 ? '🔥' : streak >= 3 ? '🌊' : '💧';
 
-  const historicalBest = calculateLongestStreak();
+  const historicalBest = calculateLongestStreak(now);
   state.longestStreak = resolveLongestStreak(historicalBest, streak);
   document.getElementById('longestStreak').textContent =
     `${state.longestStreak} day${state.longestStreak === 1 ? '' : 's'}`;
@@ -3133,8 +3331,8 @@ function updateStreak() {
   saveState();
 }
 
-function updateRing() {
-  const stats = getDailyHabitStats(state.done || {}, HABITS, new Date(), 5, state.progress || {});
+function updateRing(now = new Date()) {
+  const stats = getDailyHabitStats(state.done || {}, HABITS, now, 5, state.progress || {});
   document.getElementById('ringPct').textContent = `${stats.pct}%`;
 
   const ring = document.querySelector('.streak-ring');
@@ -3142,10 +3340,9 @@ function updateRing() {
   ring.style.background = `conic-gradient(var(--success-ring) 0deg ${deg}deg, var(--ring-track) ${deg}deg 360deg)`;
 }
 
-function updateWeekly() {
-  const dates = getWeekDates();
+function updateWeekly(now = new Date()) {
+  const dates = getWeekDates(now);
   const grid = document.getElementById('weekGrid');
-  const now = new Date();
   const todayKey = dateKey(now);
 
   let totalDone = 0;
@@ -3192,9 +3389,12 @@ function updateWeekly() {
   });
   const topCat = Object.entries(catCounts).sort((a,b) => b[1]-a[1])[0];
   const catNames = { morning:'🌅 Morning', movement:'🏃 Movement', mind:'🧠 Mind', fuel:'🥗 Fuel', evening:'🌙 Evening', hygiene:'🧼 Hygiene' };
-  document.getElementById('topCategory').textContent = topCat && topCat[1] > 0
-    ? `${catNames[topCat[0]] || topCat[0]} (${topCat[1]})`
-    : '—';
+  const topCategoryEl = document.getElementById('topCategory');
+  if (topCategoryEl) {
+    topCategoryEl.textContent = topCat && topCat[1] > 0
+      ? `${catNames[topCat[0]] || topCat[0]} (${topCat[1]})`
+      : '—';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -3454,7 +3654,7 @@ function saveManageModal() {
   reconcileMeasurementTypeChanges(state.done, state.progress, previousHabits, HABITS, editDate);
   reconcileMeasuredDay(state.done, state.progress, HABITS, editDate);
   saveState();
-  renderHabits();
+  renderHabits(editDate);
   closeManageModal();
   showToast('✓ Habits saved');
   return true;
@@ -3553,7 +3753,7 @@ async function importBackupFile(file) {
     state = loadState();
     userOrder = loadOrder();
     reloadHabits();
-    renderHabits();
+    renderHabits(importDate);
     renderManageModal();
     showToast('✓ Backup imported');
   } catch (err) {
@@ -3570,12 +3770,7 @@ function init() {
 
   // Date
   const now = new Date();
-  document.getElementById('dateDay').textContent = todayStr();
-
-  // Week number-ish
-  const start = new Date(now.getFullYear(), 0, 1);
-  const weekNum = Math.ceil((((now - start) / 86400000) + start.getDay() + 1) / 7);
-  document.getElementById('dateLabel').textContent = `Week ${weekNum} · ${now.toLocaleDateString('en-US', { month:'long' })}`;
+  updateDateDisplay(now);
 
   // Tabs
   document.getElementById('tabs').addEventListener('click', e => {
@@ -3587,12 +3782,14 @@ function init() {
     renderHabits();
   });
 
+  document.getElementById('nextWaveAction').addEventListener('click', focusNextWaveHabit);
+
   // Reset
   document.getElementById('resetBtn').addEventListener('click', () => {
     const resetDate = new Date();
     resetHabitDay(state, resetDate);
     saveState();
-    renderHabits();
+    renderHabits(resetDate);
     showToast('↻ Today reset. Fresh start.');
   });
 
@@ -3616,7 +3813,7 @@ function init() {
     reconcileMeasurementTypeChanges(state.done, state.progress, previousHabits, HABITS, resetDate);
     reconcileMeasuredDay(state.done, state.progress, HABITS, resetDate);
     saveState();
-    renderHabits();
+    renderHabits(resetDate);
     closeManageModal();
     showToast('↻ Habits reset to defaults');
   });
@@ -3632,7 +3829,7 @@ function init() {
   setupInstallTip();
   setupOfflineStatus();
 
-  renderInsights();
+  renderInsights(now);
 
   // Close on Escape
   document.addEventListener('keydown', e => {
@@ -3640,7 +3837,12 @@ function init() {
     else if (e.key === 'Escape' && reorderMode) setReorderMode(false);
   });
 
-  renderHabits();
+  renderHabits(now);
+  scheduleNextDateRollover(now);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) refreshForDateRollover();
+  });
+  window.addEventListener('pageshow', () => refreshForDateRollover());
 }
 
 document.addEventListener('DOMContentLoaded', init);
