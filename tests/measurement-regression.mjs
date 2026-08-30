@@ -606,13 +606,13 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /function updateRhythmAnchors/, `${label}: live weather data updates rhythm anchor labels on cards`);
   assert.match(html, /air-quality-api\.open-meteo\.com\/v1\/air-quality[^`]*current=us_aqi/, `${label}: air-quality anchors use Open-Meteo's live AQI feed`);
   assert.match(html, /normalizeEnvironmentalReading\(d\.current\.us_aqi,\s*0\)/, `${label}: live AQI ingestion rejects negative values`);
-  assert.match(html, /updateRhythmAnchors\(\{ \.\.\.rhythmWeatherData, aqi \}, now\)/, `${label}: live AQI merges into the existing rhythm context with a timestamp`);
+  assert.match(html, /updateRhythmAnchors\(\{ \.\.\.rhythmWeatherData, aqi, aqiObservedAt \}, now\)/, `${label}: live AQI merges into the existing rhythm context with a timestamp`);
   assert.match(html, /function renderHabits\(now = new Date\(\)\)[\s\S]*if \(rhythmWeatherData\) updateRhythmAnchors\(rhythmWeatherData, now\);[\s\S]*?\n\}/, `${label}: card rerenders restore live rhythm labels with the render transaction timestamp`);
   assert.match(html, /function renderInsights\(now = new Date\(\)\)[\s\S]*const generation = \+\+rhythmWeatherGeneration/, `${label}: environmental refresh uses a generation guard to reject superseded responses`);
-  assert.match(html, /if \(generation !== rhythmWeatherGeneration\) return/, `${label}: superseded environmental responses are discarded`);
-  assert.match(html, /function refreshForDateRollover\(now = new Date\(\)\)[\s\S]*rhythmWeatherData = \{[\s\S]*feel:[\s\S]*uv:[\s\S]*aqi:[\s\S]*rhythmWeatherGeneration\+\+/, `${label}: rollover clears stale day-specific sunrise/sunset and bumps the generation`);
-  assert.match(html, /function toggleHabit\(id\) \{\s*const now = new Date\(\);\s*const todayKey = dateKey\(now\);[\s\S]*renderHabits\(now\)/, `${label}: toggle threads its transaction timestamp through the rerender`);
-  assert.match(html, /function adjustMeasuredHabit\(id, direction\) \{\s*const now = new Date\(\);[\s\S]*renderHabits\(now\)/, `${label}: measured adjustments thread the transaction timestamp through the rerender`);
+  assert.match(html, /if \(generation !== rhythmWeatherGeneration \|\| activeDateKey !== dateKey\(new Date\(\)\)\) return/, `${label}: superseded environmental responses are discarded`);
+  assert.match(html, /function refreshForDateRollover\(now = new Date\(\)\)[\s\S]*rhythmWeatherData = null[\s\S]*rhythmWeatherGeneration\+\+/, `${label}: rollover clears all environmental channels and bumps the generation`);
+  assert.match(html, /function toggleHabit\(id\) \{\s*const now = new Date\(\);\s*if \(!ensureCurrentRenderedDate\(now\)\) return;\s*const todayKey = dateKey\(now\);[\s\S]*renderHabits\(now\)/, `${label}: toggle threads its transaction timestamp through the rerender`);
+  assert.match(html, /function adjustMeasuredHabit\(id, direction\) \{\s*const now = new Date\(\);\s*if \(!ensureCurrentRenderedDate\(now\)\) return;\s*const key = dateKey\(now\);[\s\S]*renderHabits\(now\)/, `${label}: measured adjustments thread the transaction timestamp through the rerender`);
   assert.match(html, /case 'uv-above':[\s\S]*!Number\.isFinite\(data\.uv\)[\s\S]*UV cue at \$\{rhythm\.threshold\} or higher[\s\S]*data\.uv >= rhythm\.threshold/, `${label}: partial forecast data keeps the configured UV threshold visible`);
   assert.match(html, /case 'aqi-below':[\s\S]*!Number\.isFinite\(data\.aqi\)[\s\S]*US AQI cue at or below \$\{rhythm\.threshold\}[\s\S]*data\.aqi <= rhythm\.threshold/, `${label}: partial air-quality data keeps the configured AQI threshold visible`);
   assert.match(html, /normalizeRhythmConfig/, `${label}: rhythm config is normalized for validation and rendering`);

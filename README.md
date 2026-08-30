@@ -9,10 +9,11 @@ This folder is the iPhone-first, installable version of Wavelength. Shared behav
 - Web App Manifest and Apple Home Screen icon
 - Standalone/full-screen presentation when installed
 - Offline app shell via service worker
+- Fixed **Home / Insights** dock with iPhone safe-area clearance
 - Backup/share and import controls under **Manage Habits**
 - Per-habit Monday–Sunday schedules under **Manage Habits**, with all seven days selected by default
 - Three per-habit measurement types: **Check once**, **Count**, and **Amount** with a configurable goal, increment, and unit
-- Existing localStorage history and habit editing preserved; saved schedules, measurement settings, and daily progress are included in backups and strictly validated on import
+- Existing localStorage history and habit editing preserved; saved schedules, measurement settings, daily progress, and prospective insight evidence are included in version-2 backups and strictly validated on import
 - Pending-day-aware streaks: an unfinished today does not erase a qualifying streak through yesterday
 - Three appearance modes: **System**, **Day**, and **Night**, shared across iPhone, Android, and desktop
 - Time-consistent greeting icons and a roomier mobile streak card with the decorative left icon suppressed at widths up to 600px
@@ -71,13 +72,34 @@ Rhythm anchors do not change streaks, daily targets, or completion logic. They r
 
 ### Your next wave
 
-The bottom rhythm dashboard is replaced by a single **Your next wave** recommendation. It considers only habits that are scheduled today and not yet complete, then combines their state with the current time and available environmental readings. The priority order is: adapt activity when AQI is unfavorable, protect against active UV, use time-sensitive daylight, surface a favorable outdoor window, reinforce hydration in heat, then offer one time-appropriate open habit. When every scheduled habit is complete, the card changes to a calm completion message.
+The Home view begins with a single **Your next wave** recommendation in the former Streak-card position. It considers only habits that are scheduled today and not yet complete, then combines their state with the current time and available environmental readings. The priority order is: adapt activity when AQI is unfavorable, protect against active UV, use time-sensitive daylight, surface a favorable outdoor window, reinforce hydration in heat, then offer one time-appropriate open habit. When every scheduled habit is complete, the card changes to a calm completion message.
 
 The recommendation leads with the habit action and keeps the condition secondary, for example **Now is a good time for your outdoor walk** with `Good air quality · AQI 43` beneath it. **View habit** selects the relevant category, scrolls to that habit, and briefly highlights it without changing completion. Completing or updating a habit immediately advances the recommendation. If location is denied or data is unavailable, the card still chooses a helpful habit-based fallback rather than showing a technical weather error.
 
 AQI health guidance always follows the fixed US AQI bands: a custom movement threshold may be stricter than 100, but it can never loosen the outdoor-opportunity safety ceiling above 100. An explicit `rhythm: null` suppresses environmental opportunity copy for that habit, including sunrise-specific daylight advice. Wavelength schedules a refresh just after local midnight and also checks the date on `visibilitychange` and `pageshow`, so an installed app resumed after sleeping does not retain yesterday’s habits or recommendation.
 
 The checked-in 390px Edge flow is `tests/browser/next-wave-e2e.cjs`. On the WSL/Windows test host, copy it to `C:\Temp\wavelength-next-wave-e2e.cjs`, serve the repository on port 8773, then run `cmd.exe /c "cd /d C:\Temp && node wavelength-next-wave-e2e.cjs"`. Set `WAVELENGTH_ORIGIN` and `WAVELENGTH_URL` to rerun the same assertions against the deployed Pages build.
+
+## Home and Insights
+
+The fixed bottom dock separates action from reflection:
+
+- **Home** contains the greeting, Your next wave, category controls, today's habits, and Reset today.
+- **Insights** begins with the existing Streak/Today completion card, followed by This week. Evidence-qualified adaptive cards appear beneath those progress summaries.
+
+The dock buttons explicitly expose `aria-current="page"`, meet the 44px touch-target floor, and reserve enough bottom and safe-area space that the last card remains scrollable above the dock.
+
+### Prospective evidence and adaptive cards
+
+Wavelength does not reconstruct past conditions. After the forecast and AQI requests have both settled, it records the final context-aware recommendation shown that day under `wavelength_insights_v1`. Each bounded record contains the habit and reason, exact readings used, the source channel actually present, observation/first-shown/last-shown timestamps, and optional View habit and completion timestamps. It never stores coordinates or a city in this evidence ledger. Completion evidence is reversible when a habit is unmarked, removed when Reset today or a goal edit invalidates it, and retained for at most 400 dates.
+
+Condition cards remain hidden until there are at least 10 distinct relevant days. Eligible cards rotate one at a time and always disclose the exact numerator and denominator, for example **8 of 10 high-UV days met with protection** plus **Observed in your history · Based on 10 recorded high-UV days**. Current card families are Sun-wise, Heatwise, Morning light, and literal poor-air movement completion. None claims that movement occurred indoors or that a checkbox produced a medical outcome.
+
+**A flexible win** may appear sooner when one of the last 30 days contains at least two distinct verified context-aware completions. It names the actions that stayed on track without assigning a hidden composite score. Rescue-swap or “waves ridden” claims are intentionally deferred until Wavelength can record explicit approved alternatives rather than infer substitutions from coincidental completions.
+
+Mobile backups now use version 2 and carry the normalized insight ledger. Version-1 backups remain importable and begin with no reconstructed historical evidence; the current recommendation may be recorded normally after the imported app rerenders. Version-2 insight evidence is validated against imported habit completion history before any storage write.
+
+The complete dock/evidence browser flow is `tests/browser/navigation-insights-e2e.cjs`. It verifies 390px layout, safe-area clearance, exact-source/no-coordinate storage, View habit, reversible completion, gated reports, atomic invalid-v2 rejection, and v1 compatibility.
 
 ### Card copy
 
@@ -113,6 +135,7 @@ node tests/greeting-responsive-regression.mjs
 node tests/schedule-regression.mjs
 node tests/measurement-regression.mjs
 node tests/default-habits-regression.mjs
+node tests/navigation-insights-regression.mjs
 node tests/next-wave-regression.mjs
 ```
 

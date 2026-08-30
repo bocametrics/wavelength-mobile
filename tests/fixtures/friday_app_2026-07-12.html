@@ -98,6 +98,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     --danger-border: rgba(240,106,138,0.30);
     --radius: 14px;
     --radius-sm: 10px;
+    --dock-space: 82px;
   }
 
   html[data-theme="light"] {
@@ -145,7 +146,8 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 30px 18px 50px;
+    padding: 30px 18px 0;
+    padding-bottom: calc(var(--dock-space) + max(18px, env(safe-area-inset-bottom)));
     -webkit-font-smoothing: antialiased;
   }
 
@@ -848,6 +850,150 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     box-shadow: 0 0 0 3px var(--accent-soft);
   }
 
+  /* ── Primary views and dock ── */
+  .app-view[hidden] { display: none; }
+
+  .insights-intro { margin-bottom: 20px; }
+
+  .insights-intro h1 {
+    font-size: 1.35rem;
+    font-weight: 500;
+    letter-spacing: -0.3px;
+    margin-bottom: 5px;
+  }
+
+  .insights-intro p {
+    color: var(--text2);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  .insight-section { margin-bottom: 24px; }
+  .insight-section[hidden], .insight-learning[hidden] { display: none; }
+
+  .insight-section-label {
+    margin: 0 0 10px 2px;
+    color: var(--text3);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+
+  .report-card {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 13px;
+    align-items: start;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, var(--surface), var(--accent-faint));
+  }
+
+  .report-card-icon {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    background: var(--accent-soft);
+    font-size: 1.35rem;
+  }
+
+  .report-card-eyebrow {
+    margin-bottom: 5px;
+    color: var(--accent);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+
+  .report-card-title {
+    margin-bottom: 5px;
+    color: var(--text);
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .report-card-detail {
+    color: var(--text2);
+    font-size: 0.76rem;
+    line-height: 1.5;
+  }
+
+  .insight-learning {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 16px;
+    border: 1px dashed var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--text2);
+  }
+
+  .insight-learning-icon { color: var(--accent2); font-size: 1.1rem; line-height: 1.2; }
+  .insight-learning strong { display: block; color: var(--text); font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; }
+  .insight-learning p { font-size: 0.74rem; line-height: 1.5; }
+
+  .app-dock {
+    position: fixed;
+    left: 50%;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    z-index: 220;
+    width: min(320px, calc(100% - 28px));
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    padding: 6px;
+    border: 1px solid var(--border2);
+    border-radius: 22px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    box-shadow: var(--shadow-card);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    transform: translateX(-50%);
+  }
+
+  .dock-button {
+    min-width: 0;
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 0;
+    border-radius: 16px;
+    background: transparent;
+    color: var(--text3);
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .dock-button svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .dock-button[aria-current="page"] {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .dock-button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
   @media (prefers-reduced-motion: no-preference) {
     .habit.next-wave-focus { animation: nextWaveFocus 1.2s ease; }
     @keyframes nextWaveFocus {
@@ -1470,76 +1616,128 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     </div>
   </header>
 
-  <!-- Greeting -->
-  <div class="greeting">
-    <h1 id="greeting">Good morning ☀️</h1>
-    <p>Small waves make big tides. A few minutes today sets the tone for the whole week.</p>
-  </div>
+  <main class="app-view" id="homeView" role="tabpanel" aria-labelledby="navHome">
+    <!-- Greeting -->
+    <div class="greeting">
+      <h1 id="greeting">Good morning ☀️</h1>
+      <p>Small waves make big tides. A few minutes today sets the tone for the whole week.</p>
+    </div>
 
-  <!-- Streak -->
-  <div class="streak-bar">
-    <div class="streak-flame" id="streakEmoji">🔥</div>
-    <div class="streak-info">
-      <div class="count"><span id="streakCount">0</span>-day streak</div>
-      <div class="streak-meta">
-        <div class="label">Keep the chain alive</div>
-        <div class="streak-best">Longest: <strong id="longestStreak">0 days</strong></div>
+    <!-- Your Next Wave -->
+    <section class="insights" aria-labelledby="nextWaveHeading">
+      <h3 id="nextWaveHeading">🌊 Your next wave</h3>
+      <div class="next-wave-card" id="nextWaveCard" aria-live="polite">
+        <div class="next-wave-icon" id="nextWaveIcon" aria-hidden="true">🌊</div>
+        <div class="next-wave-body">
+          <div class="next-wave-eyebrow" id="nextWaveEyebrow">Finding your next step</div>
+          <div class="next-wave-title" id="nextWaveTitle">Looking at today’s open habits…</div>
+          <div class="next-wave-detail" id="nextWaveDetail">Conditions stay in the background until they can help.</div>
+          <button type="button" class="next-wave-action" id="nextWaveAction" hidden>View habit</button>
+        </div>
       </div>
-      <div class="sub" id="streakSub">Complete at least 5 habits each day to maintain</div>
+    </section>
+
+    <!-- Category Tabs -->
+    <div class="category-tabs" id="tabs">
+      <button class="cat-tab active" data-cat="all">All</button>
+      <button class="cat-tab" data-cat="morning">🌅 Morning</button>
+      <button class="cat-tab" data-cat="movement">🏃 Movement</button>
+      <button class="cat-tab" data-cat="mind">🧠 Mind</button>
+      <button class="cat-tab" data-cat="fuel">🥗 Fuel</button>
+      <button class="cat-tab" data-cat="hygiene">🧼 Hygiene</button>
+      <button class="cat-tab" data-cat="evening">🌙 Evening</button>
     </div>
-    <div class="streak-ring">
-      <div class="streak-ring-inner" id="ringPct">0%</div>
+
+    <!-- Habits -->
+    <div class="section-title">
+      <h2>Today's habits <button class="manage-btn" id="manageBtn">✎ Manage</button><button class="manage-btn" id="reorderBtn" type="button" aria-pressed="false">↕ Reorder</button></h2>
+      <span class="count" id="doneCount">0 / 20</span>
     </div>
-  </div>
 
-  <!-- Category Tabs -->
-  <div class="category-tabs" id="tabs">
-    <button class="cat-tab active" data-cat="all">All</button>
-    <button class="cat-tab" data-cat="morning">🌅 Morning</button>
-    <button class="cat-tab" data-cat="movement">🏃 Movement</button>
-    <button class="cat-tab" data-cat="mind">🧠 Mind</button>
-    <button class="cat-tab" data-cat="fuel">🥗 Fuel</button>
-    <button class="cat-tab" data-cat="hygiene">🧼 Hygiene</button>
-    <button class="cat-tab" data-cat="evening">🌙 Evening</button>
-  </div>
+    <div class="reorder-hint" id="reorderHint"><svg class="grip-icon" width="12" height="15" viewBox="0 0 12 15" aria-hidden="true" focusable="false"><circle cx="3" cy="2.5" r="1.4"/><circle cx="9" cy="2.5" r="1.4"/><circle cx="3" cy="7.5" r="1.4"/><circle cx="9" cy="7.5" r="1.4"/><circle cx="3" cy="12.5" r="1.4"/><circle cx="9" cy="12.5" r="1.4"/></svg> Hold the right grip to drag — or use ↑↓ arrows</div>
 
-  <!-- Habits -->
-  <div class="section-title">
-    <h2>Today's habits <button class="manage-btn" id="manageBtn">✎ Manage</button><button class="manage-btn" id="reorderBtn" type="button" aria-pressed="false">↕ Reorder</button></h2>
-    <span class="count" id="doneCount">0 / 20</span>
-  </div>
+    <div class="habits" id="habitList"></div>
 
-  <div class="reorder-hint" id="reorderHint"><svg class="grip-icon" width="12" height="15" viewBox="0 0 12 15" aria-hidden="true" focusable="false"><circle cx="3" cy="2.5" r="1.4"/><circle cx="9" cy="2.5" r="1.4"/><circle cx="3" cy="7.5" r="1.4"/><circle cx="9" cy="7.5" r="1.4"/><circle cx="3" cy="12.5" r="1.4"/><circle cx="9" cy="12.5" r="1.4"/></svg> Hold the right grip to drag — or use ↑↓ arrows</div>
-
-  <div class="habits" id="habitList"></div>
-
-  <!-- Weekly Overview -->
-  <div class="weekly">
-    <div class="weekly-header">
-      <h3>This week</h3>
-      <span id="weekStats">0% completion</span>
+    <!-- Reset -->
+    <div class="reset-area">
+      <button class="reset-btn" id="resetBtn">↻ Reset today</button>
     </div>
-    <div class="week-grid" id="weekGrid"></div>
-  </div>
+  </main>
 
-  <!-- Your Next Wave -->
-  <section class="insights" aria-labelledby="insightsHeading">
-    <h3 id="insightsHeading">🌊 Your next wave</h3>
-    <div class="next-wave-card" id="nextWaveCard" aria-live="polite">
-      <div class="next-wave-icon" id="nextWaveIcon" aria-hidden="true">🌊</div>
-      <div class="next-wave-body">
-        <div class="next-wave-eyebrow" id="nextWaveEyebrow">Finding your next step</div>
-        <div class="next-wave-title" id="nextWaveTitle">Looking at today’s open habits…</div>
-        <div class="next-wave-detail" id="nextWaveDetail">Conditions stay in the background until they can help.</div>
-        <button type="button" class="next-wave-action" id="nextWaveAction" hidden>View habit</button>
+  <section class="app-view" id="insightsView" role="tabpanel" aria-labelledby="navInsights" hidden inert>
+    <div class="insights-intro">
+      <h1 id="insightsHeading">Insights</h1>
+      <p>See how your rhythm holds through changing days.</p>
+    </div>
+
+    <!-- Streak and today's completion -->
+    <div class="streak-bar">
+      <div class="streak-flame" id="streakEmoji">🔥</div>
+      <div class="streak-info">
+        <div class="count"><span id="streakCount">0</span>-day streak</div>
+        <div class="streak-meta">
+          <div class="label">Keep the chain alive</div>
+          <div class="streak-best">Longest: <strong id="longestStreak">0 days</strong></div>
+        </div>
+        <div class="sub" id="streakSub">Complete at least 5 habits each day to maintain</div>
+      </div>
+      <div class="streak-ring" aria-label="Today’s completion">
+        <div class="streak-ring-inner" id="ringPct">0%</div>
+      </div>
+    </div>
+
+    <!-- Weekly Overview -->
+    <div class="weekly">
+      <div class="weekly-header">
+        <h3>This week</h3>
+        <span id="weekStats">0% completion</span>
+      </div>
+      <div class="week-grid" id="weekGrid"></div>
+    </div>
+
+    <section id="conditionInsightSection" class="insight-section" hidden>
+      <div class="insight-section-label">Adaptive insight</div>
+      <article class="report-card">
+        <div class="report-card-icon" id="conditionInsightIcon" aria-hidden="true"></div>
+        <div>
+          <div class="report-card-eyebrow" id="conditionInsightEyebrow"></div>
+          <div class="report-card-title" id="conditionInsightTitle"></div>
+          <div class="report-card-detail" id="conditionInsightDetail"></div>
+        </div>
+      </article>
+    </section>
+
+    <section id="adaptiveDaySection" class="insight-section" hidden>
+      <div class="insight-section-label">From your history</div>
+      <article class="report-card">
+        <div class="report-card-icon" id="adaptiveDayIcon" aria-hidden="true"></div>
+        <div>
+          <div class="report-card-eyebrow" id="adaptiveDayEyebrow"></div>
+          <div class="report-card-title" id="adaptiveDayTitle"></div>
+          <div class="report-card-detail" id="adaptiveDayDetail"></div>
+        </div>
+      </article>
+    </section>
+
+    <div class="insight-learning" id="insightLearning">
+      <div class="insight-learning-icon" aria-hidden="true">≈</div>
+      <div>
+        <strong>Learning your rhythm</strong>
+        <p>Condition-aware insights appear after 10 relevant days. Each insight will show the sample it is based on.</p>
       </div>
     </div>
   </section>
 
-  <!-- Reset -->
-  <div class="reset-area">
-    <button class="reset-btn" id="resetBtn">↻ Reset today</button>
-  </div>
+  <nav class="app-dock" aria-label="Primary navigation" role="tablist">
+    <button class="dock-button" id="navHome" role="tab" aria-controls="homeView" aria-selected="true" type="button" data-view="home" aria-current="page">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-5.5h5V20"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="dock-button" id="navInsights" role="tab" aria-controls="insightsView" aria-selected="false" type="button" data-view="insights">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V9"/><path d="M12 19V5"/><path d="M19 19v-7"/></svg>
+      <span>Insights</span>
+    </button>
+  </nav>
 </div>
 
 <!-- Toast -->
@@ -2036,10 +2234,11 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data) {
     const progress = getHabitProgress(dayDone, dayProgress, habit);
     return !isHabitProgressComplete(habit, progress);
   });
-  const result = (habit, eyebrow, title, detail) => ({
+  const result = (habit, reason, eyebrow, title, detail) => ({
     habitId:habit.id,
     category:habit.cat,
     icon:habit.icon,
+    reason,
     eyebrow,
     title,
     detail,
@@ -2047,10 +2246,10 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data) {
   });
 
   if (scheduled.length === 0) {
-    return { habitId:null, category:null, icon:'○', eyebrow:'A quiet day', title:'No habits are scheduled today.', detail:'Use the space in whatever way feels restorative.', action:null };
+    return { habitId:null, category:null, icon:'○', reason:'none', eyebrow:'A quiet day', title:'No habits are scheduled today.', detail:'Use the space in whatever way feels restorative.', action:null };
   }
   if (openHabits.length === 0) {
-    return { habitId:null, category:null, icon:'✓', eyebrow:'You’re caught up', title:'Today’s habits are complete.', detail:'You followed through on every scheduled habit.', action:null };
+    return { habitId:null, category:null, icon:'✓', reason:'none', eyebrow:'You’re caught up', title:'Today’s habits are complete.', detail:'You followed through on every scheduled habit.', action:null };
   }
 
   const openById = id => openHabits.find(habit => habit.id === id);
@@ -2071,40 +2270,40 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data) {
     const title = aqi <= 150
       ? "If you're sensitive to air quality, move indoors today."
       : 'Move today’s activity indoors.';
-    return result(movement.habit, 'Adapt today', title, `${category} · AQI ${aqi}`);
+    return result(movement.habit, 'aqi-adapt', 'Adapt today', title, `${category} · AQI ${aqi}`);
   }
 
   const sunscreen = anchoredById('sunscreen', 'uv-above');
   if (sunscreen && uv !== null && uv >= sunscreen.rhythm.threshold) {
-    return result(sunscreen.habit, 'Suggested now', 'Use sun protection before heading out.', `UV ${uv} · Sun protection matters now`);
+    return result(sunscreen.habit, 'uv-protect', 'Suggested now', 'Use sun protection before heading out.', `UV ${uv} · Sun protection matters now`);
   }
 
   const daylight = anchoredById('daylight', 'sunrise');
   if (daylight && hour < 11) {
     const detail = snapshot.sunrise ? `Sunrise today · ${snapshot.sunrise}` : 'Your morning light habit is still open.';
-    return result(daylight.habit, 'Suggested now', 'Step outside for your morning light.', detail);
+    return result(daylight.habit, 'sunrise-light', 'Suggested now', 'Step outside for your morning light.', detail);
   }
 
   if (movement && aqi !== null && aqi <= 100 && aqi <= movement.rhythm.threshold) {
     const category = getAqiCategory(aqi);
     const title = aqi <= 50 ? 'Now is a good time for your outdoor walk.' : 'Outdoor movement could fit now.';
-    return result(movement.habit, 'Suggested now', title, `${category} · AQI ${aqi}`);
+    return result(movement.habit, 'aqi-opportunity', 'Suggested now', title, `${category} · AQI ${aqi}`);
   }
 
   const hydration = anchoredById('hydrate', 'temp-above');
   if (hydration && feel !== null && feel > hydration.rhythm.threshold) {
-    return result(hydration.habit, 'Suggested now', 'Have your next glass of water.', `Feels like ${feel}°F`);
+    return result(hydration.habit, 'heat-hydrate', 'Suggested now', 'Have your next glass of water.', `Feels like ${feel}°F`);
   }
 
   const sunsetHabit = openHabits.find(habit => normalizeRhythmConfig(habit.rhythm)?.type === 'sunset');
   if (sunsetHabit && hour >= 16) {
     const detail = snapshot.sunset ? `Sunset today · ${snapshot.sunset}` : 'Your evening cue is still open.';
-    return result(sunsetHabit, 'Suggested now', sunsetHabit.text, detail);
+    return result(sunsetHabit, 'sunset-rhythm', 'Suggested now', sunsetHabit.text, detail);
   }
 
   const openHydration = openById('hydrate');
   if (openHydration && hour < 12) {
-    return result(openHydration, 'A simple next step', 'Start with your water habit.', 'A calm way to begin the day.');
+    return result(openHydration, 'time-fallback', 'A simple next step', 'Start with your water habit.', 'A calm way to begin the day.');
   }
 
   const preferredCategories = hour < 11
@@ -2118,7 +2317,7 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data) {
     if (next) break;
   }
   next = next || openHabits[0];
-  return result(next, 'Your next small win', next.text, 'One open habit that fits this part of your day.');
+  return result(next, 'time-fallback', 'Your next small win', next.text, 'One open habit that fits this part of your day.');
 }
 
 function renderNextWave(now = new Date()) {
@@ -2136,18 +2335,29 @@ function renderNextWave(now = new Date()) {
   action.hidden = !suggestion.action;
   action.textContent = suggestion.action || '';
   action.dataset.habitId = suggestion.habitId || '';
+  const homeVisible = !document.getElementById('homeView').hidden;
+  const exposure = getInsightExposureSnapshot(suggestion, HABITS);
+  if (homeVisible && rhythmWeatherReadyGeneration === rhythmWeatherGeneration &&
+      recordInsightSuggestion(insightHistory, suggestion, rhythmWeatherData, now, exposure)) {
+    saveInsightHistory(now);
+    renderAdaptiveInsights(now);
+  }
 }
 
 function focusNextWaveHabit() {
+  const now = new Date();
+  if (!ensureCurrentRenderedDate(now)) return;
   const habitId = document.getElementById('nextWaveAction')?.dataset.habitId;
   const habit = HABITS.find(item => item.id === habitId);
   if (!habit) return;
+  if (markInsightViewed(insightHistory, habitId, now)) saveInsightHistory(now);
+  setActiveView('home', false);
   currentCat = habit.cat;
   document.querySelectorAll('.cat-tab').forEach(tab => {
     tab.classList.toggle('active', tab.dataset.cat === currentCat);
   });
   if (reorderMode) setReorderMode(false);
-  else renderHabits();
+  else renderHabits(now);
   requestAnimationFrame(() => {
     const target = [...document.querySelectorAll('.habit[data-id]')].find(element => element.dataset.id === habitId);
     if (!target) return;
@@ -2158,20 +2368,30 @@ function focusNextWaveHabit() {
   });
 }
 
+let rhythmWeatherData = null;
+let rhythmWeatherGeneration = 0;
+let rhythmWeatherReadyGeneration = -1;
+let rhythmWeatherController = null;
+
 function renderInsights(now = new Date()) {
+  rhythmWeatherController?.abort();
+  rhythmWeatherController = new AbortController();
+  rhythmWeatherData = null;
   const generation = ++rhythmWeatherGeneration;
+  const activeDateKey = dateKey(now);
+  rhythmWeatherReadyGeneration = -1;
   renderNextWave(now);
   getLocation().then(loc => {
     if (!loc) return;
-    if (generation !== rhythmWeatherGeneration) return;
+    if (generation !== rhythmWeatherGeneration || activeDateKey !== dateKey(new Date())) return;
 
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=apparent_temperature,uv_index&daily=sunrise,sunset&timezone=auto&temperature_unit=fahrenheit`)
+    const forecastRequest = fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=apparent_temperature,uv_index&daily=sunrise,sunset&timezone=auto&temperature_unit=fahrenheit`, { signal:rhythmWeatherController.signal })
       .then(r => {
         if (!r.ok) throw new Error('Forecast request failed');
         return r.json();
       })
       .then(d => {
-        if (generation !== rhythmWeatherGeneration) return;
+        if (generation !== rhythmWeatherGeneration || activeDateKey !== dateKey(new Date())) return;
         if (!d) return;
         const current = d.current || {};
         const feel = normalizeEnvironmentalReading(current.apparent_temperature);
@@ -2183,27 +2403,36 @@ function renderInsights(now = new Date()) {
         if (sunset) rhythmUpdate.sunset = sunset;
         if (feel !== null) rhythmUpdate.feel = feel;
         if (uv !== null) rhythmUpdate.uv = uv;
-        updateRhythmAnchors(rhythmUpdate, now);
+        if (Object.keys(rhythmUpdate).length > 0) {
+          rhythmUpdate.weatherObservedAt = Date.now();
+          updateRhythmAnchors(rhythmUpdate, now);
+        }
       })
       .catch(() => { /* Next Wave keeps its habit-based fallback. */ });
 
     // Air quality is served by Open-Meteo's separate endpoint.
-    fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${loc.lat}&longitude=${loc.lon}&current=us_aqi&timezone=auto`)
+    const aqiRequest = fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${loc.lat}&longitude=${loc.lon}&current=us_aqi&timezone=auto`, { signal:rhythmWeatherController.signal })
       .then(r => {
         if (!r.ok) throw new Error('Air-quality request failed');
         return r.json();
       })
       .then(d => {
-        if (generation !== rhythmWeatherGeneration) return;
+        if (generation !== rhythmWeatherGeneration || activeDateKey !== dateKey(new Date())) return;
         const aqi = d && d.current ? normalizeEnvironmentalReading(d.current.us_aqi, 0) : null;
-        if (aqi !== null) updateRhythmAnchors({ ...rhythmWeatherData, aqi }, now);
+        if (aqi !== null) {
+          const aqiObservedAt = Date.now();
+          updateRhythmAnchors({ ...rhythmWeatherData, aqi, aqiObservedAt }, now);
+        }
       })
       .catch(() => { /* anchored cards retain the offline-safe fallback */ });
+
+    Promise.allSettled([forecastRequest, aqiRequest]).then(() => {
+      if (generation !== rhythmWeatherGeneration || activeDateKey !== dateKey(new Date())) return;
+      rhythmWeatherReadyGeneration = generation;
+      renderNextWave(now);
+    });
   });
 }
-
-let rhythmWeatherData = null;
-let rhythmWeatherGeneration = 0;
 
 function mergeRhythmWeatherData(current, update) {
   return { ...(current || {}), ...(update || {}) };
@@ -2337,6 +2566,9 @@ document.querySelectorAll('[data-theme-option]').forEach(button => {
 // ═══════════════════════════════════════════════════════════════════
 const STORAGE_KEY = 'wavelength_wpb';
 const ORDER_KEY = 'wavelength_wpb_order';
+const INSIGHT_STORAGE_KEY = 'wavelength_insights_v1';
+const INSIGHT_HISTORY_VERSION = 1;
+const CONTEXT_INSIGHT_REASONS = new Set(['aqi-adapt','uv-protect','sunrise-light','aqi-opportunity','heat-hydrate','sunset-rhythm']);
 
 function isValidDateKey(key) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return false;
@@ -2344,6 +2576,389 @@ function isValidDateKey(key) {
   if (year < 2000 || year > 2100) return false;
   const parsed = new Date(year, month - 1, day, 12);
   return parsed.getFullYear() === year && parsed.getMonth() === month - 1 && parsed.getDate() === day;
+}
+
+function normalizeInsightHistory(rawHistory, habits, strict = false) {
+  const empty = { version:INSIGHT_HISTORY_VERSION, days:{} };
+  const invalid = message => {
+    if (strict) throw new Error(message);
+    return false;
+  };
+  if (rawHistory === undefined || rawHistory === null) return empty;
+  if (!rawHistory || typeof rawHistory !== 'object' || Array.isArray(rawHistory)) {
+    invalid('Insight history must be an object.');
+    return empty;
+  }
+  if (rawHistory.version !== INSIGHT_HISTORY_VERSION || !rawHistory.days || typeof rawHistory.days !== 'object' || Array.isArray(rawHistory.days)) {
+    invalid('Insight history version or days are invalid.');
+    return empty;
+  }
+  if (strict && Object.keys(rawHistory).some(key => !['version','days'].includes(key))) {
+    throw new Error('Insight history contains unsupported fields.');
+  }
+  const validIds = new Set((habits || []).map(habit => habit.id));
+  const validTimestamp = value => Number.isInteger(value) && value >= 0 && value <= 4102444800000;
+  const conditionKeys = new Set(['uv','aqi','feel','sunrise','sunset']);
+  const requiredCondition = {
+    'aqi-adapt':'aqi', 'uv-protect':'uv', 'sunrise-light':'sunrise',
+    'aqi-opportunity':'aqi', 'heat-hydrate':'feel', 'sunset-rhythm':'sunset',
+  };
+  const normalized = { version:INSIGHT_HISTORY_VERSION, days:{} };
+
+  for (const [key, rawDay] of Object.entries(rawHistory.days)) {
+    if (!isValidDateKey(key) || !rawDay || typeof rawDay !== 'object' || Array.isArray(rawDay)) {
+      invalid(`Invalid insight date: ${key}.`);
+      continue;
+    }
+    if (strict && Object.keys(rawDay).some(field => !['recommendations','completions'].includes(field))) {
+      throw new Error(`Insight day ${key} contains unsupported fields.`);
+    }
+    const rawRecommendations = rawDay.recommendations === undefined ? [] : rawDay.recommendations;
+    const rawCompletions = rawDay.completions === undefined ? {} : rawDay.completions;
+    if (!Array.isArray(rawRecommendations) || !rawCompletions || typeof rawCompletions !== 'object' || Array.isArray(rawCompletions)) {
+      invalid(`Insight day ${key} has invalid collections.`);
+      continue;
+    }
+    if (strict && rawRecommendations.length > 12) throw new Error(`Insight day ${key} has too many recommendations.`);
+    const recommendations = [];
+    for (const rawRecord of rawRecommendations.slice(-12)) {
+      if (!rawRecord || typeof rawRecord !== 'object' || Array.isArray(rawRecord)) {
+        invalid('Insight recommendation must be an object.');
+        continue;
+      }
+      const allowedFields = ['habitId','reason','shownAt','lastShownAt','observedAt','viewedAt','completedAt','conditions','sources','habitLabel','measurementType','ruleVersion','rule'];
+      if (strict && Object.keys(rawRecord).some(field => !allowedFields.includes(field))) {
+        throw new Error('Insight recommendation contains unsupported fields.');
+      }
+      if (!validIds.has(rawRecord.habitId)) {
+        invalid(`Insight recommendation references unknown habit: ${rawRecord.habitId}.`);
+        continue;
+      }
+      if (!CONTEXT_INSIGHT_REASONS.has(rawRecord.reason)) {
+        invalid('Insight recommendation reason is invalid.');
+        continue;
+      }
+      const validRuleShapes = {
+        'uv-protect':['weather','uv','>='],
+        'heat-hydrate':['weather','feel','>'],
+        'aqi-adapt':['aqi','aqi','>'],
+        'aqi-opportunity':['aqi','aqi','<='],
+        'sunrise-light':['weather','sunrise','within-minutes'],
+        'sunset-rhythm':['weather','sunset','within-minutes'],
+      };
+      const expectedRule = validRuleShapes[rawRecord.reason];
+      const rule = rawRecord.rule;
+      if (typeof rawRecord.habitLabel !== 'string' || !rawRecord.habitLabel.trim() || rawRecord.habitLabel.length > 80 ||
+          !['check','count','amount'].includes(rawRecord.measurementType) || rawRecord.ruleVersion !== 1 ||
+          !rule || typeof rule !== 'object' || Array.isArray(rule) ||
+          Object.keys(rule).some(field => !['channel','reading','operator','threshold'].includes(field)) ||
+          rule.channel !== expectedRule[0] || rule.reading !== expectedRule[1] || rule.operator !== expectedRule[2] ||
+          !Number.isFinite(rule.threshold)) {
+        invalid('Insight exposure snapshot is invalid.');
+        continue;
+      }
+      if (!validTimestamp(rawRecord.shownAt) || !validTimestamp(rawRecord.lastShownAt) || rawRecord.lastShownAt < rawRecord.shownAt ||
+          (rawRecord.observedAt !== undefined && !validTimestamp(rawRecord.observedAt)) ||
+          (rawRecord.viewedAt !== undefined && !validTimestamp(rawRecord.viewedAt)) ||
+          (rawRecord.completedAt !== undefined && (!validTimestamp(rawRecord.completedAt) || rawRecord.completedAt < rawRecord.shownAt))) {
+        invalid('Insight recommendation timestamp is invalid.');
+        continue;
+      }
+      const rawConditions = rawRecord.conditions;
+      if (!rawConditions || typeof rawConditions !== 'object' || Array.isArray(rawConditions) ||
+          Object.keys(rawConditions).some(field => !conditionKeys.has(field))) {
+        invalid('Insight environmental reading is invalid.');
+        continue;
+      }
+      const conditions = {};
+      let readingsValid = true;
+      for (const [field, value] of Object.entries(rawConditions)) {
+        if (field === 'uv' || field === 'aqi') {
+          if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) readingsValid = false;
+          else conditions[field] = value;
+        } else if (field === 'feel') {
+          if (typeof value !== 'number' || !Number.isFinite(value)) readingsValid = false;
+          else conditions[field] = value;
+        } else if (typeof value !== 'string' || value.length === 0 || value.length > 32) readingsValid = false;
+        else conditions[field] = value;
+      }
+      if (!readingsValid || !Object.hasOwn(conditions, requiredCondition[rawRecord.reason])) {
+        invalid('Insight environmental reading is invalid.');
+        continue;
+      }
+      const hasWeatherReading = ['uv','feel','sunrise','sunset'].some(field => Object.hasOwn(conditions, field));
+      const hasAqiReading = Object.hasOwn(conditions, 'aqi');
+      if (!rawRecord.sources || typeof rawRecord.sources !== 'object' || Array.isArray(rawRecord.sources) ||
+          Object.keys(rawRecord.sources).some(field => !['weather','aqi'].includes(field)) ||
+          (hasWeatherReading && rawRecord.sources.weather !== 'open-meteo') ||
+          (hasAqiReading && rawRecord.sources.aqi !== 'open-meteo') ||
+          (strict && !hasWeatherReading && rawRecord.sources.weather !== undefined) ||
+          (strict && !hasAqiReading && rawRecord.sources.aqi !== undefined)) {
+        invalid('Insight source is invalid.');
+        continue;
+      }
+      const sources = {};
+      if (hasWeatherReading) sources.weather = 'open-meteo';
+      if (hasAqiReading) sources.aqi = 'open-meteo';
+      const record = {
+        habitId:rawRecord.habitId, reason:rawRecord.reason,
+        shownAt:rawRecord.shownAt, lastShownAt:rawRecord.lastShownAt,
+        observedAt:rawRecord.observedAt === undefined ? rawRecord.lastShownAt : rawRecord.observedAt,
+        habitLabel:rawRecord.habitLabel, measurementType:rawRecord.measurementType,
+        ruleVersion:1, rule:{ channel:rule.channel, reading:rule.reading, operator:rule.operator, threshold:rule.threshold },
+        conditions, sources,
+      };
+      if (rawRecord.viewedAt !== undefined) record.viewedAt = rawRecord.viewedAt;
+      if (rawRecord.completedAt !== undefined) record.completedAt = rawRecord.completedAt;
+      recommendations.push(record);
+    }
+    const completions = {};
+    for (const [habitId, timestamp] of Object.entries(rawCompletions)) {
+      if (!validIds.has(habitId)) {
+        invalid(`Insight completion references unknown habit: ${habitId}.`);
+        continue;
+      }
+      if (!validTimestamp(timestamp)) {
+        invalid('Insight completion timestamp is invalid.');
+        continue;
+      }
+      completions[habitId] = timestamp;
+    }
+    for (const record of recommendations) {
+      const completionTimestamp = completions[record.habitId];
+      if (strict && ((record.completedAt !== undefined && record.completedAt !== completionTimestamp) ||
+          (record.completedAt === undefined && completionTimestamp !== undefined))) {
+        throw new Error('Insight completion evidence does not match its day completion.');
+      }
+      if (completionTimestamp === undefined) delete record.completedAt;
+      else record.completedAt = completionTimestamp;
+    }
+    normalized.days[key] = { recommendations, completions };
+  }
+  if (strict && Object.keys(normalized.days).length > 400) throw new Error('Insight history exceeds the supported retention window.');
+  return normalized;
+}
+
+function getInsightExposureSnapshot(suggestion, habits) {
+  if (!suggestion || !Array.isArray(habits)) return null;
+  const habit = habits.find(item => item.id === suggestion.habitId);
+  const habitLabel = habit && typeof habit.text === 'string' && habit.text.trim()
+    ? habit.text.trim()
+    : habit && typeof habit.title === 'string' ? habit.title.trim() : '';
+  if (!habitLabel) return null;
+  const rhythmThreshold = habit.rhythm && Number.isFinite(Number(habit.rhythm.threshold))
+    ? Number(habit.rhythm.threshold)
+    : null;
+  const rules = {
+    'uv-protect':{ channel:'weather', reading:'uv', operator:'>=', threshold:rhythmThreshold ?? 3 },
+    'heat-hydrate':{ channel:'weather', reading:'feel', operator:'>', threshold:rhythmThreshold ?? 85 },
+    'aqi-adapt':{ channel:'aqi', reading:'aqi', operator:'>', threshold:100 },
+    'aqi-opportunity':{ channel:'aqi', reading:'aqi', operator:'<=', threshold:100 },
+    'sunrise-light':{ channel:'weather', reading:'sunrise', operator:'within-minutes', threshold:60 },
+    'sunset-rhythm':{ channel:'weather', reading:'sunset', operator:'within-minutes', threshold:60 },
+  };
+  const rule = rules[suggestion.reason];
+  if (!rule) return null;
+  const measurementType = habit.measurement && ['check','count','amount'].includes(habit.measurement.type)
+    ? habit.measurement.type
+    : 'check';
+  return { habitLabel:habitLabel.slice(0, 80), measurementType, ruleVersion:1, rule };
+}
+
+function recordInsightSuggestion(history, suggestion, data, now, exposure) {
+  if (!history || !history.days || !suggestion || !CONTEXT_INSIGHT_REASONS.has(suggestion.reason) || !suggestion.habitId || !suggestion.action) return false;
+  if (!exposure || typeof exposure.habitLabel !== 'string' || !exposure.habitLabel.trim() ||
+      !['check','count','amount'].includes(exposure.measurementType) || exposure.ruleVersion !== 1 ||
+      !exposure.rule || !Number.isFinite(exposure.rule.threshold)) return false;
+  if (!now || typeof now.getTime !== 'function' || !Number.isFinite(now.getTime())) return false;
+  const snapshot = data && typeof data === 'object' ? data : {};
+  const conditions = {};
+  if (typeof snapshot.uv === 'number' && Number.isFinite(snapshot.uv) && snapshot.uv >= 0) conditions.uv = snapshot.uv;
+  if (typeof snapshot.aqi === 'number' && Number.isFinite(snapshot.aqi) && snapshot.aqi >= 0) conditions.aqi = snapshot.aqi;
+  if (typeof snapshot.feel === 'number' && Number.isFinite(snapshot.feel)) conditions.feel = snapshot.feel;
+  if (typeof snapshot.sunrise === 'string' && snapshot.sunrise.length > 0 && snapshot.sunrise.length <= 32) conditions.sunrise = snapshot.sunrise;
+  if (typeof snapshot.sunset === 'string' && snapshot.sunset.length > 0 && snapshot.sunset.length <= 32) conditions.sunset = snapshot.sunset;
+  const required = {
+    'aqi-adapt':'aqi', 'uv-protect':'uv', 'sunrise-light':'sunrise',
+    'aqi-opportunity':'aqi', 'heat-hydrate':'feel', 'sunset-rhythm':'sunset',
+  }[suggestion.reason];
+  if (!Object.hasOwn(conditions, required)) return false;
+  const ruleValue = conditions[exposure.rule.reading];
+  if ((exposure.rule.operator === '>=' && !(ruleValue >= exposure.rule.threshold)) ||
+      (exposure.rule.operator === '>' && !(ruleValue > exposure.rule.threshold)) ||
+      (exposure.rule.operator === '<=' && !(ruleValue <= exposure.rule.threshold))) return false;
+  const sources = {};
+  if (['uv','feel','sunrise','sunset'].some(field => Object.hasOwn(conditions, field))) sources.weather = 'open-meteo';
+  if (Object.hasOwn(conditions, 'aqi')) sources.aqi = 'open-meteo';
+  const key = dateKey(now);
+  const day = history.days[key] || (history.days[key] = { recommendations:[], completions:{} });
+  const timestamp = now.getTime();
+  const sourceObservedAt = required === 'aqi' ? data.aqiObservedAt : data.weatherObservedAt;
+  const observationTimestamp = Number.isInteger(sourceObservedAt) && sourceObservedAt >= 0 && sourceObservedAt <= 4102444800000
+    ? sourceObservedAt
+    : timestamp;
+  const existing = day.recommendations.find(record => record.habitId === suggestion.habitId && record.reason === suggestion.reason);
+  if (existing) {
+    existing.lastShownAt = timestamp;
+    return true;
+  }
+  if (day.recommendations.length >= 12) day.recommendations.shift();
+  day.recommendations.push({
+    habitId:suggestion.habitId, reason:suggestion.reason,
+    shownAt:timestamp, lastShownAt:timestamp, observedAt:observationTimestamp, conditions, sources,
+    habitLabel:exposure.habitLabel.slice(0, 80), measurementType:exposure.measurementType,
+    ruleVersion:1, rule:{ ...exposure.rule },
+  });
+  return true;
+}
+
+function markInsightViewed(history, habitId, now) {
+  if (!history || !history.days || typeof habitId !== 'string' || !now || typeof now.getTime !== 'function' || !Number.isFinite(now.getTime())) return false;
+  const day = history.days[dateKey(now)];
+  if (!day) return false;
+  const matching = day.recommendations.filter(record => record.habitId === habitId).sort((a, b) => b.lastShownAt - a.lastShownAt);
+  if (matching.length === 0) return false;
+  matching[0].viewedAt = now.getTime();
+  return true;
+}
+
+function recordInsightCompletion(history, habitId, now, completed) {
+  if (!history || !history.days || typeof habitId !== 'string' || habitId.length === 0 || habitId.length > 64 ||
+      !now || typeof now.getTime !== 'function' || !Number.isFinite(now.getTime())) return false;
+  const key = dateKey(now);
+  const day = history.days[key] || (completed ? (history.days[key] = { recommendations:[], completions:{} }) : null);
+  if (!day) return false;
+  const matching = day.recommendations.filter(record => record.habitId === habitId);
+  if (completed) {
+    const timestamp = now.getTime();
+    day.completions[habitId] = timestamp;
+    matching.forEach(record => {
+      if (timestamp >= record.shownAt) record.completedAt = timestamp;
+    });
+  } else {
+    delete day.completions[habitId];
+    matching.forEach(record => { delete record.completedAt; });
+  }
+  return true;
+}
+
+function pruneInsightHistory(history, now, maxDays = 400) {
+  if (!history || !history.days) return history;
+  const limit = Number.isInteger(maxDays) && maxDays > 0 ? maxDays : 400;
+  const keys = Object.keys(history.days).filter(isValidDateKey).sort();
+  keys.slice(0, Math.max(0, keys.length - limit)).forEach(key => { delete history.days[key]; });
+  return history;
+}
+
+function normalizeInsightHistoryAgainstState(history, storedState, strict = false) {
+  const invalid = message => {
+    if (strict) throw new Error(message);
+  };
+  for (const [key, day] of Object.entries((history && history.days) || {})) {
+    for (const habitId of Object.keys(day.completions || {})) {
+      if (!storedState || !storedState.done || !storedState.done[key] || storedState.done[key][habitId] !== true) {
+        invalid(`Insight completion evidence does not match habit history for ${habitId}.`);
+        delete day.completions[habitId];
+        (day.recommendations || []).filter(record => record.habitId === habitId).forEach(record => { delete record.completedAt; });
+      }
+    }
+  }
+  return history;
+}
+
+function clearInsightDate(history, now) {
+  if (!history || !history.days || !now || typeof now.getTime !== 'function' || !Number.isFinite(now.getTime())) return false;
+  const key = dateKey(now);
+  if (!history.days[key]) return false;
+  delete history.days[key];
+  return true;
+}
+
+function getConditionInsightCards(history, minimumRelevantDays = 10, now = new Date()) {
+  const minimum = Number.isInteger(minimumRelevantDays) && minimumRelevantDays > 0 ? minimumRelevantDays : 10;
+  const todayKey = dateKey(now);
+  const definitions = [
+    { id:'sun-wise', icon:'🧴', eyebrow:'Sun-wise', reason:'uv-protect', cue:'UV' },
+    { id:'heatwise', icon:'💧', eyebrow:'Heatwise', reason:'heat-hydrate', cue:'heat' },
+    { id:'morning-light', icon:'🌤️', eyebrow:'Morning light', reason:'sunrise-light', cue:'morning-light' },
+    { id:'poor-air-movement', icon:'🍃', eyebrow:'Poor-air follow-through', reason:'aqi-adapt', cue:'poor-air' },
+  ];
+  const cards = [];
+  definitions.forEach(definition => {
+    const groups = new Map();
+    Object.entries((history && history.days) || {}).forEach(([key, day]) => {
+      if (!isValidDateKey(key) || key >= todayKey) return;
+      (day.recommendations || []).filter(record => record.reason === definition.reason).forEach(record => {
+        if (!record.habitLabel || !record.rule) return;
+        const signature = JSON.stringify([record.habitId, record.habitLabel, record.measurementType, record.ruleVersion, record.rule]);
+        if (!groups.has(signature)) groups.set(signature, { label:record.habitLabel, relevant:new Set(), completed:new Set() });
+        const group = groups.get(signature);
+        group.relevant.add(key);
+        if (Number.isInteger(record.completedAt) && record.completedAt >= record.shownAt &&
+            day.completions && day.completions[record.habitId] === record.completedAt) group.completed.add(key);
+      });
+    });
+    const eligible = [...groups.values()]
+      .filter(group => group.relevant.size >= minimum)
+      .sort((a, b) => b.relevant.size - a.relevant.size || a.label.localeCompare(b.label));
+    if (eligible.length === 0) return;
+    const group = eligible[0];
+    const relevant = group.relevant.size;
+    const completed = group.completed.size;
+    cards.push({
+      id:definition.id, icon:definition.icon, eyebrow:definition.eyebrow, relevant, completed,
+      title:`You marked “${group.label}” complete on ${completed} of ${relevant} days when Wavelength showed a ${definition.cue} cue.`,
+      detail:`Observed in your history · Based on ${relevant} closed ${definition.cue}-cue dates`,
+    });
+  });
+  return cards;
+}
+
+function selectConditionInsightCard(cards, now = new Date()) {
+  if (!Array.isArray(cards) || cards.length === 0) return null;
+  const eligible = [...cards].sort((a, b) => b.relevant - a.relevant || a.id.localeCompare(b.id));
+  const key = dateKey(now).replaceAll('-', '');
+  return eligible[Number(key) % eligible.length];
+}
+
+function getAdaptiveDayCard(history, now = new Date()) {
+  if (!now || typeof now.getTime !== 'function' || !Number.isFinite(now.getTime())) return null;
+  const todaySerial = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const eligible = Object.entries((history && history.days) || {})
+    .filter(([key]) => isValidDateKey(key))
+    .sort(([a], [b]) => b.localeCompare(a))
+    .find(([key, day]) => {
+      const [year, month, date] = key.split('-').map(Number);
+      const age = Math.round((todaySerial - Date.UTC(year, month - 1, date)) / 86400000);
+      if (age < 1 || age > 30) return false;
+      const completedHabits = new Set((day.recommendations || [])
+        .filter(record => record.habitLabel && Number.isInteger(record.completedAt) && record.completedAt >= record.shownAt &&
+          day.completions && day.completions[record.habitId] === record.completedAt)
+        .map(record => record.habitId));
+      return completedHabits.size >= 2;
+    });
+  if (!eligible) return null;
+  const [key, day] = eligible;
+  const seenHabits = new Set();
+  const completedLabels = [];
+  (day.recommendations || []).forEach(record => {
+    if (!record.habitLabel || !Number.isInteger(record.completedAt) || record.completedAt < record.shownAt ||
+        seenHabits.has(record.habitId) || !day.completions || day.completions[record.habitId] !== record.completedAt) return;
+    seenHabits.add(record.habitId);
+    completedLabels.push(`“${record.habitLabel}”`);
+  });
+  const phrase = completedLabels.length === 2
+    ? `${completedLabels[0]} and ${completedLabels[1]}`
+    : `${completedLabels.slice(0, -1).join(', ')}, and ${completedLabels.at(-1)}`;
+  const [, month, date] = key.split('-').map(Number);
+  const monthName = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][month - 1];
+  const countWord = completedLabels.length === 2 ? 'two' : String(completedLabels.length);
+  return {
+    id:'adaptive-day', icon:'🏄', eyebrow:'Context-aware follow-through',
+    title:`You completed ${countWord} habits after Wavelength showed contextual cues on ${monthName} ${date}.`,
+    detail:`${phrase} were marked complete.`,
+    date:key, completed:completedLabels.length,
+  };
 }
 
 function normalizeProgressByDate(progressByDate, habits, strict = false) {
@@ -2518,6 +3133,51 @@ function loadOrder() {
 
 let state = loadState();
 let userOrder = loadOrder();
+let insightHistory = normalizeInsightHistory(null, DEFAULT_HABITS);
+
+function loadInsightHistory(activeHabits, storedState = state) {
+  const habits = activeHabits && activeHabits.length ? activeHabits : DEFAULT_HABITS;
+  try {
+    const raw = localStorage.getItem(INSIGHT_STORAGE_KEY);
+    const normalized = normalizeInsightHistory(raw ? JSON.parse(raw) : null, habits, false);
+    return normalizeInsightHistoryAgainstState(normalized, storedState, false);
+  } catch (e) {
+    return normalizeInsightHistory(null, habits);
+  }
+}
+
+function saveInsightHistory(now = new Date()) {
+  pruneInsightHistory(insightHistory, now, 400);
+  insightHistory = normalizeInsightHistory(insightHistory, HABITS.length ? HABITS : DEFAULT_HABITS, false);
+  normalizeInsightHistoryAgainstState(insightHistory, state, false);
+  localStorage.setItem(INSIGHT_STORAGE_KEY, JSON.stringify(insightHistory));
+}
+
+function renderAdaptiveInsights(now = new Date()) {
+  const conditionSection = document.getElementById('conditionInsightSection');
+  const adaptiveSection = document.getElementById('adaptiveDaySection');
+  const learning = document.getElementById('insightLearning');
+  if (!conditionSection || !adaptiveSection || !learning) return;
+
+  const selected = selectConditionInsightCard(getConditionInsightCards(insightHistory, 10, now), now);
+  conditionSection.hidden = !selected;
+  if (selected) {
+    document.getElementById('conditionInsightIcon').textContent = selected.icon;
+    document.getElementById('conditionInsightEyebrow').textContent = selected.eyebrow;
+    document.getElementById('conditionInsightTitle').textContent = selected.title;
+    document.getElementById('conditionInsightDetail').textContent = selected.detail;
+  }
+
+  const adaptiveDay = getAdaptiveDayCard(insightHistory, now);
+  adaptiveSection.hidden = !adaptiveDay;
+  if (adaptiveDay) {
+    document.getElementById('adaptiveDayIcon').textContent = adaptiveDay.icon;
+    document.getElementById('adaptiveDayEyebrow').textContent = adaptiveDay.eyebrow;
+    document.getElementById('adaptiveDayTitle').textContent = adaptiveDay.title;
+    document.getElementById('adaptiveDayDetail').textContent = adaptiveDay.detail;
+  }
+  learning.hidden = Boolean(selected || adaptiveDay);
+}
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -2586,15 +3246,20 @@ function updateDateDisplay(now = new Date()) {
 
 function refreshForDateRollover(now = new Date()) {
   if (dateKey(now) === lastRenderedDateKey) return false;
-  rhythmWeatherData = {
-    feel: rhythmWeatherData && rhythmWeatherData.feel,
-    uv: rhythmWeatherData && rhythmWeatherData.uv,
-    aqi: rhythmWeatherData && rhythmWeatherData.aqi,
-  };
+  rhythmWeatherData = null;
+  rhythmWeatherController?.abort();
   rhythmWeatherGeneration++;
   updateDateDisplay(now);
   renderHabits(now);
   renderInsights(now);
+  return true;
+}
+
+function ensureCurrentRenderedDate(now) {
+  if (lastRenderedDateKey !== dateKey(now)) {
+    refreshForDateRollover(now);
+    return false;
+  }
   return true;
 }
 
@@ -2734,6 +3399,7 @@ function renderHabits(now = new Date()) {
   updateGreeting(now);
   if (rhythmWeatherData) updateRhythmAnchors(rhythmWeatherData, now);
   else renderNextWave(now);
+  renderAdaptiveInsights(now);
 }
 
 function setReorderMode(enabled) {
@@ -2962,6 +3628,7 @@ function handlePointerUp(e) {
 // ═══════════════════════════════════════════════════════════════════
 function adjustMeasuredHabit(id, direction) {
   const now = new Date();
+  if (!ensureCurrentRenderedDate(now)) return;
   const key = dateKey(now);
   state.progress = state.progress || {};
   const wasComplete = !!(state.done[key] && state.done[key][id]);
@@ -2970,7 +3637,9 @@ function adjustMeasuredHabit(id, direction) {
   const habit = HABITS.find(item => item.id === id);
   const display = getMeasurementDisplay(habit, change.progress);
   const stats = getDailyHabitStats(state.done || {}, HABITS, now, 5, state.progress || {});
+  recordInsightCompletion(insightHistory, id, now, change.complete);
   saveState();
+  saveInsightHistory(now);
   renderHabits(now);
   if (change.complete && !wasComplete && stats.scheduledCount > 0 && stats.doneCount === stats.scheduledCount) {
     showToast('🎉 ALL DONE! You crushed it today!');
@@ -2986,23 +3655,28 @@ function adjustMeasuredHabit(id, direction) {
 
 function toggleHabit(id) {
   const now = new Date();
+  if (!ensureCurrentRenderedDate(now)) return;
   const todayKey = dateKey(now);
   if (!state.done[todayKey]) state.done[todayKey] = {};
   const today = state.done[todayKey];
 
   if (today[id]) {
     delete today[id];
+    recordInsightCompletion(insightHistory, id, now, false);
     saveState();
+    saveInsightHistory(now);
     renderHabits(now);
     showToast('Unmarked — that\'s okay. Fresh starts welcome.');
     return;
   }
 
   today[id] = true;
+  recordInsightCompletion(insightHistory, id, now, true);
   const stats = getDailyHabitStats(state.done || {}, HABITS, now, 5, state.progress || {});
   const { doneCount, scheduledCount, target } = stats;
 
   saveState();
+  saveInsightHistory(now);
   renderHabits(now);
 
   if (scheduledCount > 0 && doneCount === scheduledCount) {
@@ -3463,6 +4137,7 @@ function saveManageModal() {
   reconcileMeasurementTypeChanges(state.done, state.progress, previousHabits, HABITS, editDate);
   reconcileMeasuredDay(state.done, state.progress, HABITS, editDate);
   saveState();
+  saveInsightHistory(editDate);
   // Merge custom order with new habits (same IDs, order preserved)
   renderHabits(editDate);
   closeManageModal();
@@ -3470,11 +4145,50 @@ function saveManageModal() {
   return true;
 }
 
+const viewScrollPositions = { home:0, insights:0 };
+let currentActiveView = 'home';
+
+function setActiveView(view, scroll = true) {
+  const activeView = view === 'insights' ? 'insights' : 'home';
+  const homeView = document.getElementById('homeView');
+  const insightsView = document.getElementById('insightsView');
+  const homeButton = document.getElementById('navHome');
+  const insightsButton = document.getElementById('navInsights');
+
+  if (scroll) viewScrollPositions[currentActiveView] = window.scrollY;
+  homeView.hidden = activeView !== 'home';
+  insightsView.hidden = activeView !== 'insights';
+  homeView.inert = activeView !== 'home';
+  insightsView.inert = activeView !== 'insights';
+  homeButton.setAttribute('aria-selected', String(activeView === 'home'));
+  insightsButton.setAttribute('aria-selected', String(activeView === 'insights'));
+  homeButton.tabIndex = activeView === 'home' ? 0 : -1;
+  insightsButton.tabIndex = activeView === 'insights' ? 0 : -1;
+  if (activeView === 'home') homeButton.setAttribute('aria-current', 'page');
+  else homeButton.removeAttribute('aria-current');
+  if (activeView === 'insights') insightsButton.setAttribute('aria-current', 'page');
+  else insightsButton.removeAttribute('aria-current');
+  document.documentElement.dataset.activeView = activeView;
+  currentActiveView = activeView;
+  const viewNow = new Date();
+
+  if (activeView === 'insights') {
+    if (reorderMode) setReorderMode(false);
+    renderAdaptiveInsights(viewNow);
+  } else {
+    renderNextWave(viewNow);
+  }
+  if (scroll) {
+    requestAnimationFrame(() => window.scrollTo({ top:viewScrollPositions[activeView], behavior:'auto' }));
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════════
 function init() {
   reloadHabits();
+  insightHistory = loadInsightHistory(HABITS, state);
   applyThemePreference(document.documentElement.dataset.themePreference || 'system', false);
 
   // Date
@@ -3492,13 +4206,26 @@ function init() {
   });
 
   document.getElementById('nextWaveAction').addEventListener('click', focusNextWaveHabit);
+  document.getElementById('navHome').addEventListener('click', () => setActiveView('home'));
+  document.getElementById('navInsights').addEventListener('click', () => setActiveView('insights'));
+  document.querySelector('.app-dock').addEventListener('keydown', event => {
+    if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    event.preventDefault();
+    const targetView = event.key === 'ArrowLeft' || event.key === 'Home' ? 'home' : 'insights';
+    setActiveView(targetView);
+    document.getElementById(targetView === 'home' ? 'navHome' : 'navInsights').focus();
+  });
 
   // Reset
   document.getElementById('resetBtn').addEventListener('click', () => {
     const resetDate = new Date();
     resetHabitDay(state, resetDate);
+    if (!ensureCurrentRenderedDate(resetDate)) { /* refresh already happened */ }
+    clearInsightDate(insightHistory, resetDate);
     saveState();
+    saveInsightHistory(resetDate);
     renderHabits(resetDate);
+    renderInsights(resetDate);
     showToast('↻ Today reset. Fresh start.');
   });
 
@@ -3522,6 +4249,7 @@ function init() {
     reconcileMeasurementTypeChanges(state.done, state.progress, previousHabits, HABITS, resetDate);
     reconcileMeasuredDay(state.done, state.progress, HABITS, resetDate);
     saveState();
+    saveInsightHistory(resetDate);
     renderHabits(resetDate);
     closeManageModal();
     showToast('↻ Habits reset to defaults');
@@ -3536,9 +4264,15 @@ function init() {
   renderHabits(now);
   scheduleNextDateRollover(now);
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) refreshForDateRollover();
+    if (document.visibilityState === 'visible') {
+      const visibilityNow = new Date();
+      if (!refreshForDateRollover(visibilityNow)) renderNextWave(visibilityNow);
+    }
   });
-  window.addEventListener('pageshow', () => refreshForDateRollover());
+  window.addEventListener('pageshow', () => {
+    const pageShowNow = new Date();
+    if (!refreshForDateRollover(pageShowNow)) renderNextWave(pageShowNow);
+  });
 }
 
 document.addEventListener('DOMContentLoaded', init);

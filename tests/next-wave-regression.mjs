@@ -90,7 +90,7 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(
     plain(getNextWaveSuggestion(baseHabits, emptyDone, {}, morning, { aqi:121, uv:4, feel:96, sunrise:'6:58 AM' })),
     {
-      habitId:'beach', category:'movement', icon:'🌊', eyebrow:'Adapt today',
+      habitId:'beach', category:'movement', icon:'🌊', reason:'aqi-adapt', eyebrow:'Adapt today',
       title:"If you're sensitive to air quality, move indoors today.",
       detail:'Unhealthy for sensitive groups · AQI 121', action:'View habit',
     },
@@ -106,7 +106,7 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(
     plain(getNextWaveSuggestion(baseHabits, emptyDone, {}, morning, { aqi:43, uv:4, feel:96, sunrise:'6:58 AM' })),
     {
-      habitId:'sunscreen', category:'hygiene', icon:'🧴', eyebrow:'Suggested now',
+      habitId:'sunscreen', category:'hygiene', icon:'🧴', reason:'uv-protect', eyebrow:'Suggested now',
       title:'Use sun protection before heading out.', detail:'UV 4 · Sun protection matters now', action:'View habit',
     },
     `${label}: active UV protection takes priority before an outdoor recommendation`,
@@ -115,7 +115,7 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(
     plain(getNextWaveSuggestion(baseHabits, doneFor(morning, ['sunscreen']), {}, morning, { aqi:43, uv:4, feel:96, sunrise:'6:58 AM' })),
     {
-      habitId:'daylight', category:'morning', icon:'🌤️', eyebrow:'Suggested now',
+      habitId:'daylight', category:'morning', icon:'🌤️', reason:'sunrise-light', eyebrow:'Suggested now',
       title:'Step outside for your morning light.', detail:'Sunrise today · 6:58 AM', action:'View habit',
     },
     `${label}: morning light is offered near the start of the day when still incomplete`,
@@ -124,7 +124,7 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(
     plain(getNextWaveSuggestion(baseHabits, doneFor(morning, ['sunscreen','daylight']), {}, morning, { aqi:43, uv:4, feel:96, sunrise:'6:58 AM' })),
     {
-      habitId:'beach', category:'movement', icon:'🌊', eyebrow:'Suggested now',
+      habitId:'beach', category:'movement', icon:'🌊', reason:'aqi-opportunity', eyebrow:'Suggested now',
       title:'Now is a good time for your outdoor walk.', detail:'Good air quality · AQI 43', action:'View habit',
     },
     `${label}: favorable AQI connects directly to the incomplete outdoor habit`,
@@ -139,7 +139,7 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(
     plain(getNextWaveSuggestion(baseHabits, doneFor(morning, ['sunscreen','daylight','beach']), {}, morning, { aqi:43, uv:4, feel:96 })),
     {
-      habitId:'hydrate', category:'morning', icon:'💧', eyebrow:'Suggested now',
+      habitId:'hydrate', category:'morning', icon:'💧', reason:'heat-hydrate', eyebrow:'Suggested now',
       title:'Have your next glass of water.', detail:'Feels like 96°F', action:'View habit',
     },
     `${label}: heat amplifies an incomplete hydration habit after higher priorities are covered`,
@@ -154,7 +154,7 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(
     plain(getNextWaveSuggestion(baseHabits, doneFor(morning, ['daylight']), {}, morning, null)),
     {
-      habitId:'hydrate', category:'morning', icon:'💧', eyebrow:'A simple next step',
+      habitId:'hydrate', category:'morning', icon:'💧', reason:'time-fallback', eyebrow:'A simple next step',
       title:'Start with your water habit.', detail:'A calm way to begin the day.', action:'View habit',
     },
     `${label}: missing location still yields a helpful morning habit rather than technical fallback copy`,
@@ -164,7 +164,7 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(
     plain(getNextWaveSuggestion(baseHabits, doneFor(afternoon, ['daylight','hydrate','beach','sunscreen']), {}, afternoon, null)),
     {
-      habitId:'meditate', category:'mind', icon:'🧠', eyebrow:'Your next small win',
+      habitId:'meditate', category:'mind', icon:'🧠', reason:'time-fallback', eyebrow:'Your next small win',
       title:'Meditate 10 min', detail:'One open habit that fits this part of your day.', action:'View habit',
     },
     `${label}: a time-relevant incomplete habit becomes the fallback`,
@@ -181,7 +181,7 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(
     plain(getNextWaveSuggestion(baseHabits, allDone, {}, afternoon, { aqi:43, uv:4, feel:96 })),
     {
-      habitId:null, category:null, icon:'✓', eyebrow:'You’re caught up',
+      habitId:null, category:null, icon:'✓', reason:'none', eyebrow:'You’re caught up',
       title:'Today’s habits are complete.', detail:'You followed through on every scheduled habit.', action:null,
     },
     `${label}: completed habits are never recommended and all-done copy is calm`,
@@ -253,7 +253,7 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(
     plain(getNextWaveSuggestion(noScheduled, emptyDone, {}, morning, { aqi:43, uv:4, feel:96 })),
     {
-      habitId:null, category:null, icon:'○', eyebrow:'A quiet day',
+      habitId:null, category:null, icon:'○', reason:'none', eyebrow:'A quiet day',
       title:'No habits are scheduled today.', detail:'Use the space in whatever way feels restorative.', action:null,
     },
     `${label}: a no-scheduled day has a calm state and no action`,
@@ -278,14 +278,14 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /pageshow[\s\S]*refreshForDateRollover/, `${label}: restored pages check for a missed rollover`);
   assert.match(
     html,
-    /function toggleHabit\(id\) \{\s*const now = new Date\(\);\s*const todayKey = dateKey\(now\);[\s\S]*getDailyHabitStats\(state\.done \|\| \{\}, HABITS, now, 5, state\.progress \|\| \{\}\)/,
+    /function toggleHabit\(id\) \{\s*const now = new Date\(\);\s*if \(!ensureCurrentRenderedDate\(now\)\) return;\s*const todayKey = dateKey\(now\);[\s\S]*getDailyHabitStats\(state\.done \|\| \{\}, HABITS, now, 5, state\.progress \|\| \{\}\)/,
     `${label}: toggleHabit uses one timestamp for mutation and statistics`,
   );
 
   assert.match(html, /function renderInsights\(now = new Date\(\)\)[\s\S]*const generation = \+\+rhythmWeatherGeneration/, `${label}: renderInsights uses a generation guard`);
-  assert.match(html, /if \(generation !== rhythmWeatherGeneration\) return/, `${label}: superseded environmental responses are discarded before mutating shared state`);
-  assert.match(html, /function refreshForDateRollover\(now = new Date\(\)\)[\s\S]*rhythmWeatherData = \{[\s\S]*feel:[\s\S]*uv:[\s\S]*aqi:[\s\S]*rhythmWeatherGeneration\+\+/, `${label}: rollover clears stale day-specific environmental data and bumps the generation`);
-  assert.match(html, /function toggleHabit\(id\) \{\s*const now = new Date\(\);\s*const todayKey = dateKey\(now\);[\s\S]*renderHabits\(now\)/, `${label}: toggle threads its transaction timestamp through the rerender`);
+  assert.match(html, /if \(generation !== rhythmWeatherGeneration \|\| activeDateKey !== dateKey\(new Date\(\)\)\) return/, `${label}: superseded environmental responses are discarded before mutating shared state`);
+  assert.match(html, /function refreshForDateRollover\(now = new Date\(\)\)[\s\S]*rhythmWeatherData = null[\s\S]*rhythmWeatherGeneration\+\+/, `${label}: rollover clears all environmental channels and bumps the generation`);
+  assert.match(html, /function toggleHabit\(id\) \{\s*const now = new Date\(\);\s*if \(!ensureCurrentRenderedDate\(now\)\) return;\s*const todayKey = dateKey\(now\);[\s\S]*renderHabits\(now\)/, `${label}: toggle threads its transaction timestamp through the rerender`);
 
   assert.match(html, /title\.textContent = suggestion\.title/, `${label}: recommendation titles render as text, not HTML`);
   assert.match(html, /detail\.textContent = suggestion\.detail/, `${label}: recommendation details render as text, not HTML`);

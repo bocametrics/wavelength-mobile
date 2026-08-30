@@ -179,7 +179,8 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /'uv-above': 'When UV index reaches'/, `${label}: Manage describes the inclusive UV comparison accurately`);
   assert.match(html, /'aqi-below': 'When US AQI is at most'/, `${label}: Manage describes the inclusive AQI comparison accurately`);
 
-  assert.match(html, /id=["']insightsHeading["'][^>]*>🌊 Your next wave</, `${label}: Next Wave heading stays habit-focused before and after location permission`);
+  assert.match(html, /id=["']nextWaveHeading["'][^>]*>🌊 Your next wave</, `${label}: Next Wave remains the habit-focused Home recommendation`);
+  assert.match(html, /id=["']insightsHeading["'][^>]*>Insights</, `${label}: the reflective view has its own clear heading`);
   assert.doesNotMatch(html, /insightSunrise|insightHeat|Your \$\{loc\.city\} rhythm/, `${label}: the retired weather dashboard does not return`);
   assert.doesNotMatch(html, /const DEFAULT_LOC|const MONTHLY_CLIMATE|const FLORIDA_FACTS/, `${label}: denied location never falls back to invented West Palm Beach conditions`);
 }
