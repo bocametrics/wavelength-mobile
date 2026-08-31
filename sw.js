@@ -1,4 +1,4 @@
-const CACHE_NAME = 'wavelength-mobile-v21';
+const CACHE_NAME = 'wavelength-mobile-v22';
 const APP_SHELL = [
   './',
   './index.html',

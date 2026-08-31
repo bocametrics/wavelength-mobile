@@ -89,6 +89,8 @@ The fixed bottom dock separates action from reflection:
 
 The dock buttons explicitly expose `aria-current="page"`, meet the 44px touch-target floor, and reserve enough bottom and safe-area space that the last card remains scrollable above the dock.
 
+In normal tracking mode, every category keeps incomplete habits first and moves completed habits beneath a quiet **Completed · N** heading. Both groups preserve their relative positions from the saved canonical order; completion is a view-only partition and never rewrites `wavelength_wpb_order`. **Reorder** temporarily removes the partition and heading, showing every card in canonical order with completed styling intact. This makes Reorder an honest preview of the next fresh day. Unmarking a check-once habit or reducing a measured habit below its target returns it to the active group immediately.
+
 **This week** keeps its seven-day calendar strip, but its percentage counts only elapsed eligible days through today. Future days remain visible without lowering the result before they happen. **Last 30 days** plots each elapsed day’s scheduled-habit completion rate on a 0–100% line chart and shows a weighted average plus the exact number of tracked days. A faint dashed line marks that weighted rolling average behind the solid daily series, making recent above/below-baseline days visible without adding another score or duplicate plot label. The stored app-creation timestamp anchors the beginning of tracking, so a real zero-completion first day remains visible while earlier dates are gaps rather than invented zeroes. The header pairs the week number with the year instead of repeating the month already shown in the full date.
 
 ### Prospective evidence and adaptive cards

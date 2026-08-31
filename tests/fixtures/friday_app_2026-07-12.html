@@ -343,6 +343,15 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     margin-bottom: 32px;
   }
 
+  .completed-divider {
+    margin: 10px 4px 0;
+    color: var(--text2);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+  }
+
   .habit-empty {
     padding: 22px 16px;
     border: 1px dashed var(--border2);
@@ -3359,6 +3368,23 @@ function scheduleNextDateRollover(now = new Date()) {
   }, getNextDateRolloverDelay(now));
 }
 
+function partitionHabitsForTracking(orderedHabits, todayDone, todayProgress) {
+  todayDone = todayDone || {};
+  todayProgress = todayProgress || {};
+  const active = [];
+  const completed = [];
+  orderedHabits.forEach(habit => {
+    const progress = getHabitProgress(todayDone, todayProgress, habit);
+    const destination = isHabitProgressComplete(habit, progress) ? completed : active;
+    destination.push(habit);
+  });
+  return { active, completed };
+}
+
+function getCompletedHabitsAriaLabel(count) {
+  return `${count} completed ${count === 1 ? 'habit' : 'habits'}`;
+}
+
 function renderHabits(now = new Date()) {
   lastRenderedDateKey = dateKey(now);
   const list = document.getElementById('habitList');
@@ -3375,6 +3401,7 @@ function renderHabits(now = new Date()) {
   const sorted = [...filtered].sort((a, b) => {
     return userOrder.indexOf(a.id) - userOrder.indexOf(b.id);
   });
+  const grouped = partitionHabitsForTracking(sorted, todayDone, todayProgress);
 
   document.getElementById('doneCount').textContent = `${todayStats.doneCount} / ${todayStats.scheduledCount}`;
 
@@ -3382,9 +3409,7 @@ function renderHabits(now = new Date()) {
   const firstId = sorted.length > 0 ? sorted[0].id : null;
   const lastId = sorted.length > 0 ? sorted[sorted.length - 1].id : null;
 
-  list.innerHTML = sorted.length === 0
-    ? `<div class="habit-empty">No ${currentCat === 'all' ? '' : `${currentCat} `}habits scheduled today.</div>`
-    : sorted.map((h, i) => {
+  const renderHabitCards = habits => habits.map(h => {
     const measurement = normalizeMeasurementConfig(h);
     const rhythm = normalizeRhythmConfig(h.rhythm);
     const progress = getHabitProgress(todayDone, todayProgress, h);
@@ -3437,6 +3462,16 @@ function renderHabits(now = new Date()) {
       </div>
       `;
     }).join('');
+
+  const completedMarkup = grouped.completed.length === 0
+    ? ''
+    : `<h3 class="completed-divider" aria-label="${getCompletedHabitsAriaLabel(grouped.completed.length)}">Completed · ${grouped.completed.length}</h3>
+      ${renderHabitCards(grouped.completed)}`;
+  list.innerHTML = sorted.length === 0
+    ? `<div class="habit-empty">No ${currentCat === 'all' ? '' : `${currentCat} `}habits scheduled today.</div>`
+    : reorderMode
+      ? renderHabitCards(sorted)
+      : `${renderHabitCards(grouped.active)}${completedMarkup}`;
 
   // Attach click-to-toggle on the habit card (skip clicks on handle, buttons, badge)
   list.querySelectorAll('.habit').forEach(el => {
