@@ -85,9 +85,11 @@ The checked-in 390px Edge flow is `tests/browser/next-wave-e2e.cjs`. On the WSL/
 The fixed bottom dock separates action from reflection:
 
 - **Home** contains the greeting, Your next wave, category controls, today's habits, and Reset today.
-- **Insights** begins with the existing Streak/Today completion card, followed by This week. Evidence-qualified adaptive cards appear beneath those progress summaries.
+- **Insights** begins with Streak/Today completion, followed by This week and a rolling Last 30 days trend. Evidence-qualified adaptive cards appear beneath those progress summaries.
 
 The dock buttons explicitly expose `aria-current="page"`, meet the 44px touch-target floor, and reserve enough bottom and safe-area space that the last card remains scrollable above the dock.
+
+**This week** keeps its seven-day calendar strip, but its percentage counts only elapsed eligible days through today. Future days remain visible without lowering the result before they happen. **Last 30 days** plots each elapsed day’s scheduled-habit completion rate on a 0–100% line chart and shows a weighted average plus the exact number of tracked days. The stored app-creation timestamp anchors the beginning of tracking, so a real zero-completion first day remains visible while earlier dates are gaps rather than invented zeroes. The header pairs the week number with the year instead of repeating the month already shown in the full date.
 
 ### Prospective evidence and adaptive cards
 
@@ -132,6 +134,7 @@ Run the regression coverage for both mobile and desktop builds with:
 node tests/streak-regression.mjs
 node tests/theme-regression.mjs
 node tests/greeting-responsive-regression.mjs
+node tests/last-30-days-regression.mjs
 node tests/schedule-regression.mjs
 node tests/measurement-regression.mjs
 node tests/default-habits-regression.mjs
