@@ -6,6 +6,7 @@ const ORIGIN = process.env.WAVELENGTH_ORIGIN || 'http://127.0.0.1:8776';
 const URL = process.env.WAVELENGTH_URL || `${ORIGIN}/?last-30-days-e2e=local`;
 const SHOT = process.env.WAVELENGTH_SHOT || 'C:\\Temp\\wavelength-last-30-days.png';
 const HEADER_SHOT = process.env.WAVELENGTH_HEADER_SHOT || 'C:\\Temp\\wavelength-last-30-days-header.png';
+const THEME = process.env.WAVELENGTH_THEME || 'light';
 let browser;
 
 (async () => {
@@ -46,9 +47,9 @@ let browser;
   });
 
   await page.goto(URL, { waitUntil:'networkidle0' });
-  await page.evaluate(() => {
+  await page.evaluate(theme => {
     localStorage.clear();
-    localStorage.setItem('wavelength_theme', 'light');
+    localStorage.setItem('wavelength_theme', theme);
     const now = new Date();
     const completionCounts = [5, 8, 3, 10, 6, 9, 4, 5];
     const done = {};
@@ -62,7 +63,7 @@ let browser;
     localStorage.setItem('wavelength_wpb', JSON.stringify({
       done, progress:{}, streak:0, longestStreak:0, week:{}, created,
     }));
-  });
+  }, THEME);
   await page.reload({ waitUntil:'networkidle0' });
   await page.click('#navInsights');
   await page.waitForFunction(() => document.querySelectorAll('#last30Chart .trend-point').length === 8);
@@ -75,6 +76,8 @@ let browser;
     const svg = document.getElementById('last30Chart');
     const labels = [...svg.querySelectorAll('.trend-date-label')].map(node => node.textContent);
     const axisLabels = [...svg.querySelectorAll('.trend-axis-label')].map(node => node.textContent);
+    const averageLine = svg.querySelector('.trend-average-line');
+    const averageStyle = getComputedStyle(averageLine);
     const rect = card.getBoundingClientRect();
     return {
       dateLabel:document.getElementById('dateLabel').textContent,
@@ -88,6 +91,14 @@ let browser;
       pathCount:svg.querySelectorAll('.trend-line').length,
       labels,
       axisLabels,
+      averageLineCount:svg.querySelectorAll('.trend-average-line').length,
+      averageLabelCount:svg.querySelectorAll('.trend-average-label').length,
+      averageY:Number(averageLine?.getAttribute('y1')),
+      expectedAverageY:10 + ((100 - trend.averagePct) / 100) * (150 - 10 - 26),
+      averageOpacity:Number(averageStyle.opacity),
+      averageDash:averageStyle.strokeDasharray,
+      baselineBeforeData:Boolean(averageLine && svg.querySelector('.trend-line') &&
+        (averageLine.compareDocumentPosition(svg.querySelector('.trend-line')) & Node.DOCUMENT_POSITION_FOLLOWING)),
       title:svg.querySelector('title')?.textContent,
       cardWidth:rect.width,
       viewportWidth:window.innerWidth,
@@ -105,6 +116,12 @@ let browser;
   assert.equal(result.pathCount, 1);
   assert.equal(result.labels.length, 5, 'x-axis uses sparse mobile labels');
   assert.deepEqual(result.axisLabels, ['100%', '50%', '0%']);
+  assert.equal(result.averageLineCount, 1);
+  assert.equal(result.averageLabelCount, 0, 'header copy labels the average without cluttering the plot');
+  assert.ok(Math.abs(result.averageY - result.expectedAverageY) < 0.01);
+  assert.ok(result.averageOpacity > 0 && result.averageOpacity <= 0.5, 'average line stays faint');
+  assert.notEqual(result.averageDash, 'none', 'average line is dashed');
+  assert.equal(result.baselineBeforeData, true, 'average line renders behind the daily series');
   assert.match(result.title, /average completion across 8 tracked days/);
   assert.ok(result.cardLeft >= 0 && result.cardRight <= result.viewportWidth, 'trend card fits the viewport');
   assert.ok(result.documentWidth <= result.viewportWidth, 'page has no horizontal overflow');

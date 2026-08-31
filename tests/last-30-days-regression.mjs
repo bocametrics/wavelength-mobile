@@ -114,6 +114,14 @@ for (const [label, htmlPath] of builds) {
     `${label}: weekly display uses the elapsed-day summary helper`);
   assert.match(html, /<text class="trend-axis-label"[^>]*>\$\{pct\}%<\/text>/,
     `${label}: Y-axis labels identify completion percentages explicitly`);
+  assert.match(html, /\.trend-average-line\s*\{[^}]*stroke-dasharray:[^}]*opacity:/,
+    `${label}: average baseline is visually distinct and faint`);
+  assert.match(html, /const averageBaseline = trend\.trackedDays > 0[\s\S]*class="trend-average-line"/,
+    `${label}: renderer adds the weighted rolling average only when data exists`);
+  assert.doesNotMatch(html, /trend-average-label/,
+    `${label}: the header's average copy is not duplicated inside the compact plot`);
+  assert.match(html, /\$\{grid\}\$\{averageBaseline\}\$\{labels\}\$\{lines\}\$\{points\}/,
+    `${label}: faint baseline renders behind the primary data line and points`);
   assert.match(html, /function renderLast30Days\(now = new Date\(\)\)/,
     `${label}: the 30-day card has a dedicated renderer`);
   assert.match(html, /renderLast30Days\(now\)/,
