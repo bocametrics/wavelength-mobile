@@ -34,7 +34,7 @@ function collectErrors(page) {
   await page.waitForSelector('#nextWaveCard');
 
   const neutral = await page.evaluate(() => ({
-    heading:document.getElementById('insightsHeading').textContent,
+    heading:document.getElementById('nextWaveHeading').textContent,
     title:document.getElementById('nextWaveTitle').textContent,
     detail:document.getElementById('nextWaveDetail').textContent,
     actionHidden:document.getElementById('nextWaveAction').hidden,
@@ -51,23 +51,25 @@ function collectErrors(page) {
   assert.equal(await page.evaluate(() => !!document.querySelector('#insightSunrise, #insightHeat, .insight-grid')), false);
 
   const mergeOrders = await page.evaluate(() => {
-    const key = dateKey(new Date());
+    const now = new Date();
+    now.setHours(12, 0, 0, 0);
+    const key = dateKey(now);
     state.done[key] = { daylight:true, sunscreen:true };
     state.progress = state.progress || {};
     saveState();
-    renderHabits();
+    renderHabits(now);
     const capture = () => ({
       title:document.getElementById('nextWaveTitle').textContent,
       detail:document.getElementById('nextWaveDetail').textContent,
       snapshot:{ ...rhythmWeatherData },
     });
     rhythmWeatherData = null;
-    updateRhythmAnchors({ uv:1, feel:96, sunrise:'6:58 AM', sunset:'7:42 PM' });
-    updateRhythmAnchors({ aqi:43 });
+    updateRhythmAnchors({ uv:1, feel:96, sunrise:'6:58 AM', sunset:'7:42 PM' }, now);
+    updateRhythmAnchors({ aqi:43 }, now);
     const forecastFirst = capture();
     rhythmWeatherData = null;
-    updateRhythmAnchors({ aqi:43 });
-    updateRhythmAnchors({ uv:1, feel:96, sunrise:'6:58 AM', sunset:'7:42 PM' });
+    updateRhythmAnchors({ aqi:43 }, now);
+    updateRhythmAnchors({ uv:1, feel:96, sunrise:'6:58 AM', sunset:'7:42 PM' }, now);
     const aqiFirst = capture();
     return { forecastFirst, aqiFirst };
   });
@@ -77,6 +79,7 @@ function collectErrors(page) {
 
   const safety = await page.evaluate(() => {
     const now = new Date();
+    now.setHours(12, 0, 0, 0);
     const key = dateKey(now);
     const beach = HABITS.find(habit => habit.id === 'beach');
     const daylight = HABITS.find(habit => habit.id === 'daylight');
@@ -200,6 +203,11 @@ function collectErrors(page) {
   await page.screenshot({ path:path.join(SHOT_DIR, 'wavelength-next-wave-focus.png') });
 
   await page.click('.habit[data-id="beach"]');
+  await page.evaluate(() => {
+    const now = new Date();
+    now.setHours(12, 0, 0, 0);
+    renderHabits(now);
+  });
   await page.waitForFunction(() => document.getElementById('nextWaveTitle').textContent === 'Have your next glass of water.');
   const advanced = await page.evaluate(() => ({
     title:document.getElementById('nextWaveTitle').textContent,
@@ -216,6 +224,7 @@ function collectErrors(page) {
 
   await page.evaluate(() => {
     const now = new Date();
+    now.setHours(12, 0, 0, 0);
     const key = dateKey(now);
     const custom = HABITS.find(habit => habit.id === 'meditate');
     custom.text = '<img id="next-wave-injection" src=x onerror=alert(1)>';
@@ -223,7 +232,7 @@ function collectErrors(page) {
       .filter(habit => habit.id !== 'meditate')
       .map(habit => [habit.id, true]));
     saveState();
-    renderHabits();
+    renderHabits(now);
   });
   await page.waitForFunction(() => document.getElementById('nextWaveAction').dataset.habitId === 'meditate');
   const safeCustomText = await page.evaluate(() => ({
@@ -235,12 +244,14 @@ function collectErrors(page) {
 
   await page.evaluate(() => {
     HABITS.find(habit => habit.id === 'meditate').text = 'Meditate 10 min';
-    const key = dateKey(new Date());
+    const now = new Date();
+    now.setHours(12, 0, 0, 0);
+    const key = dateKey(now);
     state.done[key] = { daylight:true, sunscreen:true };
     state.progress[key] = {};
     saveState();
-    renderHabits();
-    updateRhythmAnchors({ aqi:121, uv:1, feel:72 });
+    renderHabits(now);
+    updateRhythmAnchors({ aqi:121, uv:1, feel:72 }, now);
   });
   await page.waitForFunction(() => document.getElementById('nextWaveTitle').textContent.includes('move indoors today'));
   const unfavorable = await page.evaluate(() => ({
@@ -309,37 +320,46 @@ function collectErrors(page) {
   await page.click('#resetBtn');
   await page.waitForFunction(() => !document.getElementById('nextWaveAction').hidden && document.getElementById('nextWaveTitle').textContent !== 'Today\u2019s habits are complete.');
 
-  const generation = await page.evaluate(() => {
+  const generation = await page.evaluate(async () => {
     const first = rhythmWeatherGeneration;
-    renderInsights(new Date());
-    renderInsights(new Date());
-    const afterDouble = rhythmWeatherGeneration;
-    return new Promise(resolve => {
-      const origFetch = window.fetch;
-      let firstResolved = false;
-      window.fetch = (url) => {
-        if (String(url).includes('air-quality')) {
-          return new Promise(res => {
-            const delay = firstResolved ? 0 : 80;
-            firstResolved = true;
-            setTimeout(() => {
-              res({ ok:true, json:() => Promise.resolve({ current:{ us_aqi:firstResolved ? 999 : 43 } }) });
-            }, delay);
-          });
-        }
-        return origFetch(url);
-      };
+    const origFetch = window.fetch;
+    const origGetLocation = getLocation;
+    getLocation = () => Promise.resolve({ lat:26.7153, lon:-80.0534 });
+    let aqiCall = 0;
+    window.fetch = (url) => {
+      if (String(url).includes('air-quality')) {
+        const value = aqiCall++ === 0 ? 999 : 43;
+        const delay = value === 999 ? 80 : 0;
+        return new Promise(resolve => setTimeout(() => {
+          resolve({ ok:true, json:() => Promise.resolve({ current:{ us_aqi:value } }) });
+        }, delay));
+      }
+      if (String(url).includes('api.open-meteo.com/v1/forecast')) {
+        return Promise.resolve({
+          ok:true,
+          json:() => Promise.resolve({
+            current:{ apparent_temperature:72, uv_index:1, is_day:1 },
+            daily:{ sunrise:['2026-08-31T06:58'], sunset:['2026-08-31T19:42'] },
+          }),
+        });
+      }
+      return origFetch(url);
+    };
+    try {
       renderInsights(new Date());
+      await Promise.resolve();
       renderInsights(new Date());
-      setTimeout(() => {
-        const result = { first, afterDouble, finalAqi:rhythmWeatherData.aqi };
-        window.fetch = origFetch;
-        resolve(result);
-      }, 250);
-    });
+      const afterDouble = rhythmWeatherGeneration;
+      await new Promise(resolve => setTimeout(resolve, 250));
+      return { first, afterDouble, finalAqi:rhythmWeatherData?.aqi ?? null, aqiCall };
+    } finally {
+      window.fetch = origFetch;
+      getLocation = origGetLocation;
+    }
   });
   assert.equal(generation.afterDouble, generation.first + 2, 'each renderInsights call increments the generation');
-  assert.notEqual(generation.finalAqi, 999, 'superseded environmental response does not overwrite newer context');
+  assert.equal(generation.aqiCall, 2, 'both AQI requests started so the stale-response guard is exercised');
+  assert.equal(generation.finalAqi, 43, 'newest environmental response wins after the superseded response resolves');
 
   const rollover = await page.evaluate(() => {
     rhythmWeatherData = { sunrise:'6:00 AM', sunset:'8:00 PM', feel:72, uv:4, aqi:43 };
@@ -348,20 +368,12 @@ function collectErrors(page) {
     rhythmWeatherGeneration = 0;
     window.dispatchEvent(new Event('pageshow'));
     return {
-      afterHasSunrise: !!rhythmWeatherData.sunrise,
-      afterHasSunset: !!rhythmWeatherData.sunset,
-      afterKeepsFeel: rhythmWeatherData.feel === 72,
-      afterKeepsUv: rhythmWeatherData.uv === 4,
-      afterKeepsAqi: rhythmWeatherData.aqi === 43,
+      snapshotCleared: rhythmWeatherData === null,
       generationBumped: rhythmWeatherGeneration > 0,
       keyUpdated: lastRenderedDateKey === currentKey,
     };
   });
-  assert.equal(rollover.afterHasSunrise, false, 'rollover clears stale sunrise');
-  assert.equal(rollover.afterHasSunset, false, 'rollover clears stale sunset');
-  assert.equal(rollover.afterKeepsFeel, true, 'rollover preserves non-day-specific feel');
-  assert.equal(rollover.afterKeepsUv, true, 'rollover preserves non-day-specific UV');
-  assert.equal(rollover.afterKeepsAqi, true, 'rollover preserves AQI');
+  assert.equal(rollover.snapshotCleared, true, 'rollover clears every stale environmental channel');
   assert.equal(rollover.generationBumped, true, 'rollover bumps the generation');
   assert.equal(rollover.keyUpdated, true, 'rollover updates the rendered date key');
 

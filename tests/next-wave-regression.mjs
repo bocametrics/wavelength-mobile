@@ -49,6 +49,10 @@ function loadFunctions(html) {
     'getAqiCategory',
     'mergeRhythmWeatherData',
     'getNextDateRolloverDelay',
+    'parseDisplayClockMinutes',
+    'getDaylightState',
+    'getHabitRecommendationFit',
+    'getHabitAdaptiveSuggestion',
     'getNextWaveSuggestion',
   ];
   const rhythmPrelude = html.match(/const RHYTHM_TYPES\s*=\s*[^;]+;/);

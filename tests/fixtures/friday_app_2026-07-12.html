@@ -1118,7 +1118,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   /* ── Celebration Toast ── */
   .toast {
     position: fixed;
-    bottom: 30px;
+    bottom: calc(var(--dock-space) + max(12px, env(safe-area-inset-bottom)));
     left: 50%;
     transform: translateX(-50%) translateY(80px);
     background: var(--surface2);
@@ -1816,28 +1816,28 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 // DATA
 // ═══════════════════════════════════════════════════════════════════
 const DEFAULT_HABITS = [
-  { id:'wake',       cat:'morning',  icon:'⏰', text:'Wake at 6:30 AM',                    note:'Keep the wake time consistent', weight:2 },
-  { id:'daylight',   cat:'morning',  icon:'🌤️', text:'Get outdoor light after waking',       note:'Step outside near the start of your day', weight:1, activeFrom:'2026-08-28', rhythm:{ type:'sunrise' } },
-  { id:'affirm',     cat:'morning',  icon:'💬', text:'Start the day with an affirmation',    note:'Set a positive tone before the day begins', weight:1 },
-  { id:'hydrate',    cat:'morning',  icon:'💧', text:'Drink 16 oz water',                    note:'Water first; adapt for heat and exertion', weight:2, rhythm:{ type:'temp-above', threshold:85, note:'Drink extra water' } },
-  { id:'stretch',    cat:'morning',  icon:'🧘', text:'10-min mobility',                      note:'Sun salutation or joint circles', weight:1 },
-  { id:'beach',      cat:'movement', icon:'🌊', text:'Outdoor walk or movement',             note:'Walk, roll, hike, swim, or paddle', weight:2, rhythm:{ type:'aqi-below', threshold:100 } },
-  { id:'strength',   cat:'movement', icon:'🏋️', text:'Strength session',                     note:'20+ min, bodyweight or bands', weight:2 },
-  { id:'cardio',     cat:'movement', icon:'🏃', text:'Cardio burst',                         note:'15 min run, bike, or HIIT', weight:1 },
-  { id:'meditate',   cat:'mind',     icon:'🧠', text:'Meditate 10 min',                      note:'Breath focus or body scan', weight:1 },
-  { id:'learn',      cat:'mind',     icon:'📖', text:'Read or learn 20 min',                 note:'Book, course, or focused research', weight:1 },
-  { id:'journal',    cat:'mind',     icon:'✍️', text:'Journal one insight',                  note:'Sentence or page — no wrong answer', weight:1 },
-  { id:'goals',      cat:'mind',     icon:'🎯', text:'Write down goals for today',           note:'Name the few outcomes that matter most', weight:1 },
-  { id:'breakfast',  cat:'fuel',     icon:'🥑', text:'Whole-food breakfast',                 note:'Protein + healthy fat + produce', weight:1 },
-  { id:'supplements',cat:'fuel',     icon:'🧬', text:'Take supplements',                      note:'Follow your personal supplement routine', weight:1, activeFrom:'2026-08-28' },
-  { id:'medication', cat:'fuel',     icon:'💊', text:'Take medication as prescribed',        note:'Follow your prescribed timing and instructions', weight:2 },
-  { id:'lunch',      cat:'fuel',     icon:'🥗', text:'Green & lean lunch',                   note:'Half plate veggies, lean protein', weight:1 },
-  { id:'dinner',     cat:'fuel',     icon:'🍳', text:'Early dinner (before 7)',              note:'Finish with enough time to wind down', weight:1 },
-  { id:'sunscreen',  cat:'hygiene',  icon:'🧴', text:'Sun protection before outdoor time',   note:'Shade, clothing, a hat, or sunscreen all count', weight:2, rhythm:{ type:'uv-above', threshold:3, note:'Use sun protection' } },
-  { id:'floss',      cat:'hygiene',  icon:'🦷', text:'Floss',                                note:'Clean between teeth once a day', weight:1 },
-  { id:'winddown',   cat:'evening',  icon:'🌙', text:'No screens 30 min before bed',         note:'Read, stretch, or just sit', weight:2 },
-  { id:'gratitude',  cat:'evening',  icon:'✨', text:'Name 3 good things',                   note:'Notice what went well today', weight:1 },
-  { id:'sleep',      cat:'evening',  icon:'🛌', text:'In bed by 10 PM',                      note:'Protect at least 7 hours for sleep', weight:2 },
+  { id:'wake',       cat:'morning',  icon:'⏰', text:'Wake at 6:30 AM',                    note:'Keep the wake time consistent', weight:2, context:{ recommend:false } },
+  { id:'daylight',   cat:'morning',  icon:'🌤️', text:'Get outdoor light after waking',       note:'Step outside near the start of your day', weight:1, activeFrom:'2026-08-28', rhythm:{ type:'sunrise' }, context:{ start:360, idealStart:390, urgencyStart:540, end:660, setting:'outdoor', daylight:'required', duration:10 } },
+  { id:'affirm',     cat:'morning',  icon:'💬', text:'Start the day with an affirmation',    note:'Set a positive tone before the day begins', weight:1, context:{ start:360, idealStart:420, end:660, setting:'indoor', duration:2 } },
+  { id:'hydrate',    cat:'morning',  icon:'💧', text:'Drink 16 oz water',                    note:'Water first; adapt for heat and exertion', weight:2, rhythm:{ type:'temp-above', threshold:85, note:'Drink extra water' }, context:{ start:300, idealStart:360, end:1260, setting:'either', duration:2 } },
+  { id:'stretch',    cat:'morning',  icon:'🧘', text:'10-min mobility',                      note:'Sun salutation or joint circles', weight:1, context:{ start:360, idealStart:420, end:1290, setting:'indoor', duration:10 } },
+  { id:'beach',      cat:'movement', icon:'🌊', text:'Outdoor walk or movement',             note:'Walk, roll, hike, swim, or paddle', weight:2, rhythm:{ type:'aqi-below', threshold:100 }, context:{ start:390, idealStart:480, end:1260, setting:'outdoor', daylight:'required', daylightClosing:true, duration:20, goal:'Move every day', adaptations:{ afterDark:{ title:'Keep your movement habit indoors tonight.', detail:'Try 10 minutes of gentle indoor movement.' } } } },
+  { id:'strength',   cat:'movement', icon:'🏋️', text:'Strength session',                     note:'20+ min, bodyweight or bands', weight:2, context:{ start:480, idealStart:600, end:1260, setting:'indoor', duration:20 } },
+  { id:'cardio',     cat:'movement', icon:'🏃', text:'Cardio burst',                         note:'15 min run, bike, or HIIT', weight:1, context:{ start:480, idealStart:600, end:1260, setting:'either', duration:15 } },
+  { id:'meditate',   cat:'mind',     icon:'🧠', text:'Meditate 10 min',                      note:'Breath focus or body scan', weight:1, context:{ start:360, idealStart:720, end:1350, setting:'either', duration:10 } },
+  { id:'learn',      cat:'mind',     icon:'📖', text:'Read or learn 20 min',                 note:'Book, course, or focused research', weight:1, context:{ start:420, idealStart:720, end:1320, setting:'indoor', duration:20 } },
+  { id:'journal',    cat:'mind',     icon:'✍️', text:'Journal one insight',                  note:'Sentence or page — no wrong answer', weight:1, context:{ start:1080, idealStart:1140, end:1350, setting:'indoor', duration:5 } },
+  { id:'goals',      cat:'mind',     icon:'🎯', text:'Write down goals for today',           note:'Name the few outcomes that matter most', weight:1, context:{ start:300, idealStart:360, urgencyStart:600, end:720, setting:'indoor', duration:5 } },
+  { id:'breakfast',  cat:'fuel',     icon:'🥑', text:'Whole-food breakfast',                 note:'Protein + healthy fat + produce', weight:1, context:{ start:300, idealStart:390, urgencyStart:570, end:630, setting:'indoor', duration:20 } },
+  { id:'supplements',cat:'fuel',     icon:'🧬', text:'Take supplements',                      note:'Follow your personal supplement routine', weight:1, activeFrom:'2026-08-28', context:{ recommend:false } },
+  { id:'medication', cat:'fuel',     icon:'💊', text:'Take medication as prescribed',        note:'Follow your prescribed timing and instructions', weight:2, context:{ recommend:false } },
+  { id:'lunch',      cat:'fuel',     icon:'🥗', text:'Green & lean lunch',                   note:'Half plate veggies, lean protein', weight:1, context:{ start:660, idealStart:690, urgencyStart:780, end:840, setting:'indoor', duration:20 } },
+  { id:'dinner',     cat:'fuel',     icon:'🍳', text:'Early dinner (before 7)',              note:'Finish with enough time to wind down', weight:1, context:{ start:960, idealStart:1020, urgencyStart:1080, end:1140, setting:'indoor', duration:30, timelyDetail:'Your before-7 dinner window is open.', urgentDetail:'Your before-7 dinner window is closing.' } },
+  { id:'sunscreen',  cat:'hygiene',  icon:'🧴', text:'Sun protection before outdoor time',   note:'Shade, clothing, a hat, or sunscreen all count', weight:2, rhythm:{ type:'uv-above', threshold:3, note:'Use sun protection' }, context:{ start:390, idealStart:480, end:1140, setting:'outdoor', daylight:'required', duration:2 } },
+  { id:'floss',      cat:'hygiene',  icon:'🦷', text:'Floss',                                note:'Clean between teeth once a day', weight:1, context:{ start:1080, idealStart:1200, end:1380, setting:'indoor', duration:2 } },
+  { id:'winddown',   cat:'evening',  icon:'🌙', text:'No screens 30 min before bed',         note:'Read, stretch, or just sit', weight:2, context:{ start:1230, idealStart:1275, urgencyStart:1290, end:1320, setting:'indoor', duration:30, timelyDetail:'Your wind-down window before bed is open.', urgentDetail:'Bedtime is approaching.' } },
+  { id:'gratitude',  cat:'evening',  icon:'✨', text:'Name 3 good things',                   note:'Notice what went well today', weight:1, context:{ start:1140, idealStart:1200, end:1380, setting:'indoor', duration:5 } },
+  { id:'sleep',      cat:'evening',  icon:'🛌', text:'In bed by 10 PM',                      note:'Protect at least 7 hours for sleep', weight:2, context:{ start:1290, idealStart:1305, urgencyStart:1310, end:1320, setting:'indoor', duration:30 } },
 ];
 
 // ── Runtime habits (editable via Manage modal) ──
@@ -2265,6 +2265,114 @@ function getNextDateRolloverDelay(now) {
   return Math.max(0, nextDate.getTime() - now.getTime());
 }
 
+function parseDisplayClockMinutes(value) {
+  if (typeof value !== 'string') return null;
+  const match = value.trim().match(/^(\d{1,2}):(\d{2})\s*([AP]M)$/i);
+  if (!match) return null;
+  let hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour < 1 || hour > 12 || minute < 0 || minute > 59) return null;
+  if (hour === 12) hour = 0;
+  if (match[3].toUpperCase() === 'PM') hour += 12;
+  return hour * 60 + minute;
+}
+
+function getDaylightState(date, data) {
+  const snapshot = data && typeof data === 'object' ? data : {};
+  const minute = date.getHours() * 60 + date.getMinutes();
+  const sunrise = parseDisplayClockMinutes(snapshot.sunrise);
+  const sunset = parseDisplayClockMinutes(snapshot.sunset);
+  if (sunrise !== null && sunset !== null) return minute >= sunrise && minute < sunset;
+  if (snapshot.isDay === true || snapshot.isDay === 1) return true;
+  if (snapshot.isDay === false || snapshot.isDay === 0) return false;
+  return null;
+}
+
+function getHabitRecommendationFit(habit, date, data) {
+  const context = habit && habit.context && typeof habit.context === 'object' ? habit.context : null;
+  if (!context) return { eligible:true, reason:'available', phase:'available', nextBoundary:null };
+  if (context.recommend === false) return { eligible:false, reason:'manual', phase:'unavailable', nextBoundary:null };
+  const minute = date.getHours() * 60 + date.getMinutes();
+  const start = Number.isInteger(context.start) ? context.start : null;
+  const end = Number.isInteger(context.end) ? context.end : null;
+  if (start !== null && minute < start) return { eligible:false, reason:'early', phase:'unavailable', nextBoundary:start };
+  if (end !== null && minute >= end) return { eligible:false, reason:'late', phase:'unavailable', nextBoundary:null };
+  const isDay = getDaylightState(date, data);
+  if (context.daylight === 'required' && isDay === false) {
+    return { eligible:false, reason:'dark', phase:'unavailable', nextBoundary:null };
+  }
+  const sunset = parseDisplayClockMinutes(data?.sunset);
+  const duration = Number.isInteger(context.duration) && context.duration > 0 ? context.duration : null;
+  const daylightRemaining = context.daylight === 'required' && isDay === true && sunset !== null
+    ? sunset - minute
+    : null;
+  if (daylightRemaining !== null && duration !== null && daylightRemaining <= duration) {
+    return { eligible:false, reason:'daylight-short', phase:'unavailable', nextBoundary:null };
+  }
+  const urgencyStart = Number.isInteger(context.urgencyStart) ? context.urgencyStart : null;
+  const idealStart = Number.isInteger(context.idealStart) ? context.idealStart : null;
+  const daylightClosing = context.daylightClosing === true && duration !== null && daylightRemaining !== null && daylightRemaining <= duration + 15;
+  const phase = daylightClosing || urgencyStart !== null && minute >= urgencyStart
+    ? 'urgent'
+    : idealStart !== null && minute >= idealStart ? 'ideal' : 'available';
+  const boundaries = [idealStart, urgencyStart, end].filter(value => value !== null && value > minute);
+  return {
+    eligible:true,
+    reason:daylightClosing ? 'daylight-closing' : 'available',
+    phase,
+    nextBoundary:boundaries.length ? Math.min(...boundaries) : null,
+    ...(daylightClosing ? { daylightRemaining } : {}),
+  };
+}
+
+function getHabitAdaptiveSuggestion(habit, fit) {
+  if (!habit || !fit || fit.eligible || !['dark','daylight-short'].includes(fit.reason)) return null;
+  const alternative = habit.context?.adaptations?.afterDark;
+  if (!alternative || typeof alternative.title !== 'string' || typeof alternative.detail !== 'string') return null;
+  const title = alternative.title.trim();
+  const detail = alternative.detail.trim();
+  if (!title || !detail || title.length > 80 || detail.length > 100) return null;
+  return { reason:fit.reason === 'dark' ? 'after-dark-adapt' : 'low-light-adapt', eyebrow:'Adapt tonight', title, detail };
+}
+
+function getNextWaveRefreshDelay(habits, date, data) {
+  const minute = date.getHours() * 60 + date.getMinutes();
+  const elapsedMs = ((minute * 60 + date.getSeconds()) * 1000) + date.getMilliseconds();
+  const boundaries = [];
+  const snapshot = data && typeof data === 'object' ? data : {};
+  const sunrise = parseDisplayClockMinutes(snapshot.sunrise);
+  const sunset = parseDisplayClockMinutes(snapshot.sunset);
+  (Array.isArray(habits) ? habits : []).forEach(habit => {
+    const context = habit && habit.context && typeof habit.context === 'object' ? habit.context : null;
+    if (!context || context.recommend === false) return;
+    [context.start, context.idealStart, context.urgencyStart, context.end].forEach(value => {
+      if (Number.isInteger(value) && value > minute) boundaries.push(value);
+    });
+    const duration = Number.isInteger(context.duration) && context.duration > 0 ? context.duration : null;
+    if (context.daylight === 'required' && duration !== null && sunset !== null) {
+      const durationBoundary = sunset - duration;
+      if (durationBoundary > minute) boundaries.push(durationBoundary);
+      const closingBoundary = durationBoundary - 15;
+      if (context.daylightClosing === true && closingBoundary > minute) boundaries.push(closingBoundary);
+    }
+  });
+  [sunrise, sunset].forEach(value => {
+    if (value !== null && value > minute) boundaries.push(value);
+  });
+  if (boundaries.length === 0) return null;
+  return Math.max(50, Math.min(...boundaries) * 60000 - elapsedMs + 50);
+}
+
+function scheduleNextWaveContextRefresh(now = new Date()) {
+  if (nextWaveContextTimer !== null) clearTimeout(nextWaveContextTimer);
+  const delay = getNextWaveRefreshDelay(HABITS, now, rhythmWeatherData);
+  if (delay === null) {
+    nextWaveContextTimer = null;
+    return;
+  }
+  nextWaveContextTimer = setTimeout(() => renderNextWave(new Date()), delay);
+}
+
 function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data) {
   doneByDate = doneByDate || {};
   progressByDate = progressByDate || {};
@@ -2294,7 +2402,19 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data) {
     return { habitId:null, category:null, icon:'✓', reason:'none', eyebrow:'You’re caught up', title:'Today’s habits are complete.', detail:'You followed through on every scheduled habit.', action:null };
   }
 
-  const openById = id => openHabits.find(habit => habit.id === id);
+  const fitById = new Map(openHabits.map(habit => [habit.id, getHabitRecommendationFit(habit, date, data)]));
+  const eligibleHabits = openHabits.filter(habit => fitById.get(habit.id).eligible);
+  const adaptiveHabit = openHabits.find(habit => getHabitAdaptiveSuggestion(habit, fitById.get(habit.id))) || null;
+  const adaptiveSuggestion = adaptiveHabit ? getHabitAdaptiveSuggestion(adaptiveHabit, fitById.get(adaptiveHabit.id)) : null;
+  if (eligibleHabits.length === 0) {
+    if (adaptiveHabit && adaptiveSuggestion) {
+      return result(adaptiveHabit, adaptiveSuggestion.reason, adaptiveSuggestion.eyebrow, adaptiveSuggestion.title, adaptiveSuggestion.detail);
+    }
+    const noun = openHabits.length === 1 ? 'habit' : 'habits';
+    return { habitId:null, category:null, icon:'○', reason:'not-timely', eyebrow:'A quiet moment', title:'Nothing is especially timely right now.', detail:`You still have ${openHabits.length} ${noun} open today.`, action:null };
+  }
+
+  const openById = id => eligibleHabits.find(habit => habit.id === id);
   const anchoredById = (id, type) => {
     const habit = openById(id);
     const rhythm = habit ? normalizeRhythmConfig(habit.rhythm) : null;
@@ -2313,6 +2433,20 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data) {
       ? "If you're sensitive to air quality, move indoors today."
       : 'Move today’s activity indoors.';
     return result(movement.habit, 'aqi-adapt', 'Adapt today', title, `${category} · AQI ${aqi}`);
+  }
+
+  const pickPhase = phase => eligibleHabits
+    .filter(habit => fitById.get(habit.id).phase === phase)
+    .sort((left, right) => (left.context?.end ?? 1440) - (right.context?.end ?? 1440))[0] || null;
+  const urgentHabit = pickPhase('urgent');
+  if (urgentHabit) {
+    const urgentFit = fitById.get(urgentHabit.id);
+    if (urgentFit.reason === 'daylight-closing') {
+      const minutes = urgentFit.daylightRemaining;
+      return result(urgentHabit, 'daylight-closing', 'Daylight closing', 'Outdoor movement still fits before sunset.', `About ${minutes} minutes of daylight remain.`);
+    }
+    const detail = urgentHabit.context?.urgentDetail || 'This habit’s useful window is closing.';
+    return result(urgentHabit, 'window-closing', 'Window closing', urgentHabit.text, detail);
   }
 
   const sunscreen = anchoredById('sunscreen', 'uv-above');
@@ -2337,7 +2471,7 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data) {
     return result(hydration.habit, 'heat-hydrate', 'Suggested now', 'Have your next glass of water.', `Feels like ${feel}°F`);
   }
 
-  const sunsetHabit = openHabits.find(habit => normalizeRhythmConfig(habit.rhythm)?.type === 'sunset');
+  const sunsetHabit = eligibleHabits.find(habit => normalizeRhythmConfig(habit.rhythm)?.type === 'sunset');
   if (sunsetHabit && hour >= 16) {
     const detail = snapshot.sunset ? `Sunset today · ${snapshot.sunset}` : 'Your evening cue is still open.';
     return result(sunsetHabit, 'sunset-rhythm', 'Suggested now', sunsetHabit.text, detail);
@@ -2348,6 +2482,16 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data) {
     return result(openHydration, 'time-fallback', 'A simple next step', 'Start with your water habit.', 'A calm way to begin the day.');
   }
 
+  const idealHabit = pickPhase('ideal');
+  if (idealHabit) {
+    const detail = idealHabit.context?.timelyDetail || 'This habit fits the current part of your day.';
+    return result(idealHabit, 'fits-now', 'Fits now', idealHabit.text, detail);
+  }
+
+  if (adaptiveHabit && adaptiveSuggestion) {
+    return result(adaptiveHabit, adaptiveSuggestion.reason, adaptiveSuggestion.eyebrow, adaptiveSuggestion.title, adaptiveSuggestion.detail);
+  }
+
   const preferredCategories = hour < 11
     ? ['morning','mind','movement','fuel','hygiene','evening']
     : hour < 17
@@ -2355,10 +2499,10 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data) {
       : ['evening','hygiene','mind','movement','fuel','morning'];
   let next = null;
   for (const category of preferredCategories) {
-    next = openHabits.find(habit => habit.cat === category && !(habit.id === 'wake' && hour >= 11));
+    next = eligibleHabits.find(habit => habit.cat === category && !(habit.id === 'wake' && hour >= 11));
     if (next) break;
   }
-  next = next || openHabits[0];
+  next = next || eligibleHabits[0];
   return result(next, 'time-fallback', 'Your next small win', next.text, 'One open habit that fits this part of your day.');
 }
 
@@ -2384,6 +2528,7 @@ function renderNextWave(now = new Date()) {
     saveInsightHistory(now);
     renderAdaptiveInsights(now);
   }
+  scheduleNextWaveContextRefresh(now);
 }
 
 function focusNextWaveHabit() {
@@ -2414,6 +2559,7 @@ let rhythmWeatherData = null;
 let rhythmWeatherGeneration = 0;
 let rhythmWeatherReadyGeneration = -1;
 let rhythmWeatherController = null;
+let nextWaveContextTimer = null;
 
 function renderInsights(now = new Date()) {
   rhythmWeatherController?.abort();
@@ -2427,7 +2573,7 @@ function renderInsights(now = new Date()) {
     if (!loc) return;
     if (generation !== rhythmWeatherGeneration || activeDateKey !== dateKey(new Date())) return;
 
-    const forecastRequest = fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=apparent_temperature,uv_index&daily=sunrise,sunset&timezone=auto&temperature_unit=fahrenheit`, { signal:rhythmWeatherController.signal })
+    const forecastRequest = fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=apparent_temperature,uv_index,is_day&daily=sunrise,sunset&timezone=auto&temperature_unit=fahrenheit`, { signal:rhythmWeatherController.signal })
       .then(r => {
         if (!r.ok) throw new Error('Forecast request failed');
         return r.json();
@@ -2438,6 +2584,7 @@ function renderInsights(now = new Date()) {
         const current = d.current || {};
         const feel = normalizeEnvironmentalReading(current.apparent_temperature);
         const uv = normalizeEnvironmentalReading(current.uv_index);
+        const isDay = current.is_day === 1 ? true : current.is_day === 0 ? false : null;
         const sunrise = d.daily && d.daily.sunrise && d.daily.sunrise[0] ? fmtClock(d.daily.sunrise[0]) : '';
         const sunset = d.daily && d.daily.sunset && d.daily.sunset[0] ? fmtClock(d.daily.sunset[0]) : '';
         const rhythmUpdate = {};
@@ -2445,6 +2592,7 @@ function renderInsights(now = new Date()) {
         if (sunset) rhythmUpdate.sunset = sunset;
         if (feel !== null) rhythmUpdate.feel = feel;
         if (uv !== null) rhythmUpdate.uv = uv;
+        if (isDay !== null) rhythmUpdate.isDay = isDay;
         if (Object.keys(rhythmUpdate).length > 0) {
           rhythmUpdate.weatherObservedAt = Date.now();
           updateRhythmAnchors(rhythmUpdate, now);
