@@ -1400,6 +1400,31 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     display: flex;
     gap: 8px;
     align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .eh-system-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+
+  .eh-param-field {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.78rem;
+    color: var(--text3);
+  }
+
+  .eh-param-field input, .eh-param-field select {
+    width: auto;
+    min-width: 70px;
+  }
+
+  .eh-param-custom {
+    width: 60px !important;
   }
 
   .edit-habit .eh-fields .eh-row input:first-child {
@@ -2028,6 +2053,161 @@ const DEFAULT_HABITS = [
   { id:'sleep',      cat:'evening',  icon:'🛌', text:'In bed by 10 PM',                      note:'Protect at least 7 hours for sleep', weight:2, context:{ start:1290, idealStart:1305, urgencyStart:1310, end:1320, setting:'indoor', duration:30 } },
 ];
 
+const SYSTEM_HABIT_PARAMETER_DEFS = {
+  wake:{ targetTime:{ type:'time', default:'06:30', min:'03:00', max:'12:00', label:'Wake time' } },
+  hydrate:{ amount:{ type:'quantity', default:16, min:1, max:256, label:'Water amount', unit:'oz' } },
+  stretch:{ durationMinutes:{ type:'duration', default:10, min:1, max:240, label:'Duration' } },
+  strength:{ durationMinutes:{ type:'duration', default:20, min:1, max:240, label:'Minimum duration' } },
+  cardio:{ durationMinutes:{ type:'duration', default:15, min:1, max:240, label:'Duration' } },
+  meditate:{ durationMinutes:{ type:'duration', default:10, min:1, max:240, label:'Duration' } },
+  learn:{ durationMinutes:{ type:'duration', default:20, min:1, max:240, label:'Duration' } },
+  dinner:{ targetTime:{ type:'time', default:'19:00', min:'12:00', max:'22:00', label:'Finish dinner by' } },
+  winddown:{ durationMinutes:{ type:'duration', default:30, min:1, max:240, label:'Screen-free time' } },
+  gratitude:{ count:{ type:'count', default:3, min:1, max:20, label:'Good things' } },
+  sleep:{ targetTime:{ type:'time', default:'22:00', min:'18:00', max:'23:59', label:'Bedtime' } },
+};
+
+function parseSystemClockTime(value) {
+  if (typeof value !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) return null;
+  const [hour, minute] = value.split(':').map(Number);
+  return hour * 60 + minute;
+}
+
+function formatSystemClockTime(value) {
+  const total = parseSystemClockTime(value);
+  if (total === null) return '';
+  const hour = Math.floor(total / 60);
+  const minute = total % 60;
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${String(minute).padStart(2, '0')} ${suffix}`;
+}
+
+function normalizeSystemHabitParams(habitId, candidate = {}, strict = false) {
+  const definition = SYSTEM_HABIT_PARAMETER_DEFS[habitId];
+  if (!definition) return {};
+  const validInput = candidate && typeof candidate === 'object' && !Array.isArray(candidate);
+  if (!validInput && strict) throw new Error(`System parameters for ${habitId} must be an object.`);
+  const input = validInput ? candidate : {};
+  if (strict && Object.keys(input).some(key => !Object.hasOwn(definition, key))) {
+    throw new Error(`Unsupported system parameter for ${habitId}.`);
+  }
+  const normalized = {};
+  for (const [key, field] of Object.entries(definition)) {
+    const value = Object.hasOwn(input, key) ? input[key] : field.default;
+    if (field.type === 'time') {
+      const minutes = parseSystemClockTime(value);
+      const minMinutes = field.min ? parseSystemClockTime(field.min) : null;
+      const maxMinutes = field.max ? parseSystemClockTime(field.max) : null;
+      if (minutes === null || (minMinutes !== null && minutes < minMinutes) || (maxMinutes !== null && minutes > maxMinutes)) {
+        if (strict) throw new Error(`Invalid time parameter for ${habitId}.`);
+        normalized[key] = field.default;
+      } else normalized[key] = value;
+    } else if (field.type === 'quantity') {
+      const valid = typeof value === 'number' && Number.isFinite(value) && value >= field.min && value <= field.max &&
+        Math.abs(value * 100 - Math.round(value * 100)) < 0.000000001;
+      if (!valid) {
+        if (strict) throw new Error(`Invalid quantity parameter for ${habitId}.`);
+        normalized[key] = field.default;
+      } else normalized[key] = value;
+    } else {
+      const valid = Number.isInteger(value) && value >= field.min && value <= field.max;
+      if (!valid) {
+        if (strict) throw new Error(`Invalid ${field.type} parameter for ${habitId}.`);
+        normalized[key] = field.default;
+      } else normalized[key] = value;
+    }
+  }
+  return normalized;
+}
+
+function parseLegacySystemHabitTitle(habitId, text) {
+  if (habitId !== 'sleep' || typeof text !== 'string') return null;
+  const match = text.match(/^In bed by (\d\d?)(?::([0-5]\d))? (AM|PM)$/);
+  if (!match) return null;
+  let hour = Number(match[1]);
+  if (hour < 1 || hour > 12) return null;
+  const minute = Number(match[2] || 0);
+  const suffix = match[3].toUpperCase();
+  if (suffix === 'AM') hour %= 12;
+  else if (hour !== 12) hour += 12;
+  return { targetTime:`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}` };
+}
+
+function formatSystemHabitTitle(habitId, params = {}) {
+  if (habitId === 'wake') return `Wake at ${formatSystemClockTime(params.targetTime)}`;
+  if (habitId === 'hydrate') return `Drink ${params.amount} oz water`;
+  if (habitId === 'stretch') return `${params.durationMinutes}-minute mobility`;
+  if (habitId === 'strength') return `Strength for ${params.durationMinutes}+ min`;
+  if (habitId === 'cardio') return `Cardio for ${params.durationMinutes} min`;
+  if (habitId === 'meditate') return `Meditate for ${params.durationMinutes} min`;
+  if (habitId === 'learn') return `Read or learn for ${params.durationMinutes} min`;
+  if (habitId === 'dinner') return `Finish dinner by ${formatSystemClockTime(params.targetTime)}`;
+  if (habitId === 'winddown') return `No screens for ${params.durationMinutes} min before bed`;
+  if (habitId === 'gratitude') return `Name ${params.count} good things`;
+  if (habitId === 'sleep') return `In bed by ${formatSystemClockTime(params.targetTime)}`;
+  return '';
+}
+
+function deriveSystemHabitContext(habitId, baseContext = {}, paramsById = {}) {
+  if (['stretch','strength','cardio','meditate','learn'].includes(habitId)) {
+    const duration = paramsById[habitId]?.durationMinutes;
+    return Number.isInteger(duration) ? { ...baseContext, duration } : { ...baseContext };
+  }
+  if (habitId === 'dinner') {
+    const target = parseSystemClockTime(paramsById.dinner?.targetTime);
+    if (target === null) return { ...baseContext };
+    return {
+      start:target - 180, idealStart:target - 120, urgencyStart:target - 60, end:target,
+      setting:baseContext.setting || 'indoor', duration:baseContext.duration || 30,
+      timelyDetail:'Your dinner window is open.', urgentDetail:'Your dinner window is closing.',
+    };
+  }
+  if (habitId === 'sleep') {
+    const bedtime = parseSystemClockTime(paramsById.sleep?.targetTime);
+    if (bedtime === null) return { ...baseContext };
+    return {
+      start:bedtime - 30, idealStart:bedtime - 15, urgencyStart:bedtime - 10, end:bedtime,
+      setting:baseContext.setting || 'indoor', duration:baseContext.duration || 30,
+    };
+  }
+  if (habitId === 'winddown') {
+    const bedtime = parseSystemClockTime(paramsById.sleep?.targetTime);
+    const duration = paramsById.winddown?.durationMinutes;
+    if (bedtime === null || !Number.isInteger(duration)) return { ...baseContext };
+    return {
+      start:bedtime - duration - 60, idealStart:bedtime - duration - 15,
+      urgencyStart:bedtime - duration, end:bedtime,
+      setting:baseContext.setting || 'indoor', duration,
+      timelyDetail:'Your wind-down window before bed is open.', urgentDetail:'Bedtime is approaching.',
+    };
+  }
+  return { ...baseContext };
+}
+
+const SYSTEM_HABIT_IDS = new Set(DEFAULT_HABITS.map(h => h.id));
+
+function buildRuntimeHabits(defaults, overrides = {}) {
+  const paramsById = {};
+  for (const id of Object.keys(SYSTEM_HABIT_PARAMETER_DEFS)) {
+    paramsById[id] = normalizeSystemHabitParams(id, overrides[id]?.params || {}, false);
+  }
+  return defaults.map(habit => {
+    const override = overrides[habit.id] || {};
+    const runtime = { ...habit, ...override };
+    if (paramsById[habit.id]) {
+      runtime.params = paramsById[habit.id];
+      runtime.text = Object.hasOwn(override, 'text')
+        ? override.text
+        : formatSystemHabitTitle(habit.id, runtime.params);
+      runtime.context = deriveSystemHabitContext(habit.id, habit.context, paramsById);
+    } else if (SYSTEM_HABIT_IDS.has(habit.id)) {
+      runtime.text = habit.text;
+    }
+    return runtime;
+  });
+}
+
 // ── Runtime habits (editable via Manage modal) ──
 const CUSTOM_HABITS_KEY = 'wavelength_wpb_habits';
 
@@ -2050,11 +2230,7 @@ function saveCustomHabits(overrides) {
 
 function reloadHabits() {
   const overrides = loadCustomHabits();
-  if (overrides && Object.keys(overrides).length > 0) {
-    HABITS = DEFAULT_HABITS.map(h => overrides[h.id] ? { ...h, ...overrides[h.id] } : h);
-  } else {
-    HABITS = DEFAULT_HABITS.map(h => ({ ...h }));
-  }
+  HABITS = buildRuntimeHabits(DEFAULT_HABITS, overrides || {});
 }
 
 let HABITS = [];
@@ -2204,7 +2380,7 @@ function normalizeCustomHabitOverrides(overrides, defaults, strict = false) {
   }
 
   const validIds = new Set(defaults.map(habit => habit.id));
-  const allowedFields = new Set(['text', 'note', 'weight', 'days', 'measurement', 'target', 'step', 'unit', 'rhythm']);
+  const allowedFields = new Set(['text', 'note', 'weight', 'params', 'days', 'measurement', 'target', 'step', 'unit', 'rhythm']);
   const normalized = {};
 
   for (const [id, override] of Object.entries(overrides)) {
@@ -2221,10 +2397,14 @@ function normalizeCustomHabitOverrides(overrides, defaults, strict = false) {
     if (unsupported) invalid(`Unsupported field "${unsupported}" for ${id}.`);
 
     const clean = {};
+    let migratedParams = null;
     if (Object.hasOwn(override, 'text')) {
       if (typeof override.text !== 'string') invalid(`Text for ${id} must be a string.`);
       else if (strict && override.text.length > 160) invalid(`Text for ${id} is too long.`);
-      else clean.text = override.text.slice(0, 160);
+      else {
+        migratedParams = parseLegacySystemHabitTitle(id, override.text);
+        if (!migratedParams) clean.text = override.text.slice(0, 160);
+      }
     }
     if (Object.hasOwn(override, 'note')) {
       if (typeof override.note !== 'string') invalid(`Note for ${id} must be a string.`);
@@ -2233,7 +2413,18 @@ function normalizeCustomHabitOverrides(overrides, defaults, strict = false) {
     }
     if (Object.hasOwn(override, 'weight')) {
       if (override.weight !== 1 && override.weight !== 2) invalid(`Weight for ${id} must be 1 or 2.`);
-      else clean.weight = override.weight;
+    }
+    if (Object.hasOwn(override, 'params') || migratedParams) {
+      if (!Object.hasOwn(SYSTEM_HABIT_PARAMETER_DEFS, id)) {
+        invalid(`System parameters are not supported for ${id}.`);
+      } else {
+        const paramCandidate = Object.hasOwn(override, 'params') ? override.params : migratedParams;
+        const params = normalizeSystemHabitParams(id, paramCandidate, strict);
+        const defaultsForHabit = normalizeSystemHabitParams(id, {}, true);
+        const changedParams = Object.fromEntries(Object.entries(params)
+          .filter(([key, value]) => value !== defaultsForHabit[key]));
+        if (Object.keys(changedParams).length > 0) clean.params = changedParams;
+      }
     }
     if (Object.hasOwn(override, 'days')) {
       const days = normalizeHabitDays(override.days);
@@ -4487,17 +4678,29 @@ function renderManageModal() {
   body.innerHTML = HABITS.map(h => {
     const selectedDays = normalizeHabitDays(h.days);
     const measurement = normalizeMeasurementConfig(h);
+    const paramDefs = SYSTEM_HABIT_PARAMETER_DEFS[h.id];
+    const isSystem = SYSTEM_HABIT_IDS.has(h.id);
+    const systemAnchor = normalizeRhythmConfig(h.rhythm);
     return `
       <div class="edit-habit" data-id="${escapeHtml(h.id)}">
         <div class="eh-icon">${escapeHtml(h.icon)}</div>
         <div class="eh-fields">
-          <input type="text" class="eh-text" maxlength="48" value="${escapeHtml(h.text)}" placeholder="Habit name">
+          ${isSystem ? `<div class="eh-system-title">${escapeHtml(h.text)}</div><input type="hidden" class="eh-text" value="${escapeHtml(h.text)}">` : `<input type="text" class="eh-text" maxlength="48" value="${escapeHtml(h.text)}" placeholder="Habit name">`}
           <div class="eh-row">
             <input type="text" class="eh-note" maxlength="80" value="${escapeHtml(h.note)}" placeholder="Note">
-            <select class="eh-weight">
-              <option value="1" ${h.weight === 1 ? 'selected' : ''}>w1</option>
-              <option value="2" ${h.weight === 2 ? 'selected' : ''}>w2</option>
-            </select>
+            ${paramDefs ? Object.entries(paramDefs).map(([key, field]) => {
+              if (field.type === 'time') {
+                const v = h.params?.[key] || field.default;
+                return `<label class="eh-param-field"><span>${escapeHtml(field.label)}</span><input type="time" class="eh-param eh-param-${escapeHtml(key)}" min="${escapeHtml(field.min || '00:00')}" max="${escapeHtml(field.max || '23:59')}" value="${escapeHtml(v)}"></label>`;
+              } else if (field.type === 'quantity') {
+                const v = h.params?.[key] ?? field.default;
+                return `<label class="eh-param-field"><span>${escapeHtml(field.label)}</span><input type="number" class="eh-param eh-param-${escapeHtml(key)}" min="${field.min}" max="${field.max}" step="0.01" value="${v}"> ${escapeHtml(field.unit || '')}</label>`;
+              } else {
+                const v = h.params?.[key] ?? field.default;
+                const opts = [5,10,15,20,30,45,60].map(d => `<option value="${d}" ${v === d ? 'selected' : ''}>${d} min</option>`).join('');
+                return `<label class="eh-param-field"><span>${escapeHtml(field.label)}</span><select class="eh-param eh-param-${escapeHtml(key)}">${opts}<option value="custom" ${![5,10,15,20,30,45,60].includes(v) ? 'selected' : ''}>Custom</option></select><input type="number" class="eh-param-custom eh-param-${escapeHtml(key)}-custom" min="${field.min}" max="${field.max}" value="${v}" ${[5,10,15,20,30,45,60].includes(v) ? 'hidden' : ''}></label>`;
+              }
+            }).join('') : ''}
           </div>
           <div class="eh-measurement-block">
             <label class="eh-measurement-label" for="measurement-${escapeHtml(h.id)}">
@@ -4520,7 +4723,8 @@ function renderManageModal() {
               ${SCHEDULE_DAYS.map(day => `<button type="button" class="eh-day" data-day="${day.value}" role="checkbox" aria-checked="${selectedDays.includes(day.value)}">${day.label}</button>`).join('')}
             </div>
           </div>
-          <div class="eh-rhythm-block">
+          ${isSystem ? `<div class="eh-system-anchor">System anchor · ${escapeHtml(systemAnchor ? RHYTHM_LABELS[systemAnchor.type] : 'No anchor')}</div>` : ''}
+          <div class="eh-rhythm-block" ${isSystem ? 'hidden' : ''}>
             <label class="eh-rhythm-label" for="rhythm-${escapeHtml(h.id)}">
               <span>Rhythm anchor</span>
               <select id="rhythm-${escapeHtml(h.id)}" class="eh-rhythm">
@@ -4549,6 +4753,14 @@ function renderManageModal() {
   body.querySelectorAll('.eh-rhythm').forEach(select => {
     select.addEventListener('change', () => updateRhythmRow(select.closest('.edit-habit')));
   });
+  body.querySelectorAll('.eh-param').forEach(select => {
+    if (select.tagName === 'SELECT') {
+      select.addEventListener('change', () => {
+        const custom = select.closest('.edit-habit').querySelector(`.${select.classList[1]}-custom`);
+        if (custom) custom.hidden = select.value !== 'custom';
+      });
+    }
+  });
   body.querySelectorAll('.eh-rhythm-threshold, .eh-rhythm-note').forEach(input => {
     input.addEventListener('input', () => input.closest('.edit-habit').classList.remove('measurement-error'));
   });
@@ -4567,13 +4779,15 @@ function closeManageModal() {
 
 function saveManageModal() {
   const overrides = {};
+  const existingOverrides = loadCustomHabits() || {};
   const previousHabits = HABITS.map(habit => ({ ...habit }));
   const allDays = normalizeHabitDays(undefined);
   for (const row of document.querySelectorAll('.edit-habit')) {
     const id = row.dataset.id;
     const text = row.querySelector('.eh-text').value.trim();
     const note = row.querySelector('.eh-note').value.trim();
-    const weight = parseInt(row.querySelector('.eh-weight').value, 10);
+    const hasParams = !!SYSTEM_HABIT_PARAMETER_DEFS[id];
+    const isSystem = SYSTEM_HABIT_IDS.has(id);
     const measurementType = row.querySelector('.eh-measurement').value;
     const days = [...row.querySelectorAll('.eh-day[aria-checked="true"]')]
       .map(button => Number(button.dataset.day))
@@ -4608,9 +4822,39 @@ function saveManageModal() {
         : 'Use positive values with up to 2 decimals and add a unit');
       return false;
     }
-    if (text !== def.text) changes.text = text;
+    const existingText = existingOverrides[id]?.text;
+    const hasGrandfatheredTitle = hasParams && typeof existingText === 'string' &&
+      parseLegacySystemHabitTitle(id, existingText) === null;
+    if (!hasParams && text !== def.text) changes.text = text;
+    else if (hasGrandfatheredTitle) changes.text = existingText;
     if (note !== def.note) changes.note = note;
-    if (weight !== def.weight) changes.weight = weight;
+    if (hasParams) {
+      const paramInputs = row.querySelectorAll('.eh-param');
+      if (paramInputs.length > 0) {
+        const paramValues = {};
+        for (const input of paramInputs) {
+          const key = input.classList[1]?.replace('eh-param-', '');
+          if (!key) continue;
+          const field = SYSTEM_HABIT_PARAMETER_DEFS[id][key];
+          if (field.type === 'time') {
+            paramValues[key] = input.value;
+          } else {
+            const selectEl = input;
+            const customEl = row.querySelector(`.eh-param-${key}-custom`);
+            if (selectEl.value === 'custom' && customEl) {
+              paramValues[key] = Number(customEl.value);
+            } else {
+              paramValues[key] = Number(selectEl.value);
+            }
+          }
+        }
+        const normalizedParams = normalizeSystemHabitParams(id, paramValues, true);
+        const defaultParams = normalizeSystemHabitParams(id, {}, true);
+        const changedParams = Object.fromEntries(Object.entries(normalizedParams)
+          .filter(([k, v]) => v !== defaultParams[k]));
+        if (Object.keys(changedParams).length > 0) changes.params = changedParams;
+      }
+    }
     if (days.join(',') !== allDays.join(',')) changes.days = days;
     if (measurement.type !== 'check') {
       changes.measurement = measurement.type;
@@ -4622,31 +4866,33 @@ function saveManageModal() {
     }
     const rhythmType = row.querySelector('.eh-rhythm').value;
     const defaultRhythm = normalizeRhythmConfig(def.rhythm);
-    if (rhythmType === 'none' && defaultRhythm) {
-      changes.rhythm = null;
-    } else if (rhythmType !== 'none') {
-      const rhythmCandidate = { type: rhythmType };
-      if (rhythmType === 'temp-above' || rhythmType === 'temp-below' || rhythmType === 'uv-above' || rhythmType === 'aqi-below') {
-        rhythmCandidate.threshold = Number(row.querySelector('.eh-rhythm-threshold').value);
+    if (!isSystem) {
+      if (rhythmType === 'none' && defaultRhythm) {
+        changes.rhythm = null;
+      } else if (rhythmType !== 'none') {
+        const rhythmCandidate = { type: rhythmType };
+        if (rhythmType === 'temp-above' || rhythmType === 'temp-below' || rhythmType === 'uv-above' || rhythmType === 'aqi-below') {
+          rhythmCandidate.threshold = Number(row.querySelector('.eh-rhythm-threshold').value);
+        }
+        const rhythmNote = row.querySelector('.eh-rhythm-note').value.trim();
+        if (rhythmNote && !isConciseRhythmNote(rhythmNote)) {
+          row.classList.add('measurement-error');
+          row.scrollIntoView({ behavior:'smooth', block:'center' });
+          row.querySelector('.eh-rhythm-note').focus();
+          showToast('Use 60 characters or fewer; avoid semicolons, em dashes, “Anchor:”, and comparison phrases');
+          return false;
+        }
+        if (rhythmNote) rhythmCandidate.note = rhythmNote;
+        const rhythm = normalizeRhythmConfig(rhythmCandidate, true);
+        if (!rhythm && rhythmType !== 'none') {
+          row.classList.add('measurement-error');
+          row.scrollIntoView({ behavior:'smooth', block:'center' });
+          row.querySelector('.eh-rhythm-threshold').focus();
+          showToast('Enter a positive threshold for the rhythm anchor');
+          return false;
+        }
+        if (rhythm && JSON.stringify(rhythm) !== JSON.stringify(defaultRhythm)) changes.rhythm = rhythm;
       }
-      const rhythmNote = row.querySelector('.eh-rhythm-note').value.trim();
-      if (rhythmNote && !isConciseRhythmNote(rhythmNote)) {
-        row.classList.add('measurement-error');
-        row.scrollIntoView({ behavior:'smooth', block:'center' });
-        row.querySelector('.eh-rhythm-note').focus();
-        showToast('Use 60 characters or fewer; avoid semicolons, em dashes, “Anchor:”, and comparison phrases');
-        return false;
-      }
-      if (rhythmNote) rhythmCandidate.note = rhythmNote;
-      const rhythm = normalizeRhythmConfig(rhythmCandidate, true);
-      if (!rhythm && rhythmType !== 'none') {
-        row.classList.add('measurement-error');
-        row.scrollIntoView({ behavior:'smooth', block:'center' });
-        row.querySelector('.eh-rhythm-threshold').focus();
-        showToast('Enter a positive threshold for the rhythm anchor');
-        return false;
-      }
-      if (rhythm && JSON.stringify(rhythm) !== JSON.stringify(defaultRhythm)) changes.rhythm = rhythm;
     }
     if (Object.keys(changes).length > 0) overrides[id] = changes;
   }
@@ -4667,7 +4913,7 @@ function saveManageModal() {
 // ═══════════════════════════════════════════════════════════════════
 // IPHONE INSTALL, OFFLINE, AND DATA TRANSFER
 // ═══════════════════════════════════════════════════════════════════
-const BACKUP_VERSION = 2;
+const BACKUP_VERSION = 3;
 const INSTALL_DISMISS_KEY = 'wavelength_install_tip_dismissed';
 
 function setupInstallTip() {
@@ -4740,8 +4986,8 @@ async function importBackupFile(file) {
   if (!file) return;
   try {
     const payload = JSON.parse(await file.text());
-    if (payload.app !== 'wavelength' || ![1, BACKUP_VERSION].includes(payload.version) || !payload.state || !Array.isArray(payload.order) ||
-        (payload.version === BACKUP_VERSION && !payload.insightHistory)) {
+    if (payload.app !== 'wavelength' || ![1, 2, BACKUP_VERSION].includes(payload.version) || !payload.state || !Array.isArray(payload.order) ||
+        (payload.version >= 2 && !payload.insightHistory)) {
       throw new Error('This is not a compatible Wavelength backup.');
     }
 

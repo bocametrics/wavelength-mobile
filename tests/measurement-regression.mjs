@@ -13,7 +13,9 @@ const builds = [
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}(`);
   assert.notEqual(start, -1, `${name} is missing`);
-  const brace = source.indexOf('{', start);
+  const signatureEnd = source.indexOf(') {', start);
+  assert.notEqual(signatureEnd, -1, `${name} signature does not terminate`);
+  const brace = signatureEnd + 2;
   let depth = 0;
   let quote = null;
   let escaped = false;
@@ -62,13 +64,22 @@ function loadFunctions(html) {
     'reconcileMeasurementTypeChanges',
     'getAqiCategory',
     'getRhythmAnchorText',
-  ];
+    'parseSystemClockTime',
+    'formatSystemClockTime',
+    'normalizeSystemHabitParams',
+    'parseLegacySystemHabitTitle',
+    'formatSystemHabitTitle',
+    'deriveSystemHabitContext',
+    'buildRuntimeHabits',
+    ];
   const rhythmPrelude = html.match(/const RHYTHM_TYPES\s*=\s*[^;]+;[\s\S]*?const RHYTHM_LABELS\s*=\s*\{[\s\S]*?\};/);
   assert.ok(rhythmPrelude, 'rhythm constants are missing');
+  const systemPrelude = html.match(/const SYSTEM_HABIT_PARAMETER_DEFS\s*=\s*\{[\s\S]*?\n\};/);
+  assert.ok(systemPrelude, 'system habit parameter definitions are missing');
   const context = {};
   vm.createContext(context);
   vm.runInContext(
-    `${rhythmPrelude[0]}\n${names.map(name => extractFunction(html, name)).join('\n')}\n` +
+    `${rhythmPrelude[0]}\n${systemPrelude[0]}\n${names.map(name => extractFunction(html, name)).join('\n')}\n` +
     `globalThis.exports = { ${names.join(', ')} };`,
     context,
   );
@@ -97,6 +108,13 @@ for (const [label, htmlPath] of builds) {
     resetHabitDay,
     reconcileMeasurementTypeChanges,
     getRhythmAnchorText,
+    parseSystemClockTime,
+    formatSystemClockTime,
+    normalizeSystemHabitParams,
+    parseLegacySystemHabitTitle,
+    formatSystemHabitTitle,
+    deriveSystemHabitContext,
+    buildRuntimeHabits,
   } = loadFunctions(html);
   const plain = value => JSON.parse(JSON.stringify(value));
 
@@ -557,7 +575,8 @@ for (const [label, htmlPath] of builds) {
 
   assert.match(html, /class=["']eh-measurement["']/, `${label}: Manage rows need a measurement type selector`);
   assert.doesNotMatch(html, /<span class=["']habit-badge["']>/, `${label}: daily cards must not display unused weight metadata`);
-  assert.match(html, /class=["']eh-weight["']/, `${label}: Manage retains weight metadata for stored-data compatibility`);
+  assert.doesNotMatch(html, /class=["']eh-weight["']/, `${label}: Manage no longer exposes the obsolete weight selector`);
+  assert.match(html, /class=["']eh-system-title["']/, `${label}: system habits show a locked generated title`);
   assert.match(html, /value=["']check["'][^>]*>Check once</, `${label}: Manage supports check-once habits`);
   assert.match(html, /value=["']count["'][^>]*>Count</, `${label}: Manage supports count habits`);
   assert.match(html, /value=["']amount["'][^>]*>Amount</, `${label}: Manage supports amount habits`);

@@ -1,0 +1,117 @@
+const assert = require('node:assert/strict');
+const puppeteer = require('puppeteer-core');
+
+const ORIGIN = process.env.WAVELENGTH_ORIGIN || 'http://127.0.0.1:8778';
+const URL = process.env.WAVELENGTH_URL || `${ORIGIN}/?system-habit-parameters-e2e=local`;
+const THEME = process.env.WAVELENGTH_THEME || 'dark';
+const SHOT = process.env.WAVELENGTH_SHOT || 'C:\\Temp\\wavelength-system-habits.png';
+let browser;
+
+(async () => {
+  browser = await puppeteer.launch({
+    executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    headless:true,
+    args:['--no-sandbox', '--disable-gpu'],
+  });
+  const page = await browser.newPage();
+  await page.setViewport({ width:390, height:844, deviceScaleFactor:3, isMobile:true, hasTouch:true });
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+  await page.goto(URL, { waitUntil:'networkidle0' });
+  await page.evaluate(theme => { localStorage.clear(); localStorage.setItem('wavelength_theme', theme); }, THEME);
+  await page.reload({ waitUntil:'networkidle0' });
+  await page.click('#manageBtn');
+  await page.waitForSelector('#modalOverlay.open');
+
+  const initial = await page.evaluate(() => ({
+    systemCount:DEFAULT_HABITS.length,
+    titleCount:document.querySelectorAll('.eh-system-title').length,
+    editableTitleCount:document.querySelectorAll('.edit-habit input.eh-text[type="text"]').length,
+    visibleRhythmEditors:[...document.querySelectorAll('.eh-rhythm-block')].filter(el => !el.hidden).length,
+    systemAnchorCount:document.querySelectorAll('.eh-system-anchor').length,
+    hasWeight:!!document.querySelector('.eh-weight'),
+    width:document.documentElement.scrollWidth,
+    viewport:window.innerWidth,
+  }));
+  assert.equal(initial.titleCount, initial.systemCount, 'every shipped habit has a locked title');
+  assert.equal(initial.editableTitleCount, 0, 'system habits expose no editable title field');
+  assert.equal(initial.visibleRhythmEditors, 0, 'system anchors expose no editable controls');
+  assert.equal(initial.systemAnchorCount, initial.systemCount, 'system anchors remain visible as summaries');
+  assert.equal(initial.hasWeight, false, 'obsolete weight selector is absent');
+  assert.ok(initial.width <= initial.viewport, 'Manage has no horizontal overflow');
+
+  await page.evaluate(() => {
+    const row = document.querySelector('.edit-habit[data-id="sleep"]');
+    row.querySelector('.eh-param-targetTime').value = '23:30';
+  });
+  await page.click('#modalSave');
+  await page.waitForSelector('#modalOverlay.open', { hidden:true });
+  await page.click('#manageBtn');
+  await page.waitForSelector('#modalOverlay.open');
+  const saved = await page.evaluate(() => {
+    const overrides = JSON.parse(localStorage.getItem('wavelength_wpb_habits'));
+    const sleep = document.querySelector('.edit-habit[data-id="sleep"]');
+    return {
+      title:sleep.querySelector('.eh-system-title').textContent,
+      time:sleep.querySelector('.eh-param-targetTime').value,
+      stored:overrides.sleep,
+      rhythmVisible:!sleep.querySelector('.eh-rhythm-block').hidden,
+    };
+  });
+  assert.equal(saved.title, 'In bed by 11:30 PM', 'bedtime parameter regenerates the locked title');
+  assert.equal(saved.time, '23:30', 'Manage reloads the saved canonical bedtime');
+  assert.deepEqual(saved.stored, { params:{ targetTime:'23:30' } }, 'save stores only non-default structured params');
+  assert.equal(saved.rhythmVisible, false, 'sleep anchor remains non-editable after reload');
+  await page.screenshot({ path:SHOT, fullPage:false });
+
+  await page.click('#modalClose');
+  await page.waitForSelector('#modalOverlay.open', { hidden:true });
+  await page.evaluate(() => {
+    localStorage.setItem('wavelength_wpb_habits', JSON.stringify({
+      sleep:{ text:'Sleep when the moon feels right' },
+    }));
+  });
+  await page.reload({ waitUntil:'networkidle0' });
+  await page.click('#manageBtn');
+  await page.waitForSelector('#modalOverlay.open');
+  assert.equal(
+    await page.$eval('.edit-habit[data-id="sleep"] .eh-system-title', el => el.textContent),
+    'Sleep when the moon feels right',
+    'unknown legacy title loads as a locked grandfathered label',
+  );
+  await page.click('#modalSave');
+  await page.waitForSelector('#modalOverlay.open', { hidden:true });
+  await page.click('#manageBtn');
+  await page.waitForSelector('#modalOverlay.open');
+  const grandfathered = await page.evaluate(() => ({
+    title:document.querySelector('.edit-habit[data-id="sleep"] .eh-system-title').textContent,
+    stored:JSON.parse(localStorage.getItem('wavelength_wpb_habits')).sleep,
+  }));
+  assert.equal(grandfathered.title, 'Sleep when the moon feels right',
+    'unknown legacy title survives an unrelated Manage save and reopen');
+  assert.deepEqual(grandfathered.stored, { text:'Sleep when the moon feels right' },
+    'save preserves only the grandfathered unknown title override');
+
+  const importVersions = await page.evaluate(async () => {
+    const results = [];
+    for (const version of [1, 2, 3]) {
+      const payload = createBackupPayload();
+      payload.version = version;
+      if (version === 1) delete payload.insightHistory;
+      await importBackupFile({ text:async () => JSON.stringify(payload) });
+      results.push({ version, toast:document.getElementById('toast').textContent });
+    }
+    return results;
+  });
+  for (const result of importVersions) {
+    assert.match(result.toast, /Backup imported/, `version-${result.version} backup imports successfully`);
+  }
+  assert.equal(
+    await page.evaluate(() => JSON.parse(localStorage.getItem('wavelength_wpb_habits')).sleep.text),
+    'Sleep when the moon feels right',
+    'backup imports retain the grandfathered unknown title',
+  );
+  assert.deepEqual(errors, []);
+  console.log(`system habit parameters 390px ${THEME} Edge flow passed`);
+})().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => { if (browser) await browser.close(); });

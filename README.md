@@ -48,7 +48,9 @@ Changing a goal recalculates today's completion from the amount already recorded
 
 Every habit card uses the same fixed height (104px on a 390px iPhone viewport), regardless of measurement type. Measured progress appears as a compact chip inline with the habit note, plus a 3px progress bar along the card's bottom edge — not a full-width meter that grows the card. The `−` and `+` controls sit in a vertical 40px rail on the right.
 
-The `weight` field (w1/w2) remains editable in Manage for stored-data compatibility, but no longer appears on the daily card — it never entered a computation (daily count, streaks, ring).
+The `weight` field (w1/w2) is no longer editable in Manage and is not written to new saves or exports. Old version-1 and version-2 backups containing `weight` are accepted on import for backward compatibility, but the field is discarded during normalization. New backups use version 3 to identify the parameter schema.
+
+System-designed habits (the built-in defaults) carry typed parameters that generate their display titles and derive their Next Wave recommendation windows. Parameters include clock times (e.g. bedtime), durations (e.g. meditation minutes), quantities (e.g. water ounces), and counts (e.g. gratitude items). Every system habit title is locked; system anchors remain visible as system-managed summaries rather than editable controls; descriptions, schedules, and tracking remain fully editable. Legacy title overrides like "In bed by 11:30 PM" migrate to structured parameters on load; unrecognized custom titles survive unchanged as read-only legacy labels. Bedtime is intentionally constrained to an evening window so its derived sleep and wind-down windows never cross midnight.
 
 **Reorder mode** is separate from tracking. Tap **↕ Reorder** to swap the `−/+` steppers for up/down arrows and a right-side drag grip; the hint line appears only in this mode. Tap **✓ Done** (or press Escape) to return to tracking. Card completion is suppressed while reordering.
 
@@ -105,7 +107,7 @@ Condition cards remain hidden until there are at least 10 distinct relevant days
 
 **A flexible win** may appear sooner when one of the last 30 days contains at least two distinct verified context-aware completions. It names the actions that stayed on track without assigning a hidden composite score. Rescue-swap or “waves ridden” claims are intentionally deferred until Wavelength can record explicit approved alternatives rather than infer substitutions from coincidental completions.
 
-Mobile backups now use version 2 and carry the normalized insight ledger. Version-1 backups remain importable and begin with no reconstructed historical evidence; the current recommendation may be recorded normally after the imported app rerenders. Version-2 insight evidence is validated against imported habit completion history before any storage write.
+Mobile backups now use version 3 and carry both the normalized insight ledger and structured system-habit parameters. Version-1 backups remain importable and begin with no reconstructed historical evidence; version-2 backups retain their validated insight ledger. Version-2 and version-3 evidence is validated against imported habit completion history before any storage write.
 
 The complete dock/evidence browser flow is `tests/browser/navigation-insights-e2e.cjs`. It verifies 390px layout, safe-area clearance, exact-source/no-coordinate storage, View habit, reversible completion, gated reports, atomic invalid-v2 rejection, and v1 compatibility.
 
@@ -150,7 +152,7 @@ node tests/next-wave-regression.mjs
 
 All cross-build suites use the tracked desktop fixture at `tests/fixtures/friday_app_2026-07-12.html`, so they run from a clean repository checkout. When shared behavior changes, update both the external standalone desktop file and this byte-identical fixture.
 
-Custom habit overrides are limited to text, note, weight, valid nonempty weekday arrays, valid measurement settings, and valid rhythm settings. Rhythm overrides require a supported anchor type; threshold-based anchors require finite positive numbers, optional rhythm notes are limited to 60 characters and one concise clause, and `rhythm: null` records an explicit opt-out from a shipped default anchor. Imported structural fields, invalid measurement or rhythm combinations, and malformed progress are rejected. Invalid legacy schedules safely fall back to every day, legacy habits without measurement settings remain Check once, and displayed custom text is escaped before insertion into HTML.
+Custom habit overrides are limited to text, note, typed system parameters, valid nonempty weekday arrays, valid measurement settings, and valid rhythm settings. Legacy `weight` values are accepted only for backward-compatible import and are discarded during normalization. Rhythm overrides require a supported anchor type; threshold-based anchors require finite positive numbers, optional rhythm notes are limited to 60 characters and one concise clause, and `rhythm: null` records an explicit opt-out from a shipped default anchor. Imported structural fields, invalid parameter, measurement, or rhythm combinations, and malformed progress are rejected. Invalid legacy schedules safely fall back to every day, legacy habits without measurement settings remain Check once, and displayed custom text is escaped before insertion into HTML.
 
 ## Requirement for iPhone installation
 

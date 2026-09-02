@@ -13,7 +13,9 @@ const builds = [
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}(`);
   assert.notEqual(start, -1, `${name} is missing`);
-  const brace = source.indexOf('{', start);
+  const signatureEnd = source.indexOf(') {', start);
+  assert.notEqual(signatureEnd, -1, `${name} signature does not terminate`);
+  const brace = signatureEnd + 2;
   let depth = 0;
   let quote = null;
   let escaped = false;
@@ -51,11 +53,20 @@ function loadScheduleFunctions(html) {
     'calculateLongestScheduledStreak',
     'resolveLongestStreak',
     'getStreakStatusCopy',
-  ];
+    'parseSystemClockTime',
+    'formatSystemClockTime',
+    'normalizeSystemHabitParams',
+    'parseLegacySystemHabitTitle',
+    'formatSystemHabitTitle',
+    'deriveSystemHabitContext',
+    'buildRuntimeHabits',
+    ];
   const context = {};
   vm.createContext(context);
+  const systemPrelude = html.match(/const SYSTEM_HABIT_PARAMETER_DEFS\s*=\s*\{[\s\S]*?\n\};/);
+  assert.ok(systemPrelude, 'system habit parameter definitions are missing');
   vm.runInContext(
-    `${names.map(name => extractFunction(html, name)).join('\n')}\n` +
+    `${systemPrelude[0]}\n${names.map(name => extractFunction(html, name)).join('\n')}\n` +
     `globalThis.exports = { ${names.join(', ')} };`,
     context,
   );
@@ -85,7 +96,7 @@ for (const [label, htmlPath] of builds) {
   );
   assert.equal(
     JSON.stringify(validOverrides),
-    JSON.stringify({ cardio: { text: 'Intervals', weight: 2, days: [1, 3, 5] } }),
+    JSON.stringify({ cardio: { text: 'Intervals', days: [1, 3, 5] } }),
     `${label}: valid imported overrides are whitelisted and normalized`,
   );
   assert.throws(
