@@ -1168,6 +1168,12 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     .move-btn { opacity: 0.5; padding: 4px; }
   }
 
+  @media (max-width: 420px) {
+    .logo-sub { display: none; }
+    .date-display { flex-shrink: 0; }
+    .date-display .day { white-space: nowrap; }
+  }
+
   /* Confetti burst */
   .confetti-container {
     position: fixed;
@@ -2047,7 +2053,7 @@ const DEFAULT_HABITS = [
   { id:'lunch',      cat:'fuel',     icon:'🥗', text:'Green & lean lunch',                   note:'Half plate veggies, lean protein', weight:1, context:{ start:660, idealStart:690, urgencyStart:780, end:840, setting:'indoor', duration:20 } },
   { id:'dinner',     cat:'fuel',     icon:'🍳', text:'Early dinner (before 7)',              note:'Finish with enough time to wind down', weight:1, context:{ start:960, idealStart:1020, urgencyStart:1080, end:1140, setting:'indoor', duration:30, timelyDetail:'Your before-7 dinner window is open.', urgentDetail:'Your before-7 dinner window is closing.' } },
   { id:'sunscreen',  cat:'hygiene',  icon:'🧴', text:'Sun protection before outdoor time',   note:'Shade, clothing, a hat, or sunscreen all count', weight:2, rhythm:{ type:'uv-above', threshold:3, note:'Use sun protection' }, context:{ start:390, idealStart:480, end:1140, setting:'outdoor', daylight:'required', duration:2 } },
-  { id:'floss',      cat:'hygiene',  icon:'🦷', text:'Floss',                                note:'Clean between teeth once a day', weight:1, context:{ start:1080, idealStart:1200, end:1380, setting:'indoor', duration:2 } },
+  { id:'floss',      cat:'hygiene',  icon:'🦷', text:'Floss',                                note:'Clean between teeth once a day', weight:1, context:{ start:1080, idealStart:1200, end:1380, setting:'indoor', duration:2, afterCompletion:['breakfast','dinner'] } },
   { id:'winddown',   cat:'evening',  icon:'🌙', text:'No screens 30 min before bed',         note:'Read, stretch, or just sit', weight:2, context:{ start:1230, idealStart:1275, urgencyStart:1290, end:1320, setting:'indoor', duration:30, timelyDetail:'Your wind-down window before bed is open.', urgentDetail:'Bedtime is approaching.' } },
   { id:'gratitude',  cat:'evening',  icon:'✨', text:'Name 3 good things',                   note:'Notice what went well today', weight:1, context:{ start:1140, idealStart:1200, end:1380, setting:'indoor', duration:5 } },
   { id:'sleep',      cat:'evening',  icon:'🛌', text:'In bed by 10 PM',                      note:'Protect at least 7 hours for sleep', weight:2, context:{ start:1290, idealStart:1305, urgencyStart:1310, end:1320, setting:'indoor', duration:30 } },
@@ -2752,7 +2758,7 @@ function scheduleNextWaveContextRefresh(now = new Date()) {
   nextWaveContextTimer = setTimeout(() => renderNextWave(new Date()), delay);
 }
 
-function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data) {
+function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, completionCue = null) {
   doneByDate = doneByDate || {};
   progressByDate = progressByDate || {};
   const key = dateKey(date);
@@ -2783,9 +2789,22 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data) {
 
   const fitById = new Map(openHabits.map(habit => [habit.id, getHabitRecommendationFit(habit, date, data)]));
   const eligibleHabits = openHabits.filter(habit => fitById.get(habit.id).eligible);
+  const cueAge = date.getTime() - Number(completionCue?.completedAt);
+  const completionCueHabit = completionCue && completionCue.dateKey === key &&
+    Number.isFinite(completionCue.completedAt) && cueAge >= 0 && cueAge <= 15 * 60 * 1000 &&
+    dayDone[completionCue.habitId] === true
+      ? openHabits.find(habit => Array.isArray(habit.context?.afterCompletion) &&
+          habit.context.afterCompletion.includes(completionCue.habitId)) || null
+      : null;
+  const completionCueResult = () => {
+    const meal = completionCue.habitId === 'breakfast' ? 'Breakfast' : 'Dinner';
+    return result(completionCueHabit, 'completion-cue', 'An easy next step', 'Take two minutes to floss.',
+      `${meal} is done. Pairing the two can make flossing easier to remember.`);
+  };
   const adaptiveHabit = openHabits.find(habit => getHabitAdaptiveSuggestion(habit, fitById.get(habit.id))) || null;
   const adaptiveSuggestion = adaptiveHabit ? getHabitAdaptiveSuggestion(adaptiveHabit, fitById.get(adaptiveHabit.id)) : null;
   if (eligibleHabits.length === 0) {
+    if (completionCueHabit) return completionCueResult();
     if (adaptiveHabit && adaptiveSuggestion) {
       return result(adaptiveHabit, adaptiveSuggestion.reason, adaptiveSuggestion.eyebrow, adaptiveSuggestion.title, adaptiveSuggestion.detail);
     }
@@ -2827,6 +2846,8 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data) {
     const detail = urgentHabit.context?.urgentDetail || 'This habit’s useful window is closing.';
     return result(urgentHabit, 'window-closing', 'Window closing', urgentHabit.text, detail);
   }
+
+  if (completionCueHabit) return completionCueResult();
 
   const sunscreen = anchoredById('sunscreen', 'uv-above');
   if (sunscreen && uv !== null && uv >= sunscreen.rhythm.threshold) {
@@ -2886,7 +2907,7 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data) {
 }
 
 function renderNextWave(now = new Date()) {
-  const suggestion = getNextWaveSuggestion(HABITS, state.done || {}, state.progress || {}, now, rhythmWeatherData);
+  const suggestion = getNextWaveSuggestion(HABITS, state.done || {}, state.progress || {}, now, rhythmWeatherData, recentCompletionCue);
   const icon = document.getElementById('nextWaveIcon');
   const eyebrow = document.getElementById('nextWaveEyebrow');
   const title = document.getElementById('nextWaveTitle');
@@ -2939,6 +2960,31 @@ let rhythmWeatherGeneration = 0;
 let rhythmWeatherReadyGeneration = -1;
 let rhythmWeatherController = null;
 let nextWaveContextTimer = null;
+const COMPLETION_CUE_WINDOW_MS = 15 * 60 * 1000;
+let recentCompletionCue = null;
+let completionCueTimer = null;
+
+function clearRecentCompletionCue(habitId = null) {
+  if (habitId && recentCompletionCue?.habitId !== habitId) return false;
+  recentCompletionCue = null;
+  if (completionCueTimer !== null) clearTimeout(completionCueTimer);
+  completionCueTimer = null;
+  return true;
+}
+
+function setRecentCompletionCue(habitId, now = new Date()) {
+  const hasTarget = HABITS.some(habit => Array.isArray(habit.context?.afterCompletion) &&
+    habit.context.afterCompletion.includes(habitId));
+  if (!hasTarget) return false;
+  clearRecentCompletionCue();
+  recentCompletionCue = { habitId, dateKey:dateKey(now), completedAt:now.getTime() };
+  completionCueTimer = setTimeout(() => {
+    recentCompletionCue = null;
+    completionCueTimer = null;
+    renderNextWave(new Date());
+  }, COMPLETION_CUE_WINDOW_MS + 50);
+  return true;
+}
 
 function renderInsights(now = new Date()) {
   rhythmWeatherController?.abort();
@@ -4314,6 +4360,7 @@ function toggleHabit(id) {
 
   if (today[id]) {
     delete today[id];
+    clearRecentCompletionCue(id);
     recordInsightCompletion(insightHistory, id, now, false);
     saveState();
     saveInsightHistory(now);
@@ -4323,6 +4370,8 @@ function toggleHabit(id) {
   }
 
   today[id] = true;
+  if (id === 'floss') clearRecentCompletionCue();
+  else setRecentCompletionCue(id, now);
   recordInsightCompletion(insightHistory, id, now, true);
   const stats = getDailyHabitStats(state.done || {}, HABITS, now, 5, state.progress || {});
   const { doneCount, scheduledCount, target } = stats;
@@ -4673,16 +4722,48 @@ function updateRhythmRow(row) {
   row.classList.remove('measurement-error');
 }
 
+function getSystemHabitParamsFromRow(row) {
+  const habitId = row?.dataset?.id;
+  const definition = SYSTEM_HABIT_PARAMETER_DEFS[habitId];
+  if (!definition) return null;
+  const values = {};
+  for (const [key, field] of Object.entries(definition)) {
+    const input = row.querySelector(`.eh-param-${key}`);
+    if (!input) continue;
+    let value = input.value;
+    if (input.tagName === 'SELECT' && value === 'custom') {
+      value = row.querySelector(`.eh-param-${key}-custom`)?.value;
+    }
+    values[key] = field.type === 'time' ? value : Number(value);
+  }
+  return normalizeSystemHabitParams(habitId, values, false);
+}
+
+function updateSystemHabitTitlePreview(row) {
+  if (!row || row.dataset.grandfatheredTitle === 'true') return false;
+  const params = getSystemHabitParamsFromRow(row);
+  const title = row.querySelector('.eh-system-title');
+  const hiddenTitle = row.querySelector('.eh-text');
+  if (!params || !title || !hiddenTitle) return false;
+  const text = formatSystemHabitTitle(row.dataset.id, params);
+  title.textContent = text;
+  hiddenTitle.value = text;
+  return true;
+}
+
 function renderManageModal() {
   const body = document.getElementById('modalBody');
+  const existingOverrides = loadCustomHabits() || {};
   body.innerHTML = HABITS.map(h => {
     const selectedDays = normalizeHabitDays(h.days);
     const measurement = normalizeMeasurementConfig(h);
     const paramDefs = SYSTEM_HABIT_PARAMETER_DEFS[h.id];
     const isSystem = SYSTEM_HABIT_IDS.has(h.id);
     const systemAnchor = normalizeRhythmConfig(h.rhythm);
+    const hasGrandfatheredTitle = !!paramDefs && typeof existingOverrides[h.id]?.text === 'string' &&
+      parseLegacySystemHabitTitle(h.id, existingOverrides[h.id].text) === null;
     return `
-      <div class="edit-habit" data-id="${escapeHtml(h.id)}">
+      <div class="edit-habit" data-id="${escapeHtml(h.id)}" data-grandfathered-title="${hasGrandfatheredTitle}">
         <div class="eh-icon">${escapeHtml(h.icon)}</div>
         <div class="eh-fields">
           ${isSystem ? `<div class="eh-system-title">${escapeHtml(h.text)}</div><input type="hidden" class="eh-text" value="${escapeHtml(h.text)}">` : `<input type="text" class="eh-text" maxlength="48" value="${escapeHtml(h.text)}" placeholder="Habit name">`}
@@ -4753,13 +4834,20 @@ function renderManageModal() {
   body.querySelectorAll('.eh-rhythm').forEach(select => {
     select.addEventListener('change', () => updateRhythmRow(select.closest('.edit-habit')));
   });
-  body.querySelectorAll('.eh-param').forEach(select => {
-    if (select.tagName === 'SELECT') {
-      select.addEventListener('change', () => {
-        const custom = select.closest('.edit-habit').querySelector(`.${select.classList[1]}-custom`);
-        if (custom) custom.hidden = select.value !== 'custom';
-      });
-    }
+  body.querySelectorAll('.eh-param').forEach(input => {
+    const update = () => {
+      const row = input.closest('.edit-habit');
+      if (input.tagName === 'SELECT') {
+        const custom = row.querySelector(`.${input.classList[1]}-custom`);
+        if (custom) custom.hidden = input.value !== 'custom';
+      }
+      updateSystemHabitTitlePreview(row);
+    };
+    (input.tagName === 'SELECT' ? ['change'] : ['input','change'])
+      .forEach(eventName => input.addEventListener(eventName, update));
+  });
+  body.querySelectorAll('.eh-param-custom').forEach(input => {
+    input.addEventListener('input', () => updateSystemHabitTitlePreview(input.closest('.edit-habit')));
   });
   body.querySelectorAll('.eh-rhythm-threshold, .eh-rhythm-note').forEach(input => {
     input.addEventListener('input', () => input.closest('.edit-habit').classList.remove('measurement-error'));

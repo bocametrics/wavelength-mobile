@@ -81,6 +81,26 @@ let browser;
   assert.ok(toastGeometry.gap >= 8, `completion toast keeps at least 8px above dock: ${JSON.stringify(toastGeometry)}`);
   await page.waitForSelector('#toast.show', { hidden:true });
 
+  await page.evaluate(() => toggleHabit('breakfast'));
+  await page.waitForFunction(() => document.getElementById('nextWaveTitle').textContent === 'Take two minutes to floss.');
+  const flossCue = await page.evaluate(() => ({
+    habitId:document.getElementById('nextWaveAction').dataset.habitId,
+    eyebrow:document.getElementById('nextWaveEyebrow').textContent,
+    title:document.getElementById('nextWaveTitle').textContent,
+    detail:document.getElementById('nextWaveDetail').textContent,
+    persisted:localStorage.getItem('wavelength_completion_cue'),
+  }));
+  assert.deepEqual(flossCue, {
+    habitId:'floss',
+    eyebrow:'An easy next step',
+    title:'Take two minutes to floss.',
+    detail:'Breakfast is done. Pairing the two can make flossing easier to remember.',
+    persisted:null,
+  }, 'checking breakfast surfaces the approved session-only Floss cue');
+  await page.evaluate(() => toggleHabit('floss'));
+  assert.equal(await page.evaluate(() => recentCompletionCue), null, 'completing Floss clears the meal cue');
+  assert.notEqual(await page.$eval('#nextWaveAction', el => el.dataset.habitId), 'floss', 'completed Floss is no longer suggested');
+
   const contextResults = await page.evaluate(() => {
     const fixed = (hour, minute = 0) => new Date(2026, 7, 31, hour, minute, 0, 0);
     const doneFor = (date, ids) => ({ [dateKey(date)]:Object.fromEntries(ids.map(id => [id, true])) });

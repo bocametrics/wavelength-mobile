@@ -218,9 +218,85 @@ for (const [label, htmlPath] of builds) {
   const sunsetData = { aqi:43, isDay:1, sunrise:'6:58 AM', sunset:'7:42 PM' };
   const productionBeach = productionHabits.find(habit => habit.id === 'beach');
   const productionSleep = productionHabits.find(habit => habit.id === 'sleep');
+  const productionFloss = productionHabits.find(habit => habit.id === 'floss');
   const completedExcept = (date, openIds) => doneFor(date, productionHabits
     .filter(habit => !openIds.includes(habit.id))
     .map(habit => habit.id));
+
+  const afterBreakfast = atTime(9);
+  const breakfastCue = {
+    habitId:'breakfast',
+    dateKey:'2026-08-31',
+    completedAt:afterBreakfast.getTime() - 5 * 60 * 1000,
+  };
+  assert.deepEqual(
+    plain(getNextWaveSuggestion(
+      productionHabits,
+      completedExcept(afterBreakfast, ['floss']),
+      {},
+      afterBreakfast,
+      { isDay:1 },
+      breakfastCue,
+    )),
+    {
+      habitId:'floss', category:'hygiene', icon:'🦷', reason:'completion-cue', eyebrow:'An easy next step',
+      title:'Take two minutes to floss.',
+      detail:'Breakfast is done. Pairing the two can make flossing easier to remember.',
+      action:'View habit',
+    },
+    `${label}: a fresh breakfast completion makes Floss the useful next step`,
+  );
+  const afterDinner = atTime(19);
+  assert.equal(
+    getNextWaveSuggestion(
+      productionHabits,
+      completedExcept(afterDinner, ['floss']),
+      {},
+      afterDinner,
+      { isDay:0 },
+      { habitId:'dinner', dateKey:'2026-08-31', completedAt:afterDinner.getTime() - 60 * 1000 },
+    ).detail,
+    'Dinner is done. Pairing the two can make flossing easier to remember.',
+    `${label}: dinner uses the same calm cue with the correct meal name`,
+  );
+  assert.notEqual(
+    getNextWaveSuggestion(
+      productionHabits,
+      completedExcept(afterBreakfast, ['floss']),
+      {},
+      afterBreakfast,
+      { isDay:1 },
+      { habitId:'breakfast', dateKey:'2026-08-31', completedAt:afterBreakfast.getTime() - 16 * 60 * 1000 },
+    ).reason,
+    'completion-cue',
+    `${label}: a meal checked more than 15 minutes ago does not masquerade as recent`,
+  );
+  assert.notEqual(
+    getNextWaveSuggestion(
+      productionHabits,
+      completedExcept(afterBreakfast, ['floss', 'breakfast']),
+      {},
+      afterBreakfast,
+      { isDay:1 },
+      breakfastCue,
+    ).reason,
+    'completion-cue',
+    `${label}: unchecking the source meal invalidates its cue`,
+  );
+  assert.notEqual(
+    getNextWaveSuggestion(
+      productionHabits,
+      completedExcept(afterBreakfast, ['floss']),
+      {},
+      afterBreakfast,
+      { isDay:1 },
+      { habitId:'lunch', dateKey:'2026-08-31', completedAt:afterBreakfast.getTime() - 60 * 1000 },
+    ).reason,
+    'completion-cue',
+    `${label}: lunch is not silently added to the approved breakfast/dinner cue`,
+  );
+  assert.deepEqual(Array.from(productionFloss.context.afterCompletion), ['breakfast','dinner'],
+    `${label}: Floss declares its completion relationship independently of category`);
 
   const daylightClosing = atTime(19, 21);
   assert.equal(

@@ -42,6 +42,28 @@ let browser;
   assert.ok(initial.width <= initial.viewport, 'Manage has no horizontal overflow');
 
   await page.evaluate(() => {
+    const wake = document.querySelector('.edit-habit[data-id="wake"] .eh-param-targetTime');
+    wake.value = '07:45';
+    wake.dispatchEvent(new Event('input', { bubbles:true }));
+    wake.dispatchEvent(new Event('change', { bubbles:true }));
+  });
+  assert.equal(
+    await page.$eval('.edit-habit[data-id="wake"] .eh-system-title', el => el.textContent),
+    'Wake at 7:45 AM',
+    'changing a system parameter updates its locked title preview before saving',
+  );
+  await page.evaluate(() => {
+    const wake = document.querySelector('.edit-habit[data-id="wake"] .eh-param-targetTime');
+    wake.value = '08:00';
+    wake.dispatchEvent(new Event('change', { bubbles:true }));
+  });
+  assert.equal(
+    await page.$eval('.edit-habit[data-id="wake"] .eh-system-title', el => el.textContent),
+    'Wake at 8:00 AM',
+    'a native-picker change event also updates the title preview',
+  );
+
+  await page.evaluate(() => {
     const row = document.querySelector('.edit-habit[data-id="sleep"]');
     row.querySelector('.eh-param-targetTime').value = '23:30';
   });
@@ -63,6 +85,7 @@ let browser;
   assert.equal(saved.time, '23:30', 'Manage reloads the saved canonical bedtime');
   assert.deepEqual(saved.stored, { params:{ targetTime:'23:30' } }, 'save stores only non-default structured params');
   assert.equal(saved.rhythmVisible, false, 'sleep anchor remains non-editable after reload');
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('.modal')).opacity === '1');
   await page.screenshot({ path:SHOT, fullPage:false });
 
   await page.click('#modalClose');
