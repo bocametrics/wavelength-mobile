@@ -1940,8 +1940,10 @@ function normalizeSystemHabitParams(habitId, candidate = {}, strict = false) {
 }
 
 function parseLegacySystemHabitTitle(habitId, text) {
-  if (habitId !== 'sleep' || typeof text !== 'string') return null;
-  const match = text.match(/^In bed by (\d\d?)(?::([0-5]\d))? (AM|PM)$/);
+  if (typeof text !== 'string') return null;
+  let match = null;
+  if (habitId === 'sleep') match = text.match(/^In bed by (\d\d?)(?::([0-5]\d))? (AM|PM)$/);
+  else if (habitId === 'wake') match = text.match(/^Wake at (\d\d?)(?::([0-5]\d))? (AM|PM)$/);
   if (!match) return null;
   let hour = Number(match[1]);
   if (hour < 1 || hour > 12) return null;

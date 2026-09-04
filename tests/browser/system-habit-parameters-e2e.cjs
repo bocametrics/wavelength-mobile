@@ -135,6 +135,36 @@ let browser;
     'Sleep when the moon feels right',
     'backup imports retain the grandfathered unknown title',
   );
+
+  const legacyWake = await page.evaluate(async () => {
+    const payload = createBackupPayload();
+    payload.version = 2;
+    payload.customHabits.wake = { text:'Wake at 7:30 AM' };
+    await importBackupFile({ text:async () => JSON.stringify(payload) });
+    const row = document.querySelector('.edit-habit[data-id="wake"]');
+    return {
+      toast:document.getElementById('toast').textContent,
+      title:row.querySelector('.eh-system-title').textContent,
+      time:row.querySelector('.eh-param-targetTime').value,
+      grandfathered:row.dataset.grandfatheredTitle,
+      stored:JSON.parse(localStorage.getItem('wavelength_wpb_habits')).wake,
+    };
+  });
+  assert.match(legacyWake.toast, /Backup imported/, 'version-2 wake-title backup imports');
+  assert.equal(legacyWake.title, 'Wake at 7:30 AM', 'legacy wake title renders from migrated parameters');
+  assert.equal(legacyWake.time, '07:30', 'legacy wake title populates the structured time control');
+  assert.equal(legacyWake.grandfathered, 'false', 'recognized wake title is no longer treated as frozen custom prose');
+  assert.deepEqual(legacyWake.stored, { params:{ targetTime:'07:30' } }, 'import stores canonical wake parameters, not text');
+  await page.evaluate(() => {
+    const wake = document.querySelector('.edit-habit[data-id="wake"] .eh-param-targetTime');
+    wake.value = '07:45';
+    wake.dispatchEvent(new Event('change', { bubbles:true }));
+  });
+  assert.equal(
+    await page.$eval('.edit-habit[data-id="wake"] .eh-system-title', el => el.textContent),
+    'Wake at 7:45 AM',
+    'migrated wake title remains live when the parameter changes',
+  );
   assert.deepEqual(errors, []);
   console.log(`system habit parameters 390px ${THEME} Edge flow passed`);
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => { if (browser) await browser.close(); });

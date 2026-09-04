@@ -87,6 +87,11 @@ for (const [label, htmlPath] of builds) {
     { targetTime:'23:30' },
     `${label}: recognized legacy bedtime title migrates without parsing arbitrary prose`,
   );
+  assert.deepEqual(
+    plain(parseLegacySystemHabitTitle('wake', 'Wake at 7:30 AM')),
+    { targetTime:'07:30' },
+    `${label}: recognized legacy wake title migrates like bedtime`,
+  );
   assert.equal(
     parseLegacySystemHabitTitle('sleep', 'Sleep when the moon feels right'),
     null,
@@ -95,6 +100,10 @@ for (const [label, htmlPath] of builds) {
   for (const nearMiss of ['In Bed By 11:30 PM', 'In bed by 11:30 pm', 'In bed by 11:30PM', ' In bed by 11:30 PM', 'In bed by  11:30 PM']) {
     assert.equal(parseLegacySystemHabitTitle('sleep', nearMiss), null,
       `${label}: legacy migration rejects non-exact title form ${JSON.stringify(nearMiss)}`);
+  }
+  for (const nearMiss of ['Wake At 7:30 AM', 'Wake at 7:30 am', 'Wake at 7:30AM', ' Wake at 7:30 AM', 'Wake at  7:30 AM']) {
+    assert.equal(parseLegacySystemHabitTitle('wake', nearMiss), null,
+      `${label}: wake migration rejects non-exact title form ${JSON.stringify(nearMiss)}`);
   }
   assert.equal(
     formatSystemHabitTitle('sleep', { targetTime:'23:30' }),
@@ -156,6 +165,15 @@ for (const [label, htmlPath] of builds) {
     )),
     { sleep:{ params:{ targetTime:'23:30' } } },
     `${label}: legacy bedtime text migrates to params while obsolete weight is discarded`,
+  );
+  assert.deepEqual(
+    plain(normalizeCustomHabitOverrides(
+      { wake:{ text:'Wake at 7:30 AM' } },
+      [{ id:'wake', text:'Wake at 6:30 AM' }],
+      true,
+    )),
+    { wake:{ params:{ targetTime:'07:30' } } },
+    `${label}: a version-2 wake title migrates instead of becoming a frozen override`,
   );
   assert.deepEqual(
     plain(normalizeCustomHabitOverrides(
