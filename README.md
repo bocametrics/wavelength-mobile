@@ -5,22 +5,22 @@ This folder is the iPhone-first, installable version of Wavelength. Shared behav
 ## What is ready
 
 - Mobile-first layout with iPhone safe-area support
-- 44px-class touch targets, visible reorder controls, and pointer-based handle dragging
+- 44px-class touch targets and pointer-based reordering that keeps the lifted card aligned inside the mobile viewport
 - Web App Manifest and Apple Home Screen icon
 - Standalone/full-screen presentation when installed
 - Offline app shell via service worker
-- Fixed **Home / Insights** dock with iPhone safe-area clearance
-- Backup/share and import controls under **Manage Habits**
+- Fixed **Home / Insights / Settings** dock with iPhone safe-area clearance
+- First Name, Appearance, Backup/Share, and Import controls on the dedicated **Settings** page
 - Per-habit Monday–Sunday schedules under **Manage Habits**, with all seven days selected by default
 - Three per-habit measurement types: **Check once**, **Count**, and **Amount** with a configurable goal, increment, and unit
-- Existing localStorage history and habit editing preserved; saved schedules, structured system-habit parameters, measurement settings, daily progress, and prospective insight evidence are included in version-3 backups and strictly validated on import
+- Existing localStorage history and habit editing preserved; First Name, saved schedules, structured system-habit parameters, measurement settings, daily progress, and prospective insight evidence are included in version-4 backups and strictly validated on import
 - Pending-day-aware streaks: an unfinished today does not erase a qualifying streak through yesterday
 - Three appearance modes: **System**, **Day**, and **Night**, shared across iPhone, Android, and desktop
-- Time-consistent greeting icons and a roomier mobile streak card with the decorative left icon suppressed at widths up to 600px
+- A personalized Home greeting with the calm **Friend** fallback, time-consistent icons, and a roomier mobile streak card with the decorative left icon suppressed at widths up to 600px
 
 ## Appearance behavior
 
-Open **Manage Habits → Appearance** and choose:
+Open **Settings → Appearance** and choose:
 
 - **System** — follows the device's light/dark setting and updates live when it changes
 - **Day** — always uses Wavelength's high-contrast coastal light palette
@@ -48,11 +48,11 @@ Changing a goal recalculates today's completion from the amount already recorded
 
 Every habit card uses the same fixed height (104px on a 390px iPhone viewport), regardless of measurement type. Measured progress appears as a compact chip inline with the habit note, plus a 3px progress bar along the card's bottom edge — not a full-width meter that grows the card. The `−` and `+` controls sit in a vertical 40px rail on the right.
 
-The `weight` field (w1/w2) is no longer editable in Manage and is not written to new saves or exports. Old version-1 and version-2 backups containing `weight` are accepted on import for backward compatibility, but the field is discarded during normalization. New backups use version 3 to identify the parameter schema.
+The `weight` field (w1/w2) is no longer editable in Manage and is not written to new saves or exports. Older backups containing `weight` remain importable for backward compatibility, but the field is discarded during normalization. Version-4 backups add the optional First Name profile field to the structured parameter and insight schema.
 
 System-designed habits (the built-in defaults) carry typed parameters that generate their display titles and derive their Next Wave recommendation windows. Parameters include clock times (e.g. bedtime), durations (e.g. meditation minutes), quantities (e.g. water ounces), and counts (e.g. gratitude items). Every system habit title is locked and its generated title preview updates immediately as a parameter changes; system anchors remain visible as system-managed summaries rather than editable controls; descriptions, schedules, and tracking remain fully editable. Exact legacy clock titles such as "Wake at 7:30 AM" and "In bed by 11:30 PM" migrate to structured parameters on load or import, while unrecognized custom titles survive unchanged as read-only legacy labels. This also repairs already-imported version-2 wake titles the next time the corrected app loads. Bedtime is intentionally constrained to an evening window so its derived sleep and wind-down windows never cross midnight.
 
-**Reorder mode** is separate from tracking. Tap **↕ Reorder** to swap the `−/+` steppers for up/down arrows and a right-side drag grip; the hint line appears only in this mode. Tap **✓ Done** (or press Escape) to return to tracking. Card completion is suppressed while reordering.
+**Reorder mode** is separate from tracking. On mobile, tap **↕ Reorder** and hold the right-side grip; the lifted card remains aligned with the list and follows only the vertical movement. Up/down arrow controls remain available on desktop but are hidden on mobile. Tap **✓ Done** (or press Escape) to return to tracking. Card completion is suppressed while reordering.
 
 ## Rhythm anchors
 
@@ -82,14 +82,17 @@ AQI health guidance always follows the fixed US AQI bands: a custom movement thr
 
 The checked-in 390px Edge flow is `tests/browser/next-wave-e2e.cjs`. On the WSL/Windows test host, copy it to `C:\Temp\wavelength-next-wave-e2e.cjs`, serve the repository on port 8773, then run `cmd.exe /c "cd /d C:\Temp && node wavelength-next-wave-e2e.cjs"`. Set `WAVELENGTH_ORIGIN` and `WAVELENGTH_URL` to rerun the same assertions against the deployed Pages build.
 
-## Home and Insights
+## Home, Insights, and Settings
 
 The fixed bottom dock separates action from reflection:
 
 - **Home** contains the greeting, Your next wave, category controls, today's habits, and Reset today.
 - **Insights** begins with Streak/Today completion, followed by This week and a rolling Last 30 days trend. Evidence-qualified adaptive cards appear beneath those progress summaries.
+- **Settings** contains the local First Name field, Appearance, Backup/Share, and Import. The name is used only in the Home greeting; an empty field displays **Friend** without storing that fallback as user data.
 
-The dock buttons explicitly expose `aria-current="page"`, meet the 44px touch-target floor, and reserve enough bottom and safe-area space that the last card remains scrollable above the dock.
+The three dock buttons explicitly expose `aria-current="page"`, meet the 48px touch-target floor, and reserve enough bottom and safe-area space that the last card remains scrollable above the dock.
+
+**Manage Habits** opens in the category currently selected on Home. For example, opening Manage from Hygiene shows **Manage Hygiene** and only Hygiene habits, regardless of whether they are scheduled or complete today. **View all habits** broadens only the modal; closing it preserves the Home category. Scoped saves and resets affect only the visible category, preserving overrides in every other category.
 
 In normal tracking mode, every category keeps incomplete habits first and moves completed habits beneath a quiet **Completed · N** heading. Both groups preserve their relative positions from the saved canonical order; completion is a view-only partition and never rewrites `wavelength_wpb_order`. **Reorder** temporarily removes the partition and heading, showing every card in canonical order with completed styling intact. This makes Reorder an honest preview of the next fresh day. Unmarking a check-once habit or reducing a measured habit below its target returns it to the active group immediately.
 
@@ -99,7 +102,7 @@ The selector derives `available`, `ideal`, `flexible`, `late`, and `urgent` phas
 
 Floss has an explicit follow-on relationship with breakfast and dinner, independent of the Fuel and Hygiene navigation categories. Checking either meal creates a session-only 15-minute cue with the stable title **Floss**, the eyebrow **An easy next step**, and a meal-specific detail such as `Breakfast is done. Take two minutes to floss.` Genuine closing windows retain priority. The cue is never written to backups and clears when Floss is completed, the source meal is unmarked, or the 15-minute window expires; Floss's ordinary evening recommendation remains available without a meal cue.
 
-Completion-response toasts reserve the dock plus iPhone safe-area footprint. Their settled rectangle is browser-tested to remain at least 8px above the fixed Home/Insights dock in both themes, so encouragement such as milestone and completion messages is never painted underneath navigation.
+Completion-response toasts reserve the dock plus iPhone safe-area footprint. Their settled rectangle is browser-tested to remain at least 8px above the fixed Home/Insights/Settings dock in both themes, so encouragement such as milestone and completion messages is never painted underneath navigation.
 
 **This week** keeps its seven-day calendar strip, but its percentage counts only elapsed eligible days through today. Future days remain visible without lowering the result before they happen. **Last 30 days** plots each elapsed day’s scheduled-habit completion rate on a 0–100% line chart and shows a weighted average plus the exact number of tracked days. A faint dashed line marks that weighted rolling average behind the solid daily series, making recent above/below-baseline days visible without adding another score or duplicate plot label. The stored app-creation timestamp anchors the beginning of tracking, so a real zero-completion first day remains visible while earlier dates are gaps rather than invented zeroes. The header pairs the week number with the year instead of repeating the month already shown in the full date. At widths up to 420px, it removes only the secondary **Daily Health Compass** tagline so long full dates remain readable on one line without shrinking the primary brand or date.
 
@@ -111,7 +114,7 @@ Condition cards remain hidden until there are at least 10 distinct relevant days
 
 **A flexible win** may appear sooner when one of the last 30 days contains at least two distinct verified context-aware completions. It names the actions that stayed on track without assigning a hidden composite score. Rescue-swap or “waves ridden” claims are intentionally deferred until Wavelength can record explicit approved alternatives rather than infer substitutions from coincidental completions.
 
-Mobile backups now use version 3 and carry both the normalized insight ledger and structured system-habit parameters. Version-1 backups remain importable and begin with no reconstructed historical evidence; version-2 backups retain their validated insight ledger. Version-2 and version-3 evidence is validated against imported habit completion history before any storage write.
+Mobile backups now use version 4 and carry the normalized insight ledger, structured system-habit parameters, and optional First Name. Version-1 backups remain importable and begin with no reconstructed historical evidence; version-2 and version-3 backups retain their validated insight ledger and default to an empty stored name. All imported evidence is validated against habit completion history before any storage write.
 
 The complete dock/evidence browser flow is `tests/browser/navigation-insights-e2e.cjs`. It verifies 390px layout, safe-area clearance, exact-source/no-coordinate storage, View habit, reversible completion, gated reports, atomic invalid-v2 rejection, and v1 compatibility.
 
@@ -152,6 +155,7 @@ node tests/measurement-regression.mjs
 node tests/default-habits-regression.mjs
 node tests/navigation-insights-regression.mjs
 node tests/next-wave-regression.mjs
+node tests/settings-manage-regression.mjs
 ```
 
 All cross-build suites use the tracked desktop fixture at `tests/fixtures/friday_app_2026-07-12.html`, so they run from a clean repository checkout. When shared behavior changes, update both the external standalone desktop file and this byte-identical fixture.
@@ -171,10 +175,10 @@ The folder must be published at an **HTTPS URL**. Opening a Windows `file://` pa
 
 ## Moving data between Wavelength Mobile installations
 
-1. In Wavelength Mobile, open **Manage Habits**.
+1. In Wavelength Mobile, open **Settings**.
 2. Select **Backup / Share** to create a JSON backup.
 3. Send the JSON file to the other device (AirDrop, Files, email to self, etc.).
-4. On the destination app, open **Manage Habits → Import backup** and choose that JSON file.
+4. On the destination app, open **Settings → Import backup** and choose that JSON file.
 
 ### Existing Windows `file://` data
 

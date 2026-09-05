@@ -81,6 +81,7 @@ for (const [label, htmlPath] of builds) {
 
   const homeStart = html.indexOf('id="homeView"');
   const insightsStart = html.indexOf('id="insightsView"');
+  const settingsStart = html.indexOf('id="settingsView"');
   const wave = html.indexOf('id="nextWaveCard"');
   const tabs = html.indexOf('id="tabs"');
   const habitList = html.indexOf('id="habitList"');
@@ -91,6 +92,7 @@ for (const [label, htmlPath] of builds) {
 
   assert.ok(homeStart > 0, `${label}: Home view exists`);
   assert.ok(insightsStart > homeStart, `${label}: Insights view follows Home`);
+  assert.ok(settingsStart > insightsStart, `${label}: Settings view follows Insights`);
   assert.ok(homeStart < wave && wave < tabs && tabs < habitList && habitList < reset && reset < insightsStart,
     `${label}: Home is action-first with Next Wave before today's controls and habits`);
   assert.ok(insightsStart < streak && streak < weekly && weekly < dock,
@@ -108,10 +110,17 @@ for (const [label, htmlPath] of builds) {
     `${label}: Insights is a dock destination`);
   assert.match(html, /id="navInsights"[^>]*role="tab"[^>]*aria-controls="insightsView"[^>]*aria-selected="false"/,
     `${label}: Insights control identifies its panel and selected state`);
+  assert.match(html, /id="navSettings"[^>]*data-view="settings"/,
+    `${label}: Settings is a dock destination`);
+  assert.match(html, /id="navSettings"[^>]*role="tab"[^>]*aria-controls="settingsView"[^>]*aria-selected="false"/,
+    `${label}: Settings control identifies its panel and selected state`);
   assert.match(html, /id="homeView"[^>]*role="tabpanel"/, `${label}: Home is a tab panel`);
   assert.match(html, /id="insightsView"[^>]*role="tabpanel"[^>]*inert/, `${label}: inactive Insights begins inert`);
+  assert.match(html, /id="settingsView"[^>]*role="tabpanel"[^>]*inert/, `${label}: inactive Settings begins inert`);
   assert.match(html, /id="insightsView"[^>]*hidden/,
     `${label}: Insights starts hidden so launch remains action-oriented`);
+  assert.match(html, /id="settingsView"[^>]*hidden/,
+    `${label}: Settings starts hidden so launch remains action-oriented`);
 
   assert.match(html, /\.app-dock\s*\{[^}]*position:\s*fixed[^}]*bottom:\s*calc\([^)]*env\(safe-area-inset-bottom\)/s,
     `${label}: floating dock stays above the iPhone home indicator`);
@@ -122,7 +131,7 @@ for (const [label, htmlPath] of builds) {
 
   assert.match(html, /function setActiveView\(view,[^)]*\)/,
     `${label}: navigation has one shared view-switch function`);
-  assert.match(html, /const viewScrollPositions = \{ home:0, insights:0 \}/,
+  assert.match(html, /const viewScrollPositions = \{ home:0, insights:0, settings:0 \}/,
     `${label}: each view retains its own scroll position`);
   assert.match(html, /function setActiveView\(view,[^)]*\)[\s\S]*\.inert =[\s\S]*aria-selected[\s\S]*viewScrollPositions\[activeView\]/,
     `${label}: switching tabs updates inert, selection, and restores destination scroll`);
@@ -130,6 +139,10 @@ for (const [label, htmlPath] of builds) {
     `${label}: Home dock action is wired`);
   assert.match(html, /document\.getElementById\('navInsights'\)\.addEventListener\('click'/,
     `${label}: Insights dock action is wired`);
+  assert.match(html, /document\.getElementById\('navSettings'\)\.addEventListener\('click'/,
+    `${label}: Settings dock action is wired`);
+  assert.match(html, /const dockViews = \['home','insights','settings'\]/,
+    `${label}: dock keyboard navigation cycles across all three views`);
 
   const habits = [
     { id:'sunscreen', title:'Sun protection before outdoor time', measurement:{ type:'check' }, rhythm:{ type:'uv-above', threshold:3 } },
@@ -326,11 +339,11 @@ for (const [label, htmlPath] of builds) {
   if (label === 'mobile') {
     assert.match(html, /function createBackupPayload\(\)[\s\S]*normalizeInsightHistoryAgainstState\([\s\S]*state, false\)/,
       `${label}: backup export repairs contradictory local evidence before serializing it`);
-    assert.match(html, /const BACKUP_VERSION = 3;/, `${label}: parameterized backups identify the version-3 schema`);
+    assert.match(html, /const BACKUP_VERSION = 4;/, `${label}: personalized backups identify the version-4 schema`);
     assert.match(html, /const backupInsightHistory = normalizeInsightHistory\(insightHistory, HABITS, false\)[\s\S]*insightHistory:\s*backupInsightHistory/,
-      `${label}: version-3 backups carry validated prospective evidence`);
-    assert.match(html, /!\[1, 2, BACKUP_VERSION\]\.includes\(payload\.version\)/,
-      `${label}: version-1 and version-2 backups remain importable`);
+      `${label}: version-4 backups carry validated prospective evidence`);
+    assert.match(html, /!\[1, 2, 3, BACKUP_VERSION\]\.includes\(payload\.version\)/,
+      `${label}: version-1 through version-3 backups remain importable`);
     assert.match(html, /payload\.version === 1\s*\?\s*normalizeInsightHistory\(null, importedHabits\)\s*:\s*normalizeInsightHistory\(payload\.insightHistory, importedHabits, true\)/,
       `${label}: legacy imports start with no fabricated insight history`);
     assert.match(html, /normalizeInsightHistoryAgainstState\(importedInsightHistory, importedState, true\)/,

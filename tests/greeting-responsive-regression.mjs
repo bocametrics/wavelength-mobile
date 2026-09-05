@@ -55,6 +55,8 @@ for (const [label, htmlPath] of builds) {
 
   const updateGreeting = extractFunction(html, 'updateGreeting');
   assert.match(updateGreeting, /getGreetingForHour\(h\)/, `${label}: rendered greeting must use the shared time mapping`);
+  assert.match(updateGreeting, /const name = firstName \|\| DEFAULT_FIRST_NAME/, `${label}: greeting must use the saved name or friendly fallback`);
+  assert.match(updateGreeting, /greet\.textContent\s*=\s*`\$\{text\}, \$\{name\} \$\{icon\}`/, `${label}: greeting must use literal text content with a comma-separated name`);
   assert.doesNotMatch(updateGreeting, /doneCount|todayDone/, `${label}: greeting icon must not depend on habit completion`);
 
   assert.match(

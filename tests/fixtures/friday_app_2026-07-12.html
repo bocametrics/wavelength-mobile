@@ -2,9 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" id="themeColorMeta" content="#0b0f1a">
 <meta name="color-scheme" content="light dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" id="appleStatusBarMeta" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Wavelength">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="A daily health compass and habit tracker.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="shortcut icon" href="icons/favicon.ico">
 <title>Wavelength — Daily Health Compass</title>
 <script>
 const THEME_STORAGE_KEY = 'wavelength_theme';
@@ -54,6 +64,8 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   const themeColorMeta = document.getElementById('themeColorMeta');
   if (themeColorMeta) themeColorMeta.content = effectiveTheme === 'dark' ? '#0b0f1a' : '#f3f7f8';
+  const appleStatusBarMeta = document.getElementById('appleStatusBarMeta');
+  if (appleStatusBarMeta) appleStatusBarMeta.content = effectiveTheme === 'dark' ? 'black-translucent' : 'default';
 })();
 </script>
 <style>
@@ -96,6 +108,9 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     --shadow-toast: 0 8px 32px rgba(0,0,0,0.40);
     --danger-soft: rgba(240,106,138,0.10);
     --danger-border: rgba(240,106,138,0.30);
+    --gold-border: rgba(240,192,112,0.30);
+    --offline-bg: rgba(18,24,39,0.94);
+    --install-green: rgba(143,219,175,0.05);
     --radius: 14px;
     --radius-sm: 10px;
     --dock-space: 82px;
@@ -136,6 +151,9 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     --shadow-toast: 0 8px 28px rgba(23,43,54,0.18);
     --danger-soft: rgba(184,66,93,0.10);
     --danger-border: rgba(184,66,93,0.34);
+    --gold-border: rgba(140,85,0,0.30);
+    --offline-bg: rgba(255,255,255,0.96);
+    --install-green: rgba(36,118,83,0.06);
   }
 
   body {
@@ -146,8 +164,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 30px 18px 0;
-    padding-bottom: calc(var(--dock-space) + max(18px, env(safe-area-inset-bottom)));
+    padding: 30px 18px 50px;
     -webkit-font-smoothing: antialiased;
   }
 
@@ -969,14 +986,64 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   .insight-learning strong { display: block; color: var(--text); font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; }
   .insight-learning p { font-size: 0.74rem; line-height: 1.5; }
 
+  .settings-intro { margin-bottom: 20px; }
+
+  .settings-intro h1 {
+    font-size: 1.35rem;
+    font-weight: 500;
+    letter-spacing: -0.3px;
+    margin-bottom: 5px;
+  }
+
+  .settings-intro p {
+    color: var(--text2);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  .settings-card {
+    margin-bottom: 14px;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+
+  .settings-card h2 {
+    margin: 0 0 12px;
+    color: var(--text);
+    font-size: 0.88rem;
+    font-weight: 600;
+  }
+
+  .settings-field {
+    display: grid;
+    gap: 7px;
+    color: var(--text2);
+    font-size: 0.76rem;
+    font-weight: 600;
+  }
+
+  .settings-field input {
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    border: 1px solid var(--border2);
+    border-radius: 9px;
+    background: var(--surface2);
+    color: var(--text);
+    font: inherit;
+    font-size: 16px;
+  }
+
   .app-dock {
     position: fixed;
     left: 50%;
     bottom: calc(10px + env(safe-area-inset-bottom));
     z-index: 220;
-    width: min(320px, calc(100% - 28px));
+    width: min(360px, calc(100% - 28px));
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
     padding: 6px;
     border: 1px solid var(--border2);
@@ -1070,6 +1137,14 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   .reorder-hint.show { display: block; }
 
+  .reorder-hint-touch { display: none; }
+  .reorder-hint-desktop { display: inline; }
+
+  @media (max-width: 600px) {
+    .reorder-hint-touch { display: inline; }
+    .reorder-hint-desktop { display: none; }
+  }
+
   .habits.reorder-mode .habit {
     grid-template-columns: 28px 22px minmax(0, 1fr) auto auto;
     border-style: dashed;
@@ -1081,6 +1156,14 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   .habits.reorder-mode .move-btns { display: flex; }
   .habits.reorder-mode .drag-handle { display: grid; }
+
+  /* Hide move buttons on mobile — drag grip is the sole reorder method on touch */
+  @media (max-width: 600px) {
+    .habits.reorder-mode .move-btns { display: none; }
+    .habits.reorder-mode .habit {
+      grid-template-columns: 22px minmax(0, 1fr) auto auto;
+    }
+  }
 
   .reorder-hint .grip-icon {
     fill: currentColor;
@@ -1141,11 +1224,6 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   }
 
   /* ── Responsive ── */
-  @media (max-width: 600px) {
-    .streak-flame { display: none; }
-    .streak-info { min-width: 0; }
-  }
-
   @media (max-width: 480px) {
     body { padding: 18px 14px 40px; }
     .streak-bar { flex-wrap: wrap; }
@@ -1258,9 +1336,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   }
 
   .appearance-tools {
-    padding: 14px 22px 16px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
+    padding: 0;
   }
 
   .appearance-heading {
@@ -1325,6 +1401,24 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     padding: 12px 22px 18px;
     overflow-y: auto;
     flex: 1;
+  }
+
+  .manage-all-link {
+    min-height: 38px;
+    margin: 0 0 12px;
+    padding: 6px 0;
+    border: 0;
+    background: transparent;
+    color: var(--accent);
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .manage-all-link:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   .edit-habit {
@@ -1660,11 +1754,179 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     background: var(--accent-soft);
     color: var(--accent);
   }
+
+  /* ── iPhone / PWA experience ── */
+  html {
+    background: var(--bg);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    min-height: 100dvh;
+    padding-top: max(18px, env(safe-area-inset-top));
+    padding-right: max(14px, env(safe-area-inset-right));
+    padding-bottom: calc(var(--dock-space) + max(18px, env(safe-area-inset-bottom)));
+    padding-left: max(14px, env(safe-area-inset-left));
+    overscroll-behavior-y: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button, input, select { touch-action: manipulation; }
+
+  .install-card {
+    display: none;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 18px;
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--accent-border);
+    background: linear-gradient(135deg, var(--accent-soft), var(--install-green));
+  }
+
+  .install-card.show { display: flex; }
+  .install-card .install-icon { font-size: 1.3rem; line-height: 1.2; }
+  .install-card .install-copy { flex: 1; min-width: 0; }
+  .install-card strong { display: block; font-size: 0.82rem; color: var(--text); margin-bottom: 3px; }
+  .install-card p { font-size: 0.74rem; line-height: 1.45; color: var(--text2); }
+  .install-dismiss {
+    min-width: 36px;
+    min-height: 36px;
+    margin: -6px -8px 0 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text3);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .data-tools {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 0;
+  }
+
+  .data-tools .modal-btn { flex: 1; min-height: 42px; }
+  #importFile { display: none; }
+
+  .offline-pill {
+    position: fixed;
+    right: max(12px, env(safe-area-inset-right));
+    bottom: calc(var(--dock-space) + env(safe-area-inset-bottom));
+    z-index: 250;
+    display: none;
+    padding: 7px 10px;
+    border: 1px solid var(--gold-border);
+    border-radius: 999px;
+    background: var(--offline-bg);
+    color: var(--accent3);
+    font-size: 0.68rem;
+    box-shadow: var(--shadow-toast);
+  }
+
+  .offline-pill.show { display: block; }
+
+  @media (max-width: 600px) {
+    header { margin-bottom: 24px; }
+    .date-display .day { font-size: 0.96rem; }
+    .date-display .label { font-size: 0.62rem; }
+    .greeting { margin-bottom: 22px; }
+    .greeting h1 { font-size: 1.3rem; }
+    .streak-bar { padding: 16px; gap: 13px; }
+    .streak-flame { display: none; }
+    .streak-info { min-width: 0; }
+
+    .category-tabs {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      margin-left: calc(-1 * max(14px, env(safe-area-inset-left)));
+      margin-right: calc(-1 * max(14px, env(safe-area-inset-right)));
+      padding: 2px max(14px, env(safe-area-inset-left)) 8px;
+      scroll-snap-type: x proximity;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .category-tabs::-webkit-scrollbar { display: none; }
+    .cat-tab {
+      min-height: 42px;
+      padding: 8px 14px;
+      flex: 0 0 auto;
+      scroll-snap-align: start;
+    }
+
+    .section-title { align-items: center; }
+    .manage-btn { min-height: 40px; padding: 8px 10px; }
+    .reorder-hint { margin-bottom: 12px; }
+
+    .habit {
+      min-height: 68px;
+      padding: 11px 10px;
+      gap: 9px;
+    }
+    .drag-handle {
+      min-width: 28px;
+      min-height: 44px;
+      place-content: center;
+      opacity: 0.58;
+      padding: 4px;
+      margin-left: 0;
+    }
+    .habit-icon { width: 26px; }
+    .checkbox { width: 24px; height: 24px; }
+    .habit-text { font-size: 0.9rem; }
+    .habit-note { font-size: 0.73rem; line-height: 1.35; }
+    .habit-badge { padding: 4px 7px; }
+    .move-btns { gap: 2px; }
+    .move-btn {
+      min-width: 34px;
+      min-height: 30px;
+      padding: 6px;
+      opacity: 0.72;
+      font-size: 0.72rem;
+    }
+
+    .modal-overlay {
+      align-items: flex-end;
+      padding: 0;
+    }
+    .modal {
+      max-height: calc(92dvh - env(safe-area-inset-top));
+      border-radius: 18px 18px 0 0;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .modal-header { padding: 16px 18px; }
+    .settings-card { padding: 16px; }
+    .appearance-heading { align-items: flex-start; flex-direction: column; gap: 3px; }
+    .theme-status { text-align: left; }
+    .modal-body { padding: 8px 18px 14px; }
+    .modal-footer { padding: 12px 18px; }
+    .modal-btn { min-height: 44px; }
+    .modal-close { min-width: 44px; min-height: 44px; }
+    .edit-habit .eh-fields input,
+    .edit-habit .eh-fields select { min-height: 44px; font-size: 16px; }
+  }
+
+  @media (display-mode: standalone) {
+    .install-card { display: none !important; }
+    header { padding-top: 4px; }
+  }
 </style>
 </head>
 <body>
 
 <div class="app" id="app">
+
+  <!-- iPhone install guidance (Safari only, hidden after install/dismiss) -->
+  <div class="install-card" id="installCard">
+    <div class="install-icon">📲</div>
+    <div class="install-copy">
+      <strong>Install Wavelength on your iPhone</strong>
+      <p>In Safari, tap Share <span aria-hidden="true">⤴</span>, then “Add to Home Screen.” It will open like a standalone app.</p>
+    </div>
+    <button class="install-dismiss" id="installDismiss" aria-label="Dismiss install tip">✕</button>
+  </div>
 
   <!-- Header -->
   <header>
@@ -1681,7 +1943,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   <main class="app-view" id="homeView" role="tabpanel" aria-labelledby="navHome">
     <!-- Greeting -->
     <div class="greeting">
-      <h1 id="greeting">Good morning ☀️</h1>
+      <h1 id="greeting">Good morning, Friend ☀️</h1>
       <p>Small waves make big tides. A few minutes today sets the tone for the whole week.</p>
     </div>
 
@@ -1716,7 +1978,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
       <span class="count" id="doneCount">0 / 20</span>
     </div>
 
-    <div class="reorder-hint" id="reorderHint"><svg class="grip-icon" width="12" height="15" viewBox="0 0 12 15" aria-hidden="true" focusable="false"><circle cx="3" cy="2.5" r="1.4"/><circle cx="9" cy="2.5" r="1.4"/><circle cx="3" cy="7.5" r="1.4"/><circle cx="9" cy="7.5" r="1.4"/><circle cx="3" cy="12.5" r="1.4"/><circle cx="9" cy="12.5" r="1.4"/></svg> Hold the right grip to drag — or use ↑↓ arrows</div>
+    <div class="reorder-hint" id="reorderHint"><svg class="grip-icon" width="12" height="15" viewBox="0 0 12 15" aria-hidden="true" focusable="false"><circle cx="3" cy="2.5" r="1.4"/><circle cx="9" cy="2.5" r="1.4"/><circle cx="3" cy="7.5" r="1.4"/><circle cx="9" cy="7.5" r="1.4"/><circle cx="3" cy="12.5" r="1.4"/><circle cx="9" cy="12.5" r="1.4"/></svg> <span class="reorder-hint-touch">Hold the right grip to drag</span><span class="reorder-hint-desktop">Hold the right grip to drag — or use ↑↓ arrows</span></div>
 
     <div class="habits" id="habitList"></div>
 
@@ -1801,6 +2063,42 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     </div>
   </section>
 
+  <section class="app-view" id="settingsView" role="tabpanel" aria-labelledby="navSettings" hidden inert>
+    <div class="settings-intro">
+      <h1>Settings</h1>
+      <p>Make Wavelength feel like your own and keep your rhythm safe.</p>
+    </div>
+
+    <section class="settings-card" aria-labelledby="firstNameHeading">
+      <h2 id="firstNameHeading">First name</h2>
+      <label class="settings-field" for="firstNameInput">
+        <span>Use your name in the daily greeting</span>
+        <input id="firstNameInput" type="text" maxlength="30" placeholder="Your name" autocomplete="given-name">
+      </label>
+    </section>
+
+    <section class="settings-card appearance-tools" aria-labelledby="appearanceHeading">
+      <div class="appearance-heading">
+        <strong id="appearanceHeading">Appearance</strong>
+        <span class="theme-status" id="themeStatus" role="status">Night mode</span>
+      </div>
+      <div class="theme-options" role="radiogroup" aria-label="Appearance">
+        <button class="theme-option" type="button" role="radio" data-theme-option="system" aria-checked="false">◐ System</button>
+        <button class="theme-option" type="button" role="radio" data-theme-option="light" aria-checked="false">☀ Day</button>
+        <button class="theme-option" type="button" role="radio" data-theme-option="dark" aria-checked="true">☾ Night</button>
+      </div>
+    </section>
+
+    <section class="settings-card" aria-labelledby="backupHeading">
+      <h2 id="backupHeading">Backup</h2>
+      <div class="data-tools" aria-label="Habit data tools">
+        <button class="modal-btn" id="exportBtn" type="button">⇧ Backup / Share</button>
+        <button class="modal-btn" id="importBtn" type="button">⇩ Import backup</button>
+        <input type="file" id="importFile" accept="application/json,.json">
+      </div>
+    </section>
+  </section>
+
   <nav class="app-dock" aria-label="Primary navigation" role="tablist">
     <button class="dock-button" id="navHome" role="tab" aria-controls="homeView" aria-selected="true" type="button" data-view="home" aria-current="page">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-5.5h5V20"/></svg>
@@ -1809,6 +2107,10 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     <button class="dock-button" id="navInsights" role="tab" aria-controls="insightsView" aria-selected="false" type="button" data-view="insights">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V9"/><path d="M12 19V5"/><path d="M19 19v-7"/></svg>
       <span>Insights</span>
+    </button>
+    <button class="dock-button" id="navSettings" role="tab" aria-controls="settingsView" aria-selected="false" type="button" data-view="settings">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20.3h-3v-.08A1.7 1.7 0 0 0 10.68 18.66a1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7.02 15a1.7 1.7 0 0 0-1.56-1.03h-.08v-3h.08A1.7 1.7 0 0 0 7.02 9.94a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.12-2.12.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.03-1.56v-.08h3v.08a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.8 8l-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.03h.08v3h-.08A1.7 1.7 0 0 0 19.4 15Z"/></svg>
+      <span>Settings</span>
     </button>
   </nav>
 </div>
@@ -1820,19 +2122,8 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <div class="modal-header">
-      <h3>✎ Manage Habits</h3>
+      <h3 id="modalTitle">Manage All Habits</h3>
       <button class="modal-close" id="modalClose">✕</button>
-    </div>
-    <div class="appearance-tools" aria-labelledby="appearanceHeading">
-      <div class="appearance-heading">
-        <strong id="appearanceHeading">Appearance</strong>
-        <span class="theme-status" id="themeStatus" role="status">Night mode</span>
-      </div>
-      <div class="theme-options" role="radiogroup" aria-label="Appearance">
-        <button class="theme-option" type="button" role="radio" data-theme-option="system" aria-checked="false">◐ System</button>
-        <button class="theme-option" type="button" role="radio" data-theme-option="light" aria-checked="false">☀ Day</button>
-        <button class="theme-option" type="button" role="radio" data-theme-option="dark" aria-checked="true">☾ Night</button>
-      </div>
     </div>
     <div class="modal-body" id="modalBody"></div>
     <div class="modal-footer">
@@ -1841,6 +2132,8 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     </div>
   </div>
 </div>
+
+<div class="offline-pill" id="offlinePill" role="status">Offline — changes stay on this device</div>
 
 <script>
 // ═══════════════════════════════════════════════════════════════════
@@ -2056,6 +2349,7 @@ function reloadHabits() {
 let HABITS = [];
 
 const CATS = ['all','morning','movement','mind','fuel','hygiene','evening'];
+const CATEGORY_NAMES = { morning:'Morning', movement:'Movement', mind:'Mind', fuel:'Fuel', hygiene:'Hygiene', evening:'Evening' };
 
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const SCHEDULE_DAYS = [
@@ -2972,6 +3266,8 @@ function applyThemePreference(preference, persist = true) {
 
   const themeColorMeta = document.getElementById('themeColorMeta');
   if (themeColorMeta) themeColorMeta.content = effectiveTheme === 'dark' ? '#0b0f1a' : '#f3f7f8';
+  const appleStatusBarMeta = document.getElementById('appleStatusBarMeta');
+  if (appleStatusBarMeta) appleStatusBarMeta.content = effectiveTheme === 'dark' ? 'black-translucent' : 'default';
 
   if (persist) {
     try { localStorage.setItem(THEME_STORAGE_KEY, safePreference); } catch (e) {}
@@ -3017,6 +3313,27 @@ document.querySelectorAll('[data-theme-option]').forEach(button => {
 // ═══════════════════════════════════════════════════════════════════
 const STORAGE_KEY = 'wavelength_wpb';
 const ORDER_KEY = 'wavelength_wpb_order';
+const FIRST_NAME_STORAGE_KEY = 'wavelength_first_name';
+const DEFAULT_FIRST_NAME = 'Friend';
+let firstName = '';
+
+function normalizeFirstName(value) {
+  return typeof value === 'string' ? value.trim().slice(0, 30) : '';
+}
+
+function loadFirstName() {
+  try { return normalizeFirstName(localStorage.getItem(FIRST_NAME_STORAGE_KEY)); } catch (e) { return ''; }
+}
+
+function saveFirstName(value) {
+  firstName = normalizeFirstName(value);
+  try {
+    if (firstName) localStorage.setItem(FIRST_NAME_STORAGE_KEY, firstName);
+    else localStorage.removeItem(FIRST_NAME_STORAGE_KEY);
+  } catch (e) {}
+  return firstName;
+}
+
 const INSIGHT_STORAGE_KEY = 'wavelength_insights_v1';
 const INSIGHT_HISTORY_VERSION = 1;
 const CONTEXT_INSIGHT_REASONS = new Set(['aqi-adapt','uv-protect','sunrise-light','aqi-opportunity','heat-hydrate','sunset-rhythm']);
@@ -3738,6 +4055,7 @@ function getLast30DayTrend(doneByDate, habits, now = new Date(), progressByDate 
 // RENDER
 // ═══════════════════════════════════════════════════════════════════
 let currentCat = 'all';
+let manageCategory = 'all';
 let reorderMode = false;
 let lastRenderedDateKey = null;
 let dateRolloverTimer = null;
@@ -4010,7 +4328,7 @@ function handlePointerDown(e) {
   clearLongPress();
   habitEl.classList.add('drag-press');
 
-  // If the pointer wanders before the hold completes, it's not a long-press.
+  // If the finger wanders before the hold completes, it's not a long-press.
   const onMove = (ev) => {
     if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > 10) {
       clearLongPress();
@@ -4045,22 +4363,25 @@ function armDrag(habitEl, startX, startY) {
   const id = habitEl.dataset.id;
 
   // Create ghost element
-  const ghost = habitEl.cloneNode(true);
+  var habitRect = habitEl.getBoundingClientRect();
+  var ghost = document.createElement('div');
   ghost.className = 'touch-ghost';
-  ghost.style.width = habitEl.offsetWidth + 'px';
-  ghost.style.left = (startX - 20) + 'px';
-  ghost.style.top = (startY - 30) + 'px';
+  ghost.style.width = habitRect.width + 'px';
+  // Lock the ghost to the original card's horizontal position so it stays in view
+  ghost.style.left = habitRect.left + 'px';
+  // Start at the touch Y offset within the card
+  ghost.style.top = habitRect.top + 'px';
   document.body.appendChild(ghost);
 
   // Simplify ghost content
-  const textEl = habitEl.querySelector('.habit-text');
-  const iconEl = habitEl.querySelector('.habit-icon');
+  var textEl = habitEl.querySelector('.habit-text');
+  var iconEl = habitEl.querySelector('.habit-icon');
   ghost.textContent = (iconEl ? iconEl.textContent : '') + ' ' + (textEl ? textEl.textContent : '');
 
   // Pre-calculate all habit positions
-  const listRects = [];
-  list.querySelectorAll('.habit').forEach(el => {
-    const r = el.getBoundingClientRect();
+  var listRects = [];
+  list.querySelectorAll('.habit').forEach(function(el) {
+    var r = el.getBoundingClientRect();
     listRects.push({ id: el.dataset.id, top: r.top, bottom: r.bottom, mid: (r.top + r.bottom) / 2 });
   });
 
@@ -4071,6 +4392,7 @@ function armDrag(habitEl, startX, startY) {
     listRects: listRects,
     origOpacity: habitEl.style.opacity,
     startY: startY,
+    ghostStartTop: habitRect.top,
     moved: false
   };
 
@@ -4086,9 +4408,9 @@ function handlePointerMove(e) {
   if (!dragState) return;
   e.preventDefault();
 
-  const ghost = dragState.ghost;
-  ghost.style.left = (e.clientX - 20) + 'px';
-  ghost.style.top = (e.clientY - 30) + 'px';
+  var ghost = dragState.ghost;
+  // Move by the finger's vertical delta while preserving the original grab offset.
+  ghost.style.top = (dragState.ghostStartTop + (e.clientY - dragState.startY)) + 'px';
 
   // Only consider it a drag if moved past the threshold
   if (Math.abs(e.clientY - dragState.startY) > DRAG_MOVE_PX) {
@@ -4098,9 +4420,10 @@ function handlePointerMove(e) {
   if (!dragState.moved) return;
 
   // Hit test against other habit positions
-  const clientY = e.clientY;
-  let targetId = null;
-  for (const rect of dragState.listRects) {
+  var clientY = e.clientY;
+  var targetId = null;
+  for (var i = 0; i < dragState.listRects.length; i++) {
+    var rect = dragState.listRects[i];
     if (rect.id === dragState.id) continue;
     if (clientY >= rect.top && clientY <= rect.bottom) {
       targetId = rect.id;
@@ -4109,7 +4432,7 @@ function handlePointerMove(e) {
   }
 
   // Visual feedback
-  document.querySelectorAll('.habit').forEach(el => {
+  document.querySelectorAll('.habit').forEach(function(el) {
     el.classList.toggle('drag-over', el.dataset.id === targetId && el.dataset.id !== dragState.id);
   });
 }
@@ -4247,7 +4570,8 @@ function updateGreeting(now = new Date()) {
   const h = now.getHours();
   const greet = document.getElementById('greeting');
   const { text, icon } = getGreetingForHour(h);
-  greet.textContent = `${text} ${icon}`;
+  const name = firstName || DEFAULT_FIRST_NAME;
+  greet.textContent = `${text}, ${name} ${icon}`;
 }
 
 function calculateLongestScheduledStreak(doneByDate, habits, throughDate = new Date(), baseTarget = 5, progressByDate) {
@@ -4585,10 +4909,41 @@ function updateSystemHabitTitlePreview(row) {
   return true;
 }
 
+function getManageScope() {
+  const scoped = manageCategory !== 'all';
+  return {
+    habits: scoped ? HABITS.filter(habit => habit.cat === manageCategory) : HABITS,
+    title: scoped ? `Manage ${CATEGORY_NAMES[manageCategory] || manageCategory}` : 'Manage All Habits',
+    scoped,
+  };
+}
+
+function mergeVisibleManageOverrides(existingOverrides, visibleOverrides, visibleIds) {
+  const overrides = { ...existingOverrides };
+  visibleIds.forEach(id => {
+    if (visibleOverrides[id]) overrides[id] = visibleOverrides[id];
+    else delete overrides[id];
+  });
+  return overrides;
+}
+
+function removeVisibleManageOverrides(existingOverrides, visibleIds) {
+  const overrides = { ...existingOverrides };
+  visibleIds.forEach(id => delete overrides[id]);
+  return overrides;
+}
+
 function renderManageModal() {
   const body = document.getElementById('modalBody');
+  const { habits, title, scoped } = getManageScope();
+  const modalTitle = document.getElementById('modalTitle');
+  if (modalTitle) modalTitle.textContent = title;
+  const resetButton = document.getElementById('modalReset');
+  if (resetButton) resetButton.textContent = scoped
+    ? `Reset ${CATEGORY_NAMES[manageCategory] || manageCategory} defaults`
+    : 'Reset all defaults';
   const existingOverrides = loadCustomHabits() || {};
-  body.innerHTML = HABITS.map(h => {
+  body.innerHTML = (scoped ? '<button class="manage-all-link" id="manageAllLink" type="button">View all habits</button>' : '') + habits.map(h => {
     const selectedDays = normalizeHabitDays(h.days);
     const measurement = normalizeMeasurementConfig(h);
     const paramDefs = SYSTEM_HABIT_PARAMETER_DEFS[h.id];
@@ -4656,6 +5011,11 @@ function renderManageModal() {
     `;
   }).join('');
 
+  body.querySelector('#manageAllLink')?.addEventListener('click', () => {
+    manageCategory = 'all';
+    renderManageModal();
+  });
+
   body.querySelectorAll('.eh-day').forEach(button => {
     button.addEventListener('click', () => {
       button.setAttribute('aria-checked', button.getAttribute('aria-checked') === 'true' ? 'false' : 'true');
@@ -4689,6 +5049,7 @@ function renderManageModal() {
 }
 
 function openManageModal() {
+  manageCategory = currentCat;
   modalOpen = true;
   renderManageModal();
   document.getElementById('modalOverlay').classList.add('open');
@@ -4700,12 +5061,14 @@ function closeManageModal() {
 }
 
 function saveManageModal() {
-  const overrides = {};
+  const visibleOverrides = {};
+  const visibleIds = [];
   const existingOverrides = loadCustomHabits() || {};
   const previousHabits = HABITS.map(habit => ({ ...habit }));
   const allDays = normalizeHabitDays(undefined);
   for (const row of document.querySelectorAll('.edit-habit')) {
     const id = row.dataset.id;
+    visibleIds.push(id);
     const text = row.querySelector('.eh-text').value.trim();
     const note = row.querySelector('.eh-note').value.trim();
     const hasParams = !!SYSTEM_HABIT_PARAMETER_DEFS[id];
@@ -4816,8 +5179,9 @@ function saveManageModal() {
         if (rhythm && JSON.stringify(rhythm) !== JSON.stringify(defaultRhythm)) changes.rhythm = rhythm;
       }
     }
-    if (Object.keys(changes).length > 0) overrides[id] = changes;
+    if (Object.keys(changes).length > 0) visibleOverrides[id] = changes;
   }
+  const overrides = mergeVisibleManageOverrides(existingOverrides, visibleOverrides, visibleIds);
   saveCustomHabits(overrides);
   reloadHabits();
   state.progress = state.progress || {};
@@ -4826,36 +5190,153 @@ function saveManageModal() {
   reconcileMeasuredDay(state.done, state.progress, HABITS, editDate);
   saveState();
   saveInsightHistory(editDate);
-  // Merge custom order with new habits (same IDs, order preserved)
   renderHabits(editDate);
   closeManageModal();
   showToast('✓ Habits saved');
   return true;
 }
 
-const viewScrollPositions = { home:0, insights:0 };
+// ═══════════════════════════════════════════════════════════════════
+// IPHONE INSTALL, OFFLINE, AND DATA TRANSFER
+// ═══════════════════════════════════════════════════════════════════
+const BACKUP_VERSION = 4;
+const INSTALL_DISMISS_KEY = 'wavelength_install_tip_dismissed';
+
+function setupInstallTip() {
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const dismissed = localStorage.getItem(INSTALL_DISMISS_KEY) === '1';
+  const card = document.getElementById('installCard');
+  if (isIOS && !isStandalone && !dismissed) card.classList.add('show');
+  document.getElementById('installDismiss').addEventListener('click', () => {
+    localStorage.setItem(INSTALL_DISMISS_KEY, '1');
+    card.classList.remove('show');
+  });
+}
+
+function setupOfflineStatus() {
+  const pill = document.getElementById('offlinePill');
+  const update = () => pill.classList.toggle('show', !navigator.onLine);
+  window.addEventListener('online', update);
+  window.addEventListener('offline', update);
+  update();
+
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    navigator.serviceWorker.register('./sw.js').catch(err => {
+      console.warn('Offline setup unavailable:', err);
+    });
+  }
+}
+
+function createBackupPayload() {
+  const backupInsightHistory = normalizeInsightHistory(insightHistory, HABITS, false);
+  normalizeInsightHistoryAgainstState(backupInsightHistory, state, false);
+  return {
+    app: 'wavelength',
+    version: BACKUP_VERSION,
+    exportedAt: new Date().toISOString(),
+    state,
+    order: userOrder,
+    firstName: firstName,
+    customHabits: loadCustomHabits() || {},
+    insightHistory: backupInsightHistory
+  };
+}
+
+async function exportBackup() {
+  const json = JSON.stringify(createBackupPayload(), null, 2);
+  const filename = `wavelength-backup-${dateKey(new Date())}.json`;
+  const file = new File([json], filename, { type: 'application/json' });
+
+  try {
+    if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
+      await navigator.share({ title: 'Wavelength backup', text: 'Wavelength habit data backup', files: [file] });
+      showToast('✓ Backup shared');
+      return;
+    }
+  } catch (err) {
+    if (err && err.name === 'AbortError') return;
+  }
+
+  const url = URL.createObjectURL(file);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showToast('✓ Backup downloaded');
+}
+
+async function importBackupFile(file) {
+  if (!file) return;
+  try {
+    const payload = JSON.parse(await file.text());
+    if (payload.app !== 'wavelength' || ![1, 2, 3, BACKUP_VERSION].includes(payload.version) || !payload.state || !Array.isArray(payload.order) ||
+        (payload.version >= 2 && !payload.insightHistory) ||
+        (payload.version >= 4 && typeof payload.firstName !== 'string')) {
+      throw new Error('This is not a compatible Wavelength backup.');
+    }
+
+    const importedOrder = normalizeImportedHabitOrder(payload.order, DEFAULT_HABITS);
+    const importedFirstName = normalizeFirstName(payload.firstName);
+    const customHabits = normalizeCustomHabitOverrides(payload.customHabits || {}, DEFAULT_HABITS, true);
+    const importedHabits = DEFAULT_HABITS.map(habit => customHabits[habit.id]
+      ? { ...habit, ...customHabits[habit.id] }
+      : { ...habit });
+    const importedState = normalizeStoredState(payload.state, importedHabits, true);
+    const importedInsightHistory = payload.version === 1
+      ? normalizeInsightHistory(null, importedHabits)
+      : normalizeInsightHistory(payload.insightHistory, importedHabits, true);
+    normalizeInsightHistoryAgainstState(importedInsightHistory, importedState, true);
+    const importDate = new Date();
+    reconcileMeasuredDay(importedState.done, importedState.progress, importedHabits, importDate);
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(importedState));
+    localStorage.setItem(ORDER_KEY, JSON.stringify(importedOrder));
+    if (importedFirstName) localStorage.setItem(FIRST_NAME_STORAGE_KEY, importedFirstName);
+    else localStorage.removeItem(FIRST_NAME_STORAGE_KEY);
+    localStorage.setItem(INSIGHT_STORAGE_KEY, JSON.stringify(importedInsightHistory));
+    saveCustomHabits(customHabits);
+
+    firstName = importedFirstName;
+    const firstNameInput = document.getElementById('firstNameInput');
+    if (firstNameInput) firstNameInput.value = firstName;
+    updateGreeting(importDate);
+    state = loadState();
+    userOrder = loadOrder();
+    reloadHabits();
+    insightHistory = loadInsightHistory(HABITS, state);
+    renderHabits(importDate);
+    renderManageModal();
+    showToast('✓ Backup imported');
+  } catch (err) {
+    showToast(`Import failed: ${err.message || 'invalid file'}`);
+  }
+}
+
+const viewScrollPositions = { home:0, insights:0, settings:0 };
 let currentActiveView = 'home';
 
 function setActiveView(view, scroll = true) {
-  const activeView = view === 'insights' ? 'insights' : 'home';
-  const homeView = document.getElementById('homeView');
-  const insightsView = document.getElementById('insightsView');
-  const homeButton = document.getElementById('navHome');
-  const insightsButton = document.getElementById('navInsights');
+  const activeView = ['home','insights','settings'].includes(view) ? view : 'home';
+  const views = {
+    home: { panel:document.getElementById('homeView'), button:document.getElementById('navHome') },
+    insights: { panel:document.getElementById('insightsView'), button:document.getElementById('navInsights') },
+    settings: { panel:document.getElementById('settingsView'), button:document.getElementById('navSettings') },
+  };
 
   if (scroll) viewScrollPositions[currentActiveView] = window.scrollY;
-  homeView.hidden = activeView !== 'home';
-  insightsView.hidden = activeView !== 'insights';
-  homeView.inert = activeView !== 'home';
-  insightsView.inert = activeView !== 'insights';
-  homeButton.setAttribute('aria-selected', String(activeView === 'home'));
-  insightsButton.setAttribute('aria-selected', String(activeView === 'insights'));
-  homeButton.tabIndex = activeView === 'home' ? 0 : -1;
-  insightsButton.tabIndex = activeView === 'insights' ? 0 : -1;
-  if (activeView === 'home') homeButton.setAttribute('aria-current', 'page');
-  else homeButton.removeAttribute('aria-current');
-  if (activeView === 'insights') insightsButton.setAttribute('aria-current', 'page');
-  else insightsButton.removeAttribute('aria-current');
+  Object.entries(views).forEach(([name, item]) => {
+    const selected = name === activeView;
+    item.panel.hidden = !selected;
+    item.panel.inert = !selected;
+    item.button.setAttribute('aria-selected', String(selected));
+    item.button.tabIndex = selected ? 0 : -1;
+    if (selected) item.button.setAttribute('aria-current', 'page');
+    else item.button.removeAttribute('aria-current');
+  });
   document.documentElement.dataset.activeView = activeView;
   currentActiveView = activeView;
   const viewNow = new Date();
@@ -4863,7 +5344,7 @@ function setActiveView(view, scroll = true) {
   if (activeView === 'insights') {
     if (reorderMode) setReorderMode(false);
     renderAdaptiveInsights(viewNow);
-  } else {
+  } else if (activeView === 'home') {
     renderNextWave(viewNow);
   }
   if (scroll) {
@@ -4877,6 +5358,16 @@ function setActiveView(view, scroll = true) {
 function init() {
   reloadHabits();
   insightHistory = loadInsightHistory(HABITS, state);
+  firstName = loadFirstName();
+  const firstNameInput = document.getElementById('firstNameInput');
+  if (firstNameInput) {
+    firstNameInput.value = firstName;
+    firstNameInput.addEventListener('change', () => {
+      saveFirstName(firstNameInput.value);
+      firstNameInput.value = firstName;
+      updateGreeting();
+    });
+  }
   applyThemePreference(document.documentElement.dataset.themePreference || 'system', false);
 
   // Date
@@ -4896,12 +5387,21 @@ function init() {
   document.getElementById('nextWaveAction').addEventListener('click', focusNextWaveHabit);
   document.getElementById('navHome').addEventListener('click', () => setActiveView('home'));
   document.getElementById('navInsights').addEventListener('click', () => setActiveView('insights'));
+  document.getElementById('navSettings').addEventListener('click', () => setActiveView('settings'));
   document.querySelector('.app-dock').addEventListener('keydown', event => {
     if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
     event.preventDefault();
-    const targetView = event.key === 'ArrowLeft' || event.key === 'Home' ? 'home' : 'insights';
+    const dockViews = ['home','insights','settings'];
+    let targetView;
+    if (event.key === 'Home') targetView = dockViews[0];
+    else if (event.key === 'End') targetView = dockViews[dockViews.length - 1];
+    else {
+      const currentIndex = dockViews.indexOf(currentActiveView);
+      const direction = event.key === 'ArrowRight' ? 1 : -1;
+      targetView = dockViews[(currentIndex + direction + dockViews.length) % dockViews.length];
+    }
     setActiveView(targetView);
-    document.getElementById(targetView === 'home' ? 'navHome' : 'navInsights').focus();
+    document.getElementById(`nav${targetView[0].toUpperCase()}${targetView.slice(1)}`).focus();
   });
 
   // Reset
@@ -4931,7 +5431,10 @@ function init() {
   document.getElementById('modalReset').addEventListener('click', () => {
     const previousHabits = HABITS.map(habit => ({ ...habit }));
     const resetDate = new Date();
-    saveCustomHabits(null);
+    const resetScope = getManageScope();
+    const resetIds = resetScope.habits.map(habit => habit.id);
+    const remainingOverrides = removeVisibleManageOverrides(loadCustomHabits() || {}, resetIds);
+    saveCustomHabits(remainingOverrides);
     reloadHabits();
     state.progress = state.progress || {};
     reconcileMeasurementTypeChanges(state.done, state.progress, previousHabits, HABITS, resetDate);
@@ -4940,15 +5443,30 @@ function init() {
     saveInsightHistory(resetDate);
     renderHabits(resetDate);
     closeManageModal();
-    showToast('↻ Habits reset to defaults');
+    showToast(resetScope.scoped
+      ? `↻ ${CATEGORY_NAMES[manageCategory] || manageCategory} reset to defaults`
+      : '↻ All habits reset to defaults');
   });
+
+  // Backup and restore across devices
+  document.getElementById('exportBtn').addEventListener('click', exportBackup);
+  document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
+  document.getElementById('importFile').addEventListener('change', e => {
+    importBackupFile(e.target.files && e.target.files[0]);
+    e.target.value = '';
+  });
+
+  setupInstallTip();
+  setupOfflineStatus();
+
+  renderInsights(now);
+
   // Close on Escape
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && modalOpen) closeManageModal();
     else if (e.key === 'Escape' && reorderMode) setReorderMode(false);
   });
 
-  renderInsights(now);
   renderHabits(now);
   scheduleNextDateRollover(now);
   document.addEventListener('visibilitychange', () => {
