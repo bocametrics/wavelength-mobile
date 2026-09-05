@@ -61,7 +61,13 @@ function collectErrors(page) {
   await page.goto(URL, { waitUntil:'networkidle0' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil:'networkidle0' });
-  await page.waitForFunction(() => document.getElementById('nextWaveTitle')?.textContent === 'Use sun protection before heading out.');
+  await page.waitForFunction(() => rhythmWeatherData?.uv === 7 && rhythmWeatherData?.aqi === 43);
+  await page.evaluate(() => {
+    const now = new Date();
+    now.setHours(12, 0, 0, 0);
+    renderHabits(now);
+  });
+  await page.waitForFunction(() => document.getElementById('nextWaveTitle')?.textContent === 'Sun protection before outdoor time');
   await page.waitForFunction(() => {
     const raw = localStorage.getItem('wavelength_insights_v1');
     if (!raw) return false;
@@ -247,7 +253,7 @@ function collectErrors(page) {
   assert.equal(reports.adaptive.eyebrow, 'Context-aware follow-through');
   assert.equal(reports.adaptive.detail, '“Sun protection before outdoor time” and “Drink 16 oz water” were marked complete.');
   assert.equal(reports.learningHidden, true);
-  assert.equal(reports.backup.version, 2);
+  assert.equal(reports.backup.version, 3);
   assert.equal(reports.backup.insightHistory.version, 1);
   assert.equal(reports.width.document, reports.width.viewport);
   assert.doesNotMatch(JSON.stringify(reports.backup.insightHistory), /latitude|longitude|\blat\b|\blon\b/i);

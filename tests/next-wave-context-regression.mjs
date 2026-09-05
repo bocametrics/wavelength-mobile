@@ -49,6 +49,7 @@ function loadFunctions(html) {
     'getAqiCategory',
     'parseDisplayClockMinutes',
     'getDaylightState',
+    'getEffectiveRecommendationContext',
     'getHabitRecommendationFit',
     'getHabitAdaptiveSuggestion',
     'getNextWaveRefreshDelay',
@@ -107,7 +108,7 @@ const dinner = {
 
 for (const [label, htmlPath] of builds) {
   const html = fs.readFileSync(htmlPath, 'utf8');
-  const { getHabitRecommendationFit, getNextWaveRefreshDelay, getNextWaveSuggestion } = loadFunctions(html);
+  const { getEffectiveRecommendationContext, getHabitRecommendationFit, getNextWaveRefreshDelay, getNextWaveSuggestion } = loadFunctions(html);
   const productionHabits = loadDefaultHabits(html);
   const beach = contextualHabits[0];
   const winddown = contextualHabits[2];
@@ -160,7 +161,7 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(
     plain(getNextWaveSuggestion(contextualHabits, doneFor(bedtimeWindow, ['beach']), {}, bedtimeWindow, { isDay:0 })),
     {
-      habitId:'winddown', category:'evening', icon:'🌙', reason:'fits-now', eyebrow:'Fits now',
+      habitId:'winddown', category:'evening', icon:'🌙', reason:'ideal-now', eyebrow:'Ideal now',
       title:'No screens 30 min before bed', detail:'Your wind-down window before bed is open.', action:'View habit',
     },
     `${label}: the opening wind-down window is explained rather than selected only by category`,
@@ -187,7 +188,7 @@ for (const [label, htmlPath] of builds) {
     plain(getNextWaveSuggestion([beach], doneFor(afterDark, []), {}, afterDark, { aqi:43, isDay:0 })),
     {
       habitId:'beach', category:'movement', icon:'🌊', reason:'after-dark-adapt', eyebrow:'Adapt tonight',
-      title:'Keep your movement habit indoors tonight.', detail:'Try 10 minutes of gentle indoor movement.', action:'View habit',
+      title:'Outdoor walk or movement', detail:'Try 10 minutes of gentle indoor movement.', action:'View habit',
     },
     `${label}: an indoor version preserves the movement goal when darkness is the only blocker`,
   );
@@ -219,9 +220,113 @@ for (const [label, htmlPath] of builds) {
   const productionBeach = productionHabits.find(habit => habit.id === 'beach');
   const productionSleep = productionHabits.find(habit => habit.id === 'sleep');
   const productionFloss = productionHabits.find(habit => habit.id === 'floss');
+  const productionMobility = productionHabits.find(habit => habit.id === 'stretch');
+  const productionHydration = productionHabits.find(habit => habit.id === 'hydrate');
+  const productionSunscreen = productionHabits.find(habit => habit.id === 'sunscreen');
+  const productionDaylight = productionHabits.find(habit => habit.id === 'daylight');
   const completedExcept = (date, openIds) => doneFor(date, productionHabits
     .filter(habit => !openIds.includes(habit.id))
     .map(habit => habit.id));
+
+  assert.equal(getHabitRecommendationFit(productionMobility, atTime(9), { isDay:1 }).phase, 'ideal',
+    `${label}: mobility is ideal during its default preferred window`);
+  assert.equal(getHabitRecommendationFit(productionMobility, atTime(13), { isDay:1 }).phase, 'flexible',
+    `${label}: mobility remains flexible after its default preferred window`);
+  assert.equal(getHabitRecommendationFit(productionMobility, atTime(21, 9), { isDay:0 }).phase, 'late',
+    `${label}: mobility enters its gentle late form near the end of its eligible window`);
+
+  const eveningPreference = {
+    eligibleStart:840,
+    idealStart:1080,
+    idealEnd:1200,
+    lateStart:1320,
+    eligibleEnd:1380,
+  };
+  assert.deepEqual(
+    plain(getEffectiveRecommendationContext(productionMobility, eveningPreference)),
+    {
+      ...plain(productionMobility.context),
+      start:840,
+      idealStart:1080,
+      idealEnd:1200,
+      lateStart:1320,
+      end:1380,
+    },
+    `${label}: a future personal window replaces timing defaults without changing habit identity or category`,
+  );
+  assert.deepEqual(
+    plain(getEffectiveRecommendationContext(productionMobility, { ...eveningPreference, idealEnd:1390 })),
+    plain(productionMobility.context),
+    `${label}: malformed future preference windows fail closed as one atomic override`,
+  );
+  assert.equal(getHabitRecommendationFit(productionMobility, atTime(17), { isDay:1 }, eveningPreference).phase, 'available',
+    `${label}: a personalized habit can be available before its ideal window`);
+  assert.equal(getHabitRecommendationFit(productionMobility, atTime(19), { isDay:0 }, eveningPreference).phase, 'ideal',
+    `${label}: a personalized evening preference determines the ideal phase`);
+  assert.equal(getHabitRecommendationFit(productionMobility, atTime(21), { isDay:0 }, eveningPreference).phase, 'flexible',
+    `${label}: a personalized evening preference determines the flexible phase`);
+  assert.equal(getHabitRecommendationFit(productionMobility, atTime(22, 30), { isDay:0 }, eveningPreference).phase, 'late',
+    `${label}: a personalized evening preference determines the late phase`);
+  assert.equal(getHabitRecommendationFit(productionMobility, atTime(23), { isDay:0 }, eveningPreference).eligible, false,
+    `${label}: a personalized eligibility boundary closes the recommendation window`);
+  assert.equal(
+    getHabitRecommendationFit({ ...productionMobility, cat:'movement' }, atTime(21, 9), { isDay:0 }).phase,
+    'late',
+    `${label}: moving mobility between browse categories does not alter recommendation timing`,
+  );
+
+  const mobilityIdeal = getNextWaveSuggestion(
+    productionHabits, completedExcept(atTime(9), ['stretch']), {}, atTime(9), { isDay:1 }, null,
+  );
+  assert.deepEqual(
+    plain(mobilityIdeal),
+    {
+      habitId:'stretch', category:'morning', icon:'🧘', reason:'ideal-now', eyebrow:'Ideal now',
+      title:'10-min mobility', detail:'This is a good time for it.', action:'View habit',
+    },
+    `${label}: mobility keeps its habit title during its ideal window`,
+  );
+  const mobilityFlexible = getNextWaveSuggestion(
+    productionHabits, completedExcept(atTime(13), ['stretch']), {}, atTime(13), { isDay:1 }, null,
+  );
+  assert.deepEqual(
+    plain(mobilityFlexible),
+    {
+      habitId:'stretch', category:'morning', icon:'🧘', reason:'still-fits', eyebrow:'Still fits today',
+      title:'10-min mobility', detail:'A mobility session can still work later in the day.', action:'View habit',
+    },
+    `${label}: mobility is framed as flexible after its preferred window`,
+  );
+  const mobilityLate = getNextWaveSuggestion(
+    productionHabits, completedExcept(atTime(21, 9), ['stretch']), {}, atTime(21, 9), { isDay:0 }, null,
+  );
+  assert.deepEqual(
+    plain(mobilityLate),
+    {
+      habitId:'stretch', category:'morning', icon:'🧘', reason:'late-form', eyebrow:'Keep it gentle',
+      title:'10-min mobility', detail:'A lighter session can still work tonight.', action:'View habit',
+    },
+    `${label}: mobility keeps its title while late-form copy changes around it`,
+  );
+
+  const personalizedIdeal = getNextWaveSuggestion(
+    productionHabits, completedExcept(atTime(19), ['stretch']), {}, atTime(19), { isDay:0 }, null,
+    { stretch:eveningPreference },
+  );
+  assert.equal(personalizedIdeal.reason, 'ideal-now', `${label}: future personal windows flow through the selector`);
+  assert.equal(personalizedIdeal.title, productionMobility.text, `${label}: personalization never changes habit identity`);
+
+  const titleInvariantScenarios = [
+    ['AQI adaptation', [productionBeach], atTime(12), { aqi:160, isDay:1 }, null],
+    ['AQI opportunity', [productionBeach], atTime(12), { aqi:43, isDay:1 }, null],
+    ['daylight cue', [productionDaylight], atTime(8), { isDay:1, sunrise:'6:58 AM', sunset:'7:42 PM' }, null],
+    ['UV cue', [productionSunscreen], atTime(12), { uv:4, isDay:1 }, null],
+    ['heat cue', [{ ...productionHydration, text:'Drink 24 oz water' }], atTime(12), { feel:95, isDay:1 }, null],
+  ];
+  for (const [scenario, habits, date, data, cue] of titleInvariantScenarios) {
+    const suggestion = getNextWaveSuggestion(habits, doneFor(date, []), {}, date, data, cue);
+    assert.equal(suggestion.title, habits[0].text, `${label}: ${scenario} preserves the current habit title`);
+  }
 
   const afterBreakfast = atTime(9);
   const breakfastCue = {
@@ -240,8 +345,8 @@ for (const [label, htmlPath] of builds) {
     )),
     {
       habitId:'floss', category:'hygiene', icon:'🦷', reason:'completion-cue', eyebrow:'An easy next step',
-      title:'Take two minutes to floss.',
-      detail:'Breakfast is done. Pairing the two can make flossing easier to remember.',
+      title:'Floss',
+      detail:'Breakfast is done. Take two minutes to floss.',
       action:'View habit',
     },
     `${label}: a fresh breakfast completion makes Floss the useful next step`,
@@ -256,7 +361,7 @@ for (const [label, htmlPath] of builds) {
       { isDay:0 },
       { habitId:'dinner', dateKey:'2026-08-31', completedAt:afterDinner.getTime() - 60 * 1000 },
     ).detail,
-    'Dinner is done. Pairing the two can make flossing easier to remember.',
+    'Dinner is done. Take two minutes to floss.',
     `${label}: dinner uses the same calm cue with the correct meal name`,
   );
   assert.notEqual(
@@ -309,11 +414,26 @@ for (const [label, htmlPath] of builds) {
     60050,
     `${label}: the clock refreshes when the full-duration outdoor version stops fitting`,
   );
+  assert.equal(
+    getNextWaveRefreshDelay([productionMobility], atTime(11, 59), null),
+    60050,
+    `${label}: the card refreshes when mobility leaves its ideal window`,
+  );
+  assert.equal(
+    getNextWaveRefreshDelay([productionMobility], atTime(20, 29), null),
+    60050,
+    `${label}: the card refreshes when mobility enters its late form`,
+  );
+  assert.equal(
+    getNextWaveRefreshDelay([productionMobility], atTime(19, 59), null, { stretch:eveningPreference }),
+    60050,
+    `${label}: future personal boundaries also schedule an immediate phase refresh`,
+  );
   assert.deepEqual(
     plain(getNextWaveSuggestion(productionHabits, completedExcept(daylightClosing, ['beach']), {}, daylightClosing, sunsetData)),
     {
       habitId:'beach', category:'movement', icon:'🌊', reason:'daylight-closing', eyebrow:'Daylight closing',
-      title:'Outdoor movement still fits before sunset.', detail:'About 21 minutes of daylight remain.', action:'View habit',
+      title:'Outdoor walk or movement', detail:'About 21 minutes of daylight remain.', action:'View habit',
     },
     `${label}: a barely sufficient daylight window is surfaced as closing rather than broadly favorable`,
   );

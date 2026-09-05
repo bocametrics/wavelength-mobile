@@ -6,6 +6,7 @@ const URL = process.env.WAVELENGTH_URL || `${ORIGIN}/?next-wave-context-e2e=loca
 const THEME = process.env.WAVELENGTH_THEME || 'dark';
 const TOAST_SHOT = process.env.WAVELENGTH_TOAST_SHOT || 'C:\\Temp\\wavelength-toast-dock.png';
 const CONTEXT_SHOT = process.env.WAVELENGTH_CONTEXT_SHOT || 'C:\\Temp\\wavelength-next-wave-context.png';
+const MOBILITY_SHOT = process.env.WAVELENGTH_MOBILITY_SHOT || 'C:\\Temp\\wavelength-mobility-late.png';
 let browser;
 
 (async () => {
@@ -81,8 +82,18 @@ let browser;
   assert.ok(toastGeometry.gap >= 8, `completion toast keeps at least 8px above dock: ${JSON.stringify(toastGeometry)}`);
   await page.waitForSelector('#toast.show', { hidden:true });
 
+  await page.evaluate(() => {
+    const now = new Date();
+    const key = dateKey(now);
+    state.done[key] = Object.fromEntries(HABITS
+      .filter(habit => !['breakfast','floss'].includes(habit.id))
+      .map(habit => [habit.id, true]));
+    state.progress[key] = {};
+    saveState();
+    renderHabits(now);
+  });
   await page.evaluate(() => toggleHabit('breakfast'));
-  await page.waitForFunction(() => document.getElementById('nextWaveTitle').textContent === 'Take two minutes to floss.');
+  await page.waitForFunction(() => document.getElementById('nextWaveTitle').textContent === 'Floss');
   const flossCue = await page.evaluate(() => ({
     habitId:document.getElementById('nextWaveAction').dataset.habitId,
     eyebrow:document.getElementById('nextWaveEyebrow').textContent,
@@ -93,8 +104,8 @@ let browser;
   assert.deepEqual(flossCue, {
     habitId:'floss',
     eyebrow:'An easy next step',
-    title:'Take two minutes to floss.',
-    detail:'Breakfast is done. Pairing the two can make flossing easier to remember.',
+    title:'Floss',
+    detail:'Breakfast is done. Take two minutes to floss.',
     persisted:null,
   }, 'checking breakfast surfaces the approved session-only Floss cue');
   await page.evaluate(() => toggleHabit('floss'));
@@ -120,6 +131,10 @@ let browser;
     const veryLate = getNextWaveSuggestion(DEFAULT_HABITS, doneFor(at2300, idsExcept(['beach'])), {}, at2300, { aqi:43, isDay:0, sunrise:'6:58 AM', sunset:'7:42 PM' });
     const at2205 = fixed(22, 5);
     const missedBedtime = getNextWaveSuggestion(DEFAULT_HABITS, doneFor(at2205, idsExcept(['sleep'])), {}, at2205, { isDay:0 });
+    const at1300 = fixed(13);
+    const mobilityFlexible = getNextWaveSuggestion(DEFAULT_HABITS, doneFor(at1300, idsExcept(['stretch'])), {}, at1300, { isDay:1 });
+    const at2109 = fixed(21, 9);
+    const mobilityLate = getNextWaveSuggestion(DEFAULT_HABITS, doneFor(at2109, idsExcept(['stretch'])), {}, at2109, { isDay:0 });
     state.done[dateKey(at2000)] = Object.fromEntries(idsExcept(['beach']).map(id => [id, true]));
     renderNextWave(at2000);
     return {
@@ -130,6 +145,8 @@ let browser;
       afterDark,
       veryLate,
       missedBedtime,
+      mobilityFlexible,
+      mobilityLate,
       rendered:{
         eyebrow:document.getElementById('nextWaveEyebrow').textContent,
         title:document.getElementById('nextWaveTitle').textContent,
@@ -145,11 +162,20 @@ let browser;
   assert.equal(contextResults.daylightClosing.detail, 'About 21 minutes of daylight remain.');
   assert.equal(contextResults.lowLight.reason, 'low-light-adapt');
   assert.equal(contextResults.afterDark.reason, 'after-dark-adapt');
-  assert.match(contextResults.afterDark.title, /indoors tonight/i);
+  assert.equal(contextResults.afterDark.title, 'Outdoor walk or movement');
   assert.equal(contextResults.veryLate.reason, 'not-timely');
   assert.equal(contextResults.veryLate.habitId, null);
   assert.equal(contextResults.missedBedtime.reason, 'not-timely');
+  assert.deepEqual(contextResults.mobilityFlexible, {
+    habitId:'stretch', category:'morning', icon:'🧘', reason:'still-fits', eyebrow:'Still fits today',
+    title:'10-min mobility', detail:'A mobility session can still work later in the day.', action:'View habit',
+  });
+  assert.deepEqual(contextResults.mobilityLate, {
+    habitId:'stretch', category:'morning', icon:'🧘', reason:'late-form', eyebrow:'Keep it gentle',
+    title:'10-min mobility', detail:'A lighter session can still work tonight.', action:'View habit',
+  });
   assert.equal(contextResults.rendered.eyebrow, 'Adapt tonight');
+  assert.equal(contextResults.rendered.title, 'Outdoor walk or movement');
   assert.match(contextResults.rendered.detail, /gentle indoor movement/i);
 
   await page.evaluate(() => {
@@ -165,6 +191,35 @@ let browser;
   }));
   assert.ok(layout.documentWidth <= layout.viewportWidth, 'contextual Next Wave has no horizontal overflow');
   assert.ok(layout.actionHeight >= 40, 'View habit action retains its touch target');
+
+  const renderedMobility = await page.evaluate(() => {
+    const at2109 = new Date(2026, 7, 31, 21, 9, 0, 0);
+    const key = dateKey(at2109);
+    state.done[key] = Object.fromEntries(DEFAULT_HABITS
+      .filter(habit => habit.id !== 'stretch')
+      .map(habit => [habit.id, true]));
+    state.progress[key] = {};
+    renderNextWave(at2109);
+    return {
+      eyebrow:document.getElementById('nextWaveEyebrow').textContent,
+      title:document.getElementById('nextWaveTitle').textContent,
+      detail:document.getElementById('nextWaveDetail').textContent,
+      habitId:document.getElementById('nextWaveAction').dataset.habitId,
+      habitTitle:HABITS.find(habit => habit.id === 'stretch').text,
+      documentWidth:document.documentElement.scrollWidth,
+      viewportWidth:window.innerWidth,
+    };
+  });
+  assert.deepEqual(renderedMobility, {
+    eyebrow:'Keep it gentle',
+    title:'10-minute mobility',
+    detail:'A lighter session can still work tonight.',
+    habitId:'stretch',
+    habitTitle:'10-minute mobility',
+    documentWidth:390,
+    viewportWidth:390,
+  });
+  await page.screenshot({ path:MOBILITY_SHOT, fullPage:false });
   assert.deepEqual(runtimeErrors, []);
 
   console.log(`next wave context and toast/dock 390px ${THEME} Edge flow passed`);

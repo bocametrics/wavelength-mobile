@@ -74,7 +74,7 @@ function collectErrors(page) {
     return { forecastFirst, aqiFirst };
   });
   assert.deepEqual(mergeOrders.forecastFirst, mergeOrders.aqiFirst);
-  assert.equal(mergeOrders.forecastFirst.title, 'Now is a good time for your outdoor walk.');
+  assert.equal(mergeOrders.forecastFirst.title, 'Outdoor walk or movement');
   assert.equal(mergeOrders.forecastFirst.detail, 'Good air quality · AQI 43');
 
   const safety = await page.evaluate(() => {
@@ -85,10 +85,14 @@ function collectErrors(page) {
     const daylight = HABITS.find(habit => habit.id === 'daylight');
     const originalBeachRhythm = JSON.parse(JSON.stringify(beach.rhythm));
     const originalDaylightRhythm = JSON.parse(JSON.stringify(daylight.rhythm));
-    const capture = () => ({
-      title:document.getElementById('nextWaveTitle').textContent,
-      detail:document.getElementById('nextWaveDetail').textContent,
-    });
+    const capture = () => {
+      const suggestion = getNextWaveSuggestion(HABITS, state.done, state.progress, now, rhythmWeatherData);
+      return {
+        reason:suggestion.reason,
+        title:document.getElementById('nextWaveTitle').textContent,
+        detail:document.getElementById('nextWaveDetail').textContent,
+      };
+    };
 
     state.done[key] = { daylight:true, sunscreen:true };
     beach.rhythm = { type:'aqi-below', threshold:150 };
@@ -127,14 +131,16 @@ function collectErrors(page) {
     updateRhythmAnchors({ aqi:43, uv:4, feel:96, sunrise:'6:58 AM', sunset:'7:42 PM' }, now);
     return { loose150, loose200, strict50, daylightOptOut };
   });
-  assert.equal(safety.loose150.title, "If you're sensitive to air quality, move indoors today.");
-  assert.equal(safety.loose200.title, 'Move today’s activity indoors.');
-  assert.notEqual(safety.strict50.title, 'Outdoor movement could fit now.');
+  assert.equal(safety.loose150.title, 'Outdoor walk or movement');
+  assert.equal(safety.loose150.detail, 'AQI 121 · Move indoors if you’re sensitive.');
+  assert.equal(safety.loose200.title, 'Outdoor walk or movement');
+  assert.equal(safety.loose200.detail, 'AQI 160 · Move indoors today.');
+  assert.notEqual(safety.strict50.reason, 'aqi-opportunity');
   assert.doesNotMatch(safety.strict50.detail, /AQI/);
-  assert.notEqual(safety.daylightOptOut.title, 'Step outside for your morning light.');
+  assert.notEqual(safety.daylightOptOut.reason, 'sunrise-light');
   assert.doesNotMatch(safety.daylightOptOut.detail, /Sunrise/);
 
-  await page.waitForFunction(() => document.getElementById('nextWaveTitle').textContent === 'Now is a good time for your outdoor walk.');
+  await page.waitForFunction(() => document.getElementById('nextWaveTitle').textContent === 'Outdoor walk or movement');
   const favorable = await page.evaluate(() => {
     const card = document.getElementById('nextWaveCard');
     const action = document.getElementById('nextWaveAction');
@@ -158,7 +164,7 @@ function collectErrors(page) {
     actionHeight:favorable.actionHeight,
   }, {
     eyebrow:'Suggested now',
-    title:'Now is a good time for your outdoor walk.',
+    title:'Outdoor walk or movement',
     detail:'Good air quality · AQI 43',
     icon:'🌊',
     habitId:'beach',
@@ -208,7 +214,7 @@ function collectErrors(page) {
     now.setHours(12, 0, 0, 0);
     renderHabits(now);
   });
-  await page.waitForFunction(() => document.getElementById('nextWaveTitle').textContent === 'Have your next glass of water.');
+  await page.waitForFunction(() => document.getElementById('nextWaveTitle').textContent === 'Drink 16 oz water');
   const advanced = await page.evaluate(() => ({
     title:document.getElementById('nextWaveTitle').textContent,
     detail:document.getElementById('nextWaveDetail').textContent,
@@ -216,8 +222,8 @@ function collectErrors(page) {
     walkDone:document.querySelector('.habit[data-id="beach"]')?.classList.contains('done') || false,
   }));
   assert.deepEqual(advanced, {
-    title:'Have your next glass of water.',
-    detail:'Feels like 96°F',
+    title:'Drink 16 oz water',
+    detail:'Feels like 96°F · Extra water may help',
     habitId:'hydrate',
     walkDone:true,
   });
@@ -253,7 +259,7 @@ function collectErrors(page) {
     renderHabits(now);
     updateRhythmAnchors({ aqi:121, uv:1, feel:72 }, now);
   });
-  await page.waitForFunction(() => document.getElementById('nextWaveTitle').textContent.includes('move indoors today'));
+  await page.waitForFunction(() => document.getElementById('nextWaveDetail').textContent.includes('Move indoors'));
   const unfavorable = await page.evaluate(() => ({
     eyebrow:document.getElementById('nextWaveEyebrow').textContent,
     title:document.getElementById('nextWaveTitle').textContent,
@@ -262,8 +268,8 @@ function collectErrors(page) {
   }));
   assert.deepEqual(unfavorable, {
     eyebrow:'Adapt today',
-    title:"If you're sensitive to air quality, move indoors today.",
-    detail:'Unhealthy for sensitive groups · AQI 121',
+    title:'Outdoor walk or movement',
+    detail:'AQI 121 · Move indoors if you’re sensitive.',
     habitId:'beach',
   });
 

@@ -51,6 +51,7 @@ function loadFunctions(html) {
     'getNextDateRolloverDelay',
     'parseDisplayClockMinutes',
     'getDaylightState',
+    'getEffectiveRecommendationContext',
     'getHabitRecommendationFit',
     'getHabitAdaptiveSuggestion',
     'getNextWaveSuggestion',
@@ -95,15 +96,15 @@ for (const [label, htmlPath] of builds) {
     plain(getNextWaveSuggestion(baseHabits, emptyDone, {}, morning, { aqi:121, uv:4, feel:96, sunrise:'6:58 AM' })),
     {
       habitId:'beach', category:'movement', icon:'🌊', reason:'aqi-adapt', eyebrow:'Adapt today',
-      title:"If you're sensitive to air quality, move indoors today.",
-      detail:'Unhealthy for sensitive groups · AQI 121', action:'View habit',
+      title:'Outdoor walk or movement',
+      detail:'AQI 121 · Move indoors if you’re sensitive.', action:'View habit',
     },
     `${label}: unfavorable AQI adapts an incomplete outdoor habit before other cues`,
   );
 
   assert.equal(
     getNextWaveSuggestion(baseHabits, emptyDone, {}, morning, { aqi:160, uv:1 })?.title,
-    'Move today’s activity indoors.',
+    'Outdoor walk or movement',
     `${label}: unhealthy AQI gives a direct indoor adaptation`,
   );
 
@@ -111,7 +112,7 @@ for (const [label, htmlPath] of builds) {
     plain(getNextWaveSuggestion(baseHabits, emptyDone, {}, morning, { aqi:43, uv:4, feel:96, sunrise:'6:58 AM' })),
     {
       habitId:'sunscreen', category:'hygiene', icon:'🧴', reason:'uv-protect', eyebrow:'Suggested now',
-      title:'Use sun protection before heading out.', detail:'UV 4 · Sun protection matters now', action:'View habit',
+      title:'Sun protection before outdoor time', detail:'UV 4 · Protection matters now', action:'View habit',
     },
     `${label}: active UV protection takes priority before an outdoor recommendation`,
   );
@@ -120,7 +121,7 @@ for (const [label, htmlPath] of builds) {
     plain(getNextWaveSuggestion(baseHabits, doneFor(morning, ['sunscreen']), {}, morning, { aqi:43, uv:4, feel:96, sunrise:'6:58 AM' })),
     {
       habitId:'daylight', category:'morning', icon:'🌤️', reason:'sunrise-light', eyebrow:'Suggested now',
-      title:'Step outside for your morning light.', detail:'Sunrise today · 6:58 AM', action:'View habit',
+      title:'Get outdoor light after waking', detail:'Sunrise today · 6:58 AM', action:'View habit',
     },
     `${label}: morning light is offered near the start of the day when still incomplete`,
   );
@@ -129,14 +130,14 @@ for (const [label, htmlPath] of builds) {
     plain(getNextWaveSuggestion(baseHabits, doneFor(morning, ['sunscreen','daylight']), {}, morning, { aqi:43, uv:4, feel:96, sunrise:'6:58 AM' })),
     {
       habitId:'beach', category:'movement', icon:'🌊', reason:'aqi-opportunity', eyebrow:'Suggested now',
-      title:'Now is a good time for your outdoor walk.', detail:'Good air quality · AQI 43', action:'View habit',
+      title:'Outdoor walk or movement', detail:'Good air quality · AQI 43', action:'View habit',
     },
     `${label}: favorable AQI connects directly to the incomplete outdoor habit`,
   );
 
   assert.equal(
     getNextWaveSuggestion(baseHabits, doneFor(morning, ['sunscreen','daylight']), {}, morning, { aqi:78, uv:1 })?.title,
-    'Outdoor movement could fit now.',
+    'Outdoor walk or movement',
     `${label}: moderate AQI uses appropriately cautious opportunity copy`,
   );
 
@@ -144,7 +145,7 @@ for (const [label, htmlPath] of builds) {
     plain(getNextWaveSuggestion(baseHabits, doneFor(morning, ['sunscreen','daylight','beach']), {}, morning, { aqi:43, uv:4, feel:96 })),
     {
       habitId:'hydrate', category:'morning', icon:'💧', reason:'heat-hydrate', eyebrow:'Suggested now',
-      title:'Have your next glass of water.', detail:'Feels like 96°F', action:'View habit',
+      title:'Drink 16 oz water', detail:'Feels like 96°F · Extra water may help', action:'View habit',
     },
     `${label}: heat amplifies an incomplete hydration habit after higher priorities are covered`,
   );
@@ -159,7 +160,7 @@ for (const [label, htmlPath] of builds) {
     plain(getNextWaveSuggestion(baseHabits, doneFor(morning, ['daylight']), {}, morning, null)),
     {
       habitId:'hydrate', category:'morning', icon:'💧', reason:'time-fallback', eyebrow:'A simple next step',
-      title:'Start with your water habit.', detail:'A calm way to begin the day.', action:'View habit',
+      title:'Drink 16 oz water', detail:'A calm way to begin the day.', action:'View habit',
     },
     `${label}: missing location still yields a helpful morning habit rather than technical fallback copy`,
   );
@@ -168,8 +169,8 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(
     plain(getNextWaveSuggestion(baseHabits, doneFor(afternoon, ['daylight','hydrate','beach','sunscreen']), {}, afternoon, null)),
     {
-      habitId:'meditate', category:'mind', icon:'🧠', reason:'time-fallback', eyebrow:'Your next small win',
-      title:'Meditate 10 min', detail:'One open habit that fits this part of your day.', action:'View habit',
+      habitId:'meditate', category:'mind', icon:'🧠', reason:'available-now', eyebrow:'Your next small win',
+      title:'Meditate 10 min', detail:'One open habit that fits right now.', action:'View habit',
     },
     `${label}: a time-relevant incomplete habit becomes the fallback`,
   );
@@ -201,8 +202,8 @@ for (const [label, htmlPath] of builds) {
 
   const optedOutBeach = baseHabits.map(habit => habit.id === 'beach' ? { ...habit, rhythm:null } : habit);
   assert.notEqual(
-    getNextWaveSuggestion(optedOutBeach, doneFor(morning, ['sunscreen','daylight']), {}, morning, { aqi:43, uv:1 })?.title,
-    'Now is a good time for your outdoor walk.',
+    getNextWaveSuggestion(optedOutBeach, doneFor(morning, ['sunscreen','daylight']), {}, morning, { aqi:43, uv:1 })?.reason,
+    'aqi-opportunity',
     `${label}: explicit No anchor prevents environmental opportunity copy`,
   );
 
@@ -214,7 +215,7 @@ for (const [label, htmlPath] of builds) {
     morning,
     { sunrise:'7:00 AM', uv:1 },
   );
-  assert.notEqual(daylightOptOutSuggestion?.title, 'Step outside for your morning light.', `${label}: explicit daylight No anchor suppresses sunrise opportunity copy`);
+  assert.notEqual(daylightOptOutSuggestion?.reason, 'sunrise-light', `${label}: explicit daylight No anchor suppresses sunrise opportunity copy`);
   assert.doesNotMatch(daylightOptOutSuggestion?.detail || '', /Sunrise/, `${label}: daylight No anchor suppresses sunrise detail`);
 
   const loose150 = baseHabits.map(habit => habit.id === 'beach' ? { ...habit, rhythm:{ type:'aqi-below', threshold:150 } } : habit);
@@ -222,22 +223,22 @@ for (const [label, htmlPath] of builds) {
   const outdoorReady = doneFor(morning, ['sunscreen','daylight']);
   assert.equal(
     getNextWaveSuggestion(loose150, outdoorReady, {}, morning, { aqi:121, uv:1 })?.title,
-    "If you're sensitive to air quality, move indoors today.",
+    'Outdoor walk or movement',
     `${label}: a loose custom threshold cannot override AQI sensitivity guidance`,
   );
   assert.equal(
     getNextWaveSuggestion(loose200, outdoorReady, {}, morning, { aqi:160, uv:1 })?.title,
-    'Move today’s activity indoors.',
+    'Outdoor walk or movement',
     `${label}: a loose custom threshold cannot create an outdoor opportunity in unhealthy air`,
   );
 
   const aqiMatrix = [
-    [50, 'Now is a good time for your outdoor walk.', 'Good air quality · AQI 50'],
-    [50.1, 'Outdoor movement could fit now.', 'Moderate air quality · AQI 50.1'],
-    [100, 'Outdoor movement could fit now.', 'Moderate air quality · AQI 100'],
-    [100.1, "If you're sensitive to air quality, move indoors today.", 'Unhealthy for sensitive groups · AQI 100.1'],
-    [150, "If you're sensitive to air quality, move indoors today.", 'Unhealthy for sensitive groups · AQI 150'],
-    [150.1, 'Move today’s activity indoors.', 'Unhealthy air quality · AQI 150.1'],
+    [50, 'Outdoor walk or movement', 'Good air quality · AQI 50'],
+    [50.1, 'Outdoor walk or movement', 'Moderate air quality · AQI 50.1'],
+    [100, 'Outdoor walk or movement', 'Moderate air quality · AQI 100'],
+    [100.1, 'Outdoor walk or movement', 'AQI 100.1 · Move indoors if you’re sensitive.'],
+    [150, 'Outdoor walk or movement', 'AQI 150 · Move indoors if you’re sensitive.'],
+    [150.1, 'Outdoor walk or movement', 'AQI 150.1 · Move indoors today.'],
   ];
   for (const [aqi, title, detail] of aqiMatrix) {
     const suggestion = getNextWaveSuggestion(baseHabits, outdoorReady, {}, morning, { aqi, uv:1 });
@@ -250,7 +251,7 @@ for (const [label, htmlPath] of builds) {
 
   const strict50 = baseHabits.map(habit => habit.id === 'beach' ? { ...habit, rhythm:{ type:'aqi-below', threshold:50 } } : habit);
   const strictSuggestion = getNextWaveSuggestion(strict50, outdoorReady, {}, morning, { aqi:78, uv:1 });
-  assert.notEqual(strictSuggestion?.title, 'Outdoor movement could fit now.', `${label}: a stricter custom threshold suppresses the moderate-air opportunity`);
+  assert.notEqual(strictSuggestion?.reason, 'aqi-opportunity', `${label}: a stricter custom threshold suppresses the moderate-air opportunity`);
   assert.doesNotMatch(strictSuggestion?.detail || '', /AQI/, `${label}: a stricter custom threshold does not imply unsafe air below AQI 101`);
 
   const noScheduled = baseHabits.map(habit => ({ ...habit, days:[1] }));

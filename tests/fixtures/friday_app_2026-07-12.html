@@ -1851,8 +1851,8 @@ const DEFAULT_HABITS = [
   { id:'daylight',   cat:'morning',  icon:'🌤️', text:'Get outdoor light after waking',       note:'Step outside near the start of your day', weight:1, activeFrom:'2026-08-28', rhythm:{ type:'sunrise' }, context:{ start:360, idealStart:390, urgencyStart:540, end:660, setting:'outdoor', daylight:'required', duration:10 } },
   { id:'affirm',     cat:'morning',  icon:'💬', text:'Start the day with an affirmation',    note:'Set a positive tone before the day begins', weight:1, context:{ start:360, idealStart:420, end:660, setting:'indoor', duration:2 } },
   { id:'hydrate',    cat:'morning',  icon:'💧', text:'Drink 16 oz water',                    note:'Water first; adapt for heat and exertion', weight:2, rhythm:{ type:'temp-above', threshold:85, note:'Drink extra water' }, context:{ start:300, idealStart:360, end:1260, setting:'either', duration:2 } },
-  { id:'stretch',    cat:'morning',  icon:'🧘', text:'10-min mobility',                      note:'Sun salutation or joint circles', weight:1, context:{ start:360, idealStart:420, end:1290, setting:'indoor', duration:10 } },
-  { id:'beach',      cat:'movement', icon:'🌊', text:'Outdoor walk or movement',             note:'Walk, roll, hike, swim, or paddle', weight:2, rhythm:{ type:'aqi-below', threshold:100 }, context:{ start:390, idealStart:480, end:1260, setting:'outdoor', daylight:'required', daylightClosing:true, duration:20, goal:'Move every day', adaptations:{ afterDark:{ title:'Keep your movement habit indoors tonight.', detail:'Try 10 minutes of gentle indoor movement.' } } } },
+  { id:'stretch',    cat:'morning',  icon:'🧘', text:'10-min mobility',                      note:'Sun salutation or joint circles', weight:1, context:{ start:360, idealStart:420, idealEnd:720, lateStart:1230, end:1290, setting:'indoor', duration:10, flexibleDetail:'A mobility session can still work later in the day.', lateEyebrow:'Keep it gentle', lateDetail:'A lighter session can still work tonight.' } },
+  { id:'beach',      cat:'movement', icon:'🌊', text:'Outdoor walk or movement',             note:'Walk, roll, hike, swim, or paddle', weight:2, rhythm:{ type:'aqi-below', threshold:100 }, context:{ start:390, idealStart:480, end:1260, setting:'outdoor', daylight:'required', daylightClosing:true, duration:20, goal:'Move every day', adaptations:{ afterDark:{ detail:'Try 10 minutes of gentle indoor movement.' } } } },
   { id:'strength',   cat:'movement', icon:'🏋️', text:'Strength session',                     note:'20+ min, bodyweight or bands', weight:2, context:{ start:480, idealStart:600, end:1260, setting:'indoor', duration:20 } },
   { id:'cardio',     cat:'movement', icon:'🏃', text:'Cardio burst',                         note:'15 min run, bike, or HIIT', weight:1, context:{ start:480, idealStart:600, end:1260, setting:'either', duration:15 } },
   { id:'meditate',   cat:'mind',     icon:'🧠', text:'Meditate 10 min',                      note:'Breath focus or body scan', weight:1, context:{ start:360, idealStart:720, end:1350, setting:'either', duration:10 } },
@@ -2487,8 +2487,19 @@ function getDaylightState(date, data) {
   return null;
 }
 
-function getHabitRecommendationFit(habit, date, data) {
+function getEffectiveRecommendationContext(habit, preferenceWindow = null) {
   const context = habit && habit.context && typeof habit.context === 'object' ? habit.context : null;
+  if (!context || !preferenceWindow || typeof preferenceWindow !== 'object' || Array.isArray(preferenceWindow)) return context;
+  const keys = ['eligibleStart', 'idealStart', 'idealEnd', 'lateStart', 'eligibleEnd'];
+  const values = keys.map(key => preferenceWindow[key]);
+  if (values.some(value => !Number.isInteger(value) || value < 0 || value > 1440)) return context;
+  const [start, idealStart, idealEnd, lateStart, end] = values;
+  if (!(start <= idealStart && idealStart < idealEnd && idealEnd <= lateStart && lateStart < end)) return context;
+  return { ...context, start, idealStart, idealEnd, lateStart, end };
+}
+
+function getHabitRecommendationFit(habit, date, data, preferenceWindow = null) {
+  const context = getEffectiveRecommendationContext(habit, preferenceWindow);
   if (!context) return { eligible:true, reason:'available', phase:'available', nextBoundary:null };
   if (context.recommend === false) return { eligible:false, reason:'manual', phase:'unavailable', nextBoundary:null };
   const minute = date.getHours() * 60 + date.getMinutes();
@@ -2510,11 +2521,15 @@ function getHabitRecommendationFit(habit, date, data) {
   }
   const urgencyStart = Number.isInteger(context.urgencyStart) ? context.urgencyStart : null;
   const idealStart = Number.isInteger(context.idealStart) ? context.idealStart : null;
+  const idealEnd = Number.isInteger(context.idealEnd) ? context.idealEnd : null;
+  const lateStart = Number.isInteger(context.lateStart) ? context.lateStart : null;
   const daylightClosing = context.daylightClosing === true && duration !== null && daylightRemaining !== null && daylightRemaining <= duration + 15;
   const phase = daylightClosing || urgencyStart !== null && minute >= urgencyStart
     ? 'urgent'
-    : idealStart !== null && minute >= idealStart ? 'ideal' : 'available';
-  const boundaries = [idealStart, urgencyStart, end].filter(value => value !== null && value > minute);
+    : lateStart !== null && minute >= lateStart ? 'late'
+    : idealStart !== null && minute >= idealStart && (idealEnd === null || minute < idealEnd) ? 'ideal'
+    : idealEnd !== null && minute >= idealEnd ? 'flexible' : 'available';
+  const boundaries = [idealStart, idealEnd, lateStart, urgencyStart, end].filter(value => value !== null && value > minute);
   return {
     eligible:true,
     reason:daylightClosing ? 'daylight-closing' : 'available',
@@ -2527,14 +2542,13 @@ function getHabitRecommendationFit(habit, date, data) {
 function getHabitAdaptiveSuggestion(habit, fit) {
   if (!habit || !fit || fit.eligible || !['dark','daylight-short'].includes(fit.reason)) return null;
   const alternative = habit.context?.adaptations?.afterDark;
-  if (!alternative || typeof alternative.title !== 'string' || typeof alternative.detail !== 'string') return null;
-  const title = alternative.title.trim();
+  if (!alternative || typeof alternative.detail !== 'string') return null;
   const detail = alternative.detail.trim();
-  if (!title || !detail || title.length > 80 || detail.length > 100) return null;
-  return { reason:fit.reason === 'dark' ? 'after-dark-adapt' : 'low-light-adapt', eyebrow:'Adapt tonight', title, detail };
+  if (!detail || detail.length > 100) return null;
+  return { reason:fit.reason === 'dark' ? 'after-dark-adapt' : 'low-light-adapt', eyebrow:'Adapt tonight', detail };
 }
 
-function getNextWaveRefreshDelay(habits, date, data) {
+function getNextWaveRefreshDelay(habits, date, data, preferenceWindows = null) {
   const minute = date.getHours() * 60 + date.getMinutes();
   const elapsedMs = ((minute * 60 + date.getSeconds()) * 1000) + date.getMilliseconds();
   const boundaries = [];
@@ -2542,9 +2556,9 @@ function getNextWaveRefreshDelay(habits, date, data) {
   const sunrise = parseDisplayClockMinutes(snapshot.sunrise);
   const sunset = parseDisplayClockMinutes(snapshot.sunset);
   (Array.isArray(habits) ? habits : []).forEach(habit => {
-    const context = habit && habit.context && typeof habit.context === 'object' ? habit.context : null;
+    const context = getEffectiveRecommendationContext(habit, preferenceWindows?.[habit.id]);
     if (!context || context.recommend === false) return;
-    [context.start, context.idealStart, context.urgencyStart, context.end].forEach(value => {
+    [context.start, context.idealStart, context.idealEnd, context.lateStart, context.urgencyStart, context.end].forEach(value => {
       if (Number.isInteger(value) && value > minute) boundaries.push(value);
     });
     const duration = Number.isInteger(context.duration) && context.duration > 0 ? context.duration : null;
@@ -2572,7 +2586,7 @@ function scheduleNextWaveContextRefresh(now = new Date()) {
   nextWaveContextTimer = setTimeout(() => renderNextWave(new Date()), delay);
 }
 
-function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, completionCue = null) {
+function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, completionCue = null, preferenceWindows = null) {
   doneByDate = doneByDate || {};
   progressByDate = progressByDate || {};
   const key = dateKey(date);
@@ -2583,13 +2597,13 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
     const progress = getHabitProgress(dayDone, dayProgress, habit);
     return !isHabitProgressComplete(habit, progress);
   });
-  const result = (habit, reason, eyebrow, title, detail) => ({
+  const result = (habit, reason, eyebrow, detail) => ({
     habitId:habit.id,
     category:habit.cat,
     icon:habit.icon,
     reason,
     eyebrow,
-    title,
+    title:habit.text,
     detail,
     action:'View habit',
   });
@@ -2601,7 +2615,8 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
     return { habitId:null, category:null, icon:'✓', reason:'none', eyebrow:'You’re caught up', title:'Today’s habits are complete.', detail:'You followed through on every scheduled habit.', action:null };
   }
 
-  const fitById = new Map(openHabits.map(habit => [habit.id, getHabitRecommendationFit(habit, date, data)]));
+  const fitById = new Map(openHabits.map(habit => [habit.id,
+    getHabitRecommendationFit(habit, date, data, preferenceWindows?.[habit.id])]));
   const eligibleHabits = openHabits.filter(habit => fitById.get(habit.id).eligible);
   const cueAge = date.getTime() - Number(completionCue?.completedAt);
   const completionCueHabit = completionCue && completionCue.dateKey === key &&
@@ -2612,15 +2627,15 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
       : null;
   const completionCueResult = () => {
     const meal = completionCue.habitId === 'breakfast' ? 'Breakfast' : 'Dinner';
-    return result(completionCueHabit, 'completion-cue', 'An easy next step', 'Take two minutes to floss.',
-      `${meal} is done. Pairing the two can make flossing easier to remember.`);
+    return result(completionCueHabit, 'completion-cue', 'An easy next step',
+      `${meal} is done. Take two minutes to floss.`);
   };
   const adaptiveHabit = openHabits.find(habit => getHabitAdaptiveSuggestion(habit, fitById.get(habit.id))) || null;
   const adaptiveSuggestion = adaptiveHabit ? getHabitAdaptiveSuggestion(adaptiveHabit, fitById.get(adaptiveHabit.id)) : null;
   if (eligibleHabits.length === 0) {
     if (completionCueHabit) return completionCueResult();
     if (adaptiveHabit && adaptiveSuggestion) {
-      return result(adaptiveHabit, adaptiveSuggestion.reason, adaptiveSuggestion.eyebrow, adaptiveSuggestion.title, adaptiveSuggestion.detail);
+      return result(adaptiveHabit, adaptiveSuggestion.reason, adaptiveSuggestion.eyebrow, adaptiveSuggestion.detail);
     }
     const noun = openHabits.length === 1 ? 'habit' : 'habits';
     return { habitId:null, category:null, icon:'○', reason:'not-timely', eyebrow:'A quiet moment', title:'Nothing is especially timely right now.', detail:`You still have ${openHabits.length} ${noun} open today.`, action:null };
@@ -2637,14 +2652,15 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
   const uv = Number.isFinite(snapshot.uv) && snapshot.uv >= 0 ? snapshot.uv : null;
   const feel = Number.isFinite(snapshot.feel) ? snapshot.feel : null;
   const hour = date.getHours();
+  const minute = hour * 60 + date.getMinutes();
 
   const movement = anchoredById('beach', 'aqi-below');
   if (movement && aqi !== null && aqi > 100) {
     const category = getAqiCategory(aqi);
-    const title = aqi <= 150
-      ? "If you're sensitive to air quality, move indoors today."
-      : 'Move today’s activity indoors.';
-    return result(movement.habit, 'aqi-adapt', 'Adapt today', title, `${category} · AQI ${aqi}`);
+    const detail = aqi <= 150
+      ? `AQI ${aqi} · Move indoors if you’re sensitive.`
+      : `AQI ${aqi} · Move indoors today.`;
+    return result(movement.habit, 'aqi-adapt', 'Adapt today', detail);
   }
 
   const pickPhase = phase => eligibleHabits
@@ -2655,69 +2671,75 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
     const urgentFit = fitById.get(urgentHabit.id);
     if (urgentFit.reason === 'daylight-closing') {
       const minutes = urgentFit.daylightRemaining;
-      return result(urgentHabit, 'daylight-closing', 'Daylight closing', 'Outdoor movement still fits before sunset.', `About ${minutes} minutes of daylight remain.`);
+      return result(urgentHabit, 'daylight-closing', 'Daylight closing', `About ${minutes} minutes of daylight remain.`);
     }
     const detail = urgentHabit.context?.urgentDetail || 'This habit’s useful window is closing.';
-    return result(urgentHabit, 'window-closing', 'Window closing', urgentHabit.text, detail);
+    return result(urgentHabit, 'window-closing', 'Window closing', detail);
   }
 
   if (completionCueHabit) return completionCueResult();
 
   const sunscreen = anchoredById('sunscreen', 'uv-above');
   if (sunscreen && uv !== null && uv >= sunscreen.rhythm.threshold) {
-    return result(sunscreen.habit, 'uv-protect', 'Suggested now', 'Use sun protection before heading out.', `UV ${uv} · Sun protection matters now`);
+    return result(sunscreen.habit, 'uv-protect', 'Suggested now', `UV ${uv} · Protection matters now`);
   }
 
   const daylight = anchoredById('daylight', 'sunrise');
   if (daylight && hour < 11) {
     const detail = snapshot.sunrise ? `Sunrise today · ${snapshot.sunrise}` : 'Your morning light habit is still open.';
-    return result(daylight.habit, 'sunrise-light', 'Suggested now', 'Step outside for your morning light.', detail);
+    return result(daylight.habit, 'sunrise-light', 'Suggested now', detail);
   }
 
   if (movement && aqi !== null && aqi <= 100 && aqi <= movement.rhythm.threshold) {
     const category = getAqiCategory(aqi);
-    const title = aqi <= 50 ? 'Now is a good time for your outdoor walk.' : 'Outdoor movement could fit now.';
-    return result(movement.habit, 'aqi-opportunity', 'Suggested now', title, `${category} · AQI ${aqi}`);
+    return result(movement.habit, 'aqi-opportunity', 'Suggested now', `${category} · AQI ${aqi}`);
   }
 
   const hydration = anchoredById('hydrate', 'temp-above');
   if (hydration && feel !== null && feel > hydration.rhythm.threshold) {
-    return result(hydration.habit, 'heat-hydrate', 'Suggested now', 'Have your next glass of water.', `Feels like ${feel}°F`);
+    return result(hydration.habit, 'heat-hydrate', 'Suggested now', `Feels like ${feel}°F · Extra water may help`);
   }
 
   const sunsetHabit = eligibleHabits.find(habit => normalizeRhythmConfig(habit.rhythm)?.type === 'sunset');
   if (sunsetHabit && hour >= 16) {
     const detail = snapshot.sunset ? `Sunset today · ${snapshot.sunset}` : 'Your evening cue is still open.';
-    return result(sunsetHabit, 'sunset-rhythm', 'Suggested now', sunsetHabit.text, detail);
+    return result(sunsetHabit, 'sunset-rhythm', 'Suggested now', detail);
   }
 
   const openHydration = openById('hydrate');
   if (openHydration && hour < 12) {
-    return result(openHydration, 'time-fallback', 'A simple next step', 'Start with your water habit.', 'A calm way to begin the day.');
+    return result(openHydration, 'time-fallback', 'A simple next step', 'A calm way to begin the day.');
   }
 
   const idealHabit = pickPhase('ideal');
   if (idealHabit) {
-    const detail = idealHabit.context?.timelyDetail || 'This habit fits the current part of your day.';
-    return result(idealHabit, 'fits-now', 'Fits now', idealHabit.text, detail);
+    const detail = idealHabit.context?.timelyDetail || 'This is a good time for it.';
+    return result(idealHabit, 'ideal-now', 'Ideal now', detail);
   }
 
   if (adaptiveHabit && adaptiveSuggestion) {
-    return result(adaptiveHabit, adaptiveSuggestion.reason, adaptiveSuggestion.eyebrow, adaptiveSuggestion.title, adaptiveSuggestion.detail);
+    return result(adaptiveHabit, adaptiveSuggestion.reason, adaptiveSuggestion.eyebrow, adaptiveSuggestion.detail);
   }
 
-  const preferredCategories = hour < 11
-    ? ['morning','mind','movement','fuel','hygiene','evening']
-    : hour < 17
-      ? ['mind','movement','fuel','hygiene','morning','evening']
-      : ['evening','hygiene','mind','movement','fuel','morning'];
-  let next = null;
-  for (const category of preferredCategories) {
-    next = eligibleHabits.find(habit => habit.cat === category && !(habit.id === 'wake' && hour >= 11));
-    if (next) break;
+  const flexibleHabit = pickPhase('flexible');
+  if (flexibleHabit) {
+    const detail = flexibleHabit.context?.flexibleDetail || 'There’s still room for this today.';
+    return result(flexibleHabit, 'still-fits', 'Still fits today', detail);
   }
-  next = next || eligibleHabits[0];
-  return result(next, 'time-fallback', 'Your next small win', next.text, 'One open habit that fits this part of your day.');
+
+  const lateHabit = pickPhase('late');
+  if (lateHabit) {
+    const eyebrow = lateHabit.context?.lateEyebrow || 'Still fits tonight';
+    const detail = lateHabit.context?.lateDetail || 'A lighter version can still work tonight.';
+    return result(lateHabit, 'late-form', eyebrow, detail);
+  }
+
+  const availableHabit = pickPhase('available');
+  const availableContext = getEffectiveRecommendationContext(availableHabit, preferenceWindows?.[availableHabit.id]);
+  const idealComesLater = Number.isInteger(availableContext?.idealStart) && minute < availableContext.idealStart;
+  return idealComesLater
+    ? result(availableHabit, 'available-now', 'Available now', 'It fits now, though its ideal window comes later.')
+    : result(availableHabit, 'available-now', 'Your next small win', 'One open habit that fits right now.');
 }
 
 function renderNextWave(now = new Date()) {
