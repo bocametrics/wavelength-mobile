@@ -985,6 +985,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   .insight-learning-icon { color: var(--accent2); font-size: 1.1rem; line-height: 1.2; }
   .insight-learning strong { display: block; color: var(--text); font-size: 0.8rem; font-weight: 600; margin-bottom: 4px; }
   .insight-learning p { font-size: 0.74rem; line-height: 1.5; }
+  .insight-progress { display: block; margin-top: 8px; color: var(--text3); font-size: 0.7rem; font-weight: 500; }
 
   .settings-intro { margin-bottom: 20px; }
 
@@ -2057,8 +2058,9 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     <div class="insight-learning" id="insightLearning">
       <div class="insight-learning-icon" aria-hidden="true">≈</div>
       <div>
-        <strong>Learning your rhythm</strong>
-        <p>Condition-aware insights appear after 10 relevant days. Each insight will show the sample it is based on.</p>
+        <strong id="insightLearningHeading">Learning your rhythm</strong>
+        <p id="insightLearningBody">Wavelength is learning how your habits respond to weather, air quality, and light. After 10 days with the same condition, a pattern begins to appear.</p>
+        <span class="insight-progress" id="insightLearningProgress"></span>
       </div>
     </div>
   </section>
@@ -3650,6 +3652,8 @@ function getConditionInsightCards(history, minimumRelevantDays = 10, now = new D
     { id:'heatwise', icon:'💧', eyebrow:'Heatwise', reason:'heat-hydrate', cue:'heat' },
     { id:'morning-light', icon:'🌤️', eyebrow:'Morning light', reason:'sunrise-light', cue:'morning-light' },
     { id:'poor-air-movement', icon:'🍃', eyebrow:'Poor-air follow-through', reason:'aqi-adapt', cue:'poor-air' },
+    { id:'good-air-movement', icon:'🌿', eyebrow:'Good-air follow-through', reason:'aqi-opportunity', cue:'good-air' },
+    { id:'evening-rhythm', icon:'🌆', eyebrow:'Evening rhythm', reason:'sunset-rhythm', cue:'sunset' },
   ];
   const cards = [];
   definitions.forEach(definition => {
@@ -3921,13 +3925,28 @@ function saveInsightHistory(now = new Date()) {
   localStorage.setItem(INSIGHT_STORAGE_KEY, JSON.stringify(insightHistory));
 }
 
+function getMaxConditionDays(history, now = new Date()) {
+  const todayKey = dateKey(now);
+  const reasons = ['uv-protect','heat-hydrate','sunrise-light','aqi-adapt','aqi-opportunity','sunset-rhythm'];
+  let maxDays = 0;
+  for (const reason of reasons) {
+    const count = Object.entries((history && history.days) || {})
+      .filter(([key]) => isValidDateKey(key) && key < todayKey)
+      .filter(([, day]) => (day.recommendations || []).some(record => record.reason === reason))
+      .length;
+    if (count > maxDays) maxDays = count;
+  }
+  return maxDays;
+}
+
 function renderAdaptiveInsights(now = new Date()) {
   const conditionSection = document.getElementById('conditionInsightSection');
   const adaptiveSection = document.getElementById('adaptiveDaySection');
   const learning = document.getElementById('insightLearning');
   if (!conditionSection || !adaptiveSection || !learning) return;
 
-  const selected = selectConditionInsightCard(getConditionInsightCards(insightHistory, 10, now), now);
+  const allCards = getConditionInsightCards(insightHistory, 10, now);
+  const selected = selectConditionInsightCard(allCards, now);
   conditionSection.hidden = !selected;
   if (selected) {
     document.getElementById('conditionInsightIcon').textContent = selected.icon;
@@ -3944,7 +3963,30 @@ function renderAdaptiveInsights(now = new Date()) {
     document.getElementById('adaptiveDayTitle').textContent = adaptiveDay.title;
     document.getElementById('adaptiveDayDetail').textContent = adaptiveDay.detail;
   }
-  learning.hidden = Boolean(selected || adaptiveDay);
+
+  const heading = document.getElementById('insightLearningHeading');
+  const body = document.getElementById('insightLearningBody');
+  const progress = document.getElementById('insightLearningProgress');
+
+  if (selected || adaptiveDay) {
+    // Some insights are showing — check if all condition patterns are eligible.
+    if (allCards.length >= 6) {
+      learning.hidden = true;
+    } else {
+      learning.hidden = false;
+      heading.textContent = 'More insights forming';
+      body.textContent = 'Wavelength is learning how your habits respond to weather, air quality, and light. New patterns appear as conditions repeat in your history.';
+      progress.textContent = `${allCards.length} of 6 patterns taking shape`;
+    }
+  } else {
+    // No insights yet — show the learning state with a live progress count.
+    learning.hidden = false;
+    heading.textContent = 'Learning your rhythm';
+    body.textContent = 'Wavelength is learning how your habits respond to weather, air quality, and light. After 10 days with the same condition, a pattern begins to appear.';
+    const maxDays = getMaxConditionDays(insightHistory, now);
+    const capped = Math.min(maxDays, 10);
+    progress.textContent = `${capped} of 10 days with conditions met so far`;
+  }
 }
 
 function saveState() {

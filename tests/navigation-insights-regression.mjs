@@ -454,8 +454,8 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /id="conditionInsightSection"[^>]*hidden/, `${label}: evidence-gated condition card starts hidden`);
   assert.match(html, /id="adaptiveDaySection"[^>]*hidden/, `${label}: narrative card starts hidden`);
   assert.match(html, /id="insightLearning"/, `${label}: Insights explains why adaptive cards are not visible yet`);
-  assert.match(html, /<p>Condition-aware insights appear after 10 relevant days\. Each insight will show the sample it is based on\.<\/p>/,
-    `${label}: learning copy states the threshold and future sample disclosure plainly`);
+  assert.match(html, /After 10 days with the same condition, a pattern begins to appear\./,
+    `${label}: learning copy states the threshold and introduces the pattern concept`);
   assert.match(html, /function renderAdaptiveInsights\(now = new Date\(\)\)[\s\S]*\.textContent = selected\.title[\s\S]*\.textContent = adaptiveDay\.detail/,
     `${label}: adaptive card copy renders as text rather than HTML`);
   assert.doesNotMatch(html, /high-UV days met|poor-air days still included|You adapted well|A flexible win|Rescue Swap|Waves Ridden/,
