@@ -339,10 +339,10 @@ for (const [label, htmlPath] of builds) {
   if (label === 'mobile') {
     assert.match(html, /function createBackupPayload\(\)[\s\S]*normalizeInsightHistoryAgainstState\([\s\S]*state, false\)/,
       `${label}: backup export repairs contradictory local evidence before serializing it`);
-    assert.match(html, /const BACKUP_VERSION = 4;/, `${label}: personalized backups identify the version-4 schema`);
+    assert.match(html, /const BACKUP_VERSION = 5;/, `${label}: personalized backups identify the version-5 schema`);
     assert.match(html, /const backupInsightHistory = normalizeInsightHistory\(insightHistory, HABITS, false\)[\s\S]*insightHistory:\s*backupInsightHistory/,
-      `${label}: version-4 backups carry validated prospective evidence`);
-    assert.match(html, /!\[1, 2, 3, BACKUP_VERSION\]\.includes\(payload\.version\)/,
+      `${label}: version-5 backups carry validated prospective evidence`);
+    assert.match(html, /!\[1, 2, 3, 4, BACKUP_VERSION\]\.includes\(payload\.version\)/,
       `${label}: version-1 through version-3 backups remain importable`);
     assert.match(html, /payload\.version === 1\s*\?\s*normalizeInsightHistory\(null, importedHabits\)\s*:\s*normalizeInsightHistory\(payload\.insightHistory, importedHabits, true\)/,
       `${label}: legacy imports start with no fabricated insight history`);

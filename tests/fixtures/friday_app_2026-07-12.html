@@ -1512,6 +1512,19 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     min-width: 70px;
   }
 
+  .eh-preference-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: var(--text3);
+  }
+
+  .eh-preference-field input {
+    min-height: 40px;
+  }
+
   .eh-param-custom {
     width: 60px !important;
   }
@@ -2310,6 +2323,7 @@ function buildRuntimeHabits(defaults, overrides = {}) {
   return defaults.map(habit => {
     const override = overrides[habit.id] || {};
     const runtime = { ...habit, ...override };
+    if (override.preferenceWindow) runtime.preferenceWindow = normalizePreferenceWindow(override.preferenceWindow, false);
     if (paramsById[habit.id]) {
       runtime.params = paramsById[habit.id];
       runtime.text = Object.hasOwn(override, 'text')
@@ -2485,6 +2499,89 @@ function reconcileMeasurementTypeChanges(doneByDate, progressByDate, previousHab
   return dayDone;
 }
 
+function normalizePreferenceWindow(value, strict = false) {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    if (strict) throw new Error('Preference window must be an object.');
+    return null;
+  }
+  const result = {};
+  if (Object.hasOwn(value, 'idealStart')) {
+    const v = value.idealStart;
+    if (!Number.isInteger(v) || v < 0 || v > 1440) {
+      if (strict) throw new Error('idealStart must be an integer 0–1440.');
+      return null;
+    }
+    result.idealStart = v;
+  }
+  if (Object.hasOwn(value, 'idealEnd')) {
+    const v = value.idealEnd;
+    if (!Number.isInteger(v) || v < 0 || v > 1440) {
+      if (strict) throw new Error('idealEnd must be an integer 0–1440.');
+      return null;
+    }
+    result.idealEnd = v;
+  }
+  if (Object.keys(result).length === 0) return null;
+  if (result.idealStart !== undefined && result.idealEnd !== undefined && result.idealStart >= result.idealEnd) {
+    if (strict) throw new Error('idealStart must be earlier than idealEnd.');
+    return null;
+  }
+  return result;
+}
+
+function expandPreferenceWindow(preferenceWindow, systemContext) {
+  if (!preferenceWindow || typeof preferenceWindow !== 'object') return null;
+  const idealStart = preferenceWindow.idealStart;
+  const idealEnd = preferenceWindow.idealEnd;
+  if (!Number.isInteger(idealStart) || !Number.isInteger(idealEnd) || idealStart >= idealEnd) return null;
+  const systemEnd = systemContext && Number.isInteger(systemContext.end) ? systemContext.end : null;
+  const eligibleStart = Math.max(0, idealStart - 60);
+  const lateStart = idealEnd;
+  const eligibleEnd = systemEnd !== null ? systemEnd : Math.min(1440, idealEnd + 60);
+  return { eligibleStart, idealStart, idealEnd, lateStart, eligibleEnd };
+}
+
+function getPreferenceWindowsMap(habits) {
+  const map = {};
+  (Array.isArray(habits) ? habits : []).forEach(habit => {
+    if (habit.preferenceWindow) {
+      const expanded = expandPreferenceWindow(habit.preferenceWindow, habit.context);
+      if (expanded) map[habit.id] = expanded;
+    }
+  });
+  return map;
+}
+
+function preferenceWindowToDisplayTime(preferenceWindow) {
+  if (!preferenceWindow || typeof preferenceWindow !== 'object') return '';
+  if (!Number.isInteger(preferenceWindow.idealStart)) return '';
+  const total = preferenceWindow.idealStart + 15;
+  const hour = Math.floor(total / 60);
+  const minute = total % 60;
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
+function displayTimeToPreferenceWindow(timeStr) {
+  if (typeof timeStr !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(timeStr)) return null;
+  const [hour, minute] = timeStr.split(':').map(Number);
+  const preferredMinutes = hour * 60 + minute;
+  const idealStart = Math.max(0, preferredMinutes - 15);
+  const idealEnd = Math.min(1440, preferredMinutes + 15);
+  if (idealStart >= idealEnd) return null;
+  return { idealStart, idealEnd };
+}
+
+function isEligibleForPreferenceWindow(habit) {
+  if (!habit || !habit.context || typeof habit.context !== 'object') return false;
+  if (!Number.isInteger(habit.context.start)) return false;
+  if (Object.hasOwn(SYSTEM_HABIT_PARAMETER_DEFS, habit.id)) {
+    const defs = SYSTEM_HABIT_PARAMETER_DEFS[habit.id];
+    return !Object.values(defs).some(field => field.type === 'time');
+  }
+  return true;
+}
+
 function normalizeCustomHabitOverrides(overrides, defaults, strict = false) {
   const invalid = message => {
     if (strict) throw new Error(message);
@@ -2496,7 +2593,7 @@ function normalizeCustomHabitOverrides(overrides, defaults, strict = false) {
   }
 
   const validIds = new Set(defaults.map(habit => habit.id));
-  const allowedFields = new Set(['text', 'note', 'weight', 'params', 'days', 'measurement', 'target', 'step', 'unit', 'rhythm']);
+  const allowedFields = new Set(['text', 'note', 'weight', 'params', 'days', 'measurement', 'target', 'step', 'unit', 'rhythm', 'preferenceWindow']);
   const normalized = {};
 
   for (const [id, override] of Object.entries(overrides)) {
@@ -2595,6 +2692,15 @@ function normalizeCustomHabitOverrides(overrides, defaults, strict = false) {
         }
         const r = normalizeRhythmConfig(rhythmCandidate, strict);
         if (r) clean.rhythm = r; else invalid(`Invalid rhythm anchor for ${id}.`);
+      }
+    }
+    if (Object.hasOwn(override, 'preferenceWindow')) {
+      if (override.preferenceWindow === null) {
+        clean.preferenceWindow = null;
+      } else {
+        const pw = normalizePreferenceWindow(override.preferenceWindow, strict);
+        if (pw) clean.preferenceWindow = pw;
+        else if (strict) throw new Error(`Invalid preference window for ${id}.`);
       }
     }
     if (Object.keys(clean).length > 0) normalized[id] = clean;
@@ -2874,7 +2980,7 @@ function getNextWaveRefreshDelay(habits, date, data, preferenceWindows = null) {
 
 function scheduleNextWaveContextRefresh(now = new Date()) {
   if (nextWaveContextTimer !== null) clearTimeout(nextWaveContextTimer);
-  const delay = getNextWaveRefreshDelay(HABITS, now, rhythmWeatherData);
+  const delay = getNextWaveRefreshDelay(HABITS, now, rhythmWeatherData, getPreferenceWindowsMap(HABITS));
   if (delay === null) {
     nextWaveContextTimer = null;
     return;
@@ -3039,7 +3145,8 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
 }
 
 function renderNextWave(now = new Date()) {
-  const suggestion = getNextWaveSuggestion(HABITS, state.done || {}, state.progress || {}, now, rhythmWeatherData, recentCompletionCue);
+  const preferenceWindows = getPreferenceWindowsMap(HABITS);
+  const suggestion = getNextWaveSuggestion(HABITS, state.done || {}, state.progress || {}, now, rhythmWeatherData, recentCompletionCue, preferenceWindows);
   const icon = document.getElementById('nextWaveIcon');
   const eyebrow = document.getElementById('nextWaveEyebrow');
   const title = document.getElementById('nextWaveTitle');
@@ -5048,6 +5155,7 @@ function renderManageModal() {
             </label>
             <input type="text" class="eh-rhythm-note" maxlength="60" value="${escapeHtml(normalizeRhythmConfig(h.rhythm)?.note ?? '')}" placeholder="Optional: one concise action" ${normalizeRhythmConfig(h.rhythm) ? '' : 'hidden'}>
           </div>
+          ${isEligibleForPreferenceWindow(h) ? `<label class="eh-preference-field"><span>Preferred time</span><input type="time" class="eh-preference" value="${escapeHtml(preferenceWindowToDisplayTime(h.preferenceWindow))}" placeholder="Optional"></label>` : ''}
         </div>
       </div>
     `;
@@ -5221,6 +5329,26 @@ function saveManageModal() {
         if (rhythm && JSON.stringify(rhythm) !== JSON.stringify(defaultRhythm)) changes.rhythm = rhythm;
       }
     }
+    const preferenceInput = row.querySelector('.eh-preference');
+    if (preferenceInput) {
+      const prefValue = preferenceInput.value.trim();
+      if (prefValue) {
+        const pw = displayTimeToPreferenceWindow(prefValue);
+        if (pw) {
+          const def2 = DEFAULT_HABITS.find(h2 => h2.id === id);
+          if (def2 && def2.context && Number.isInteger(def2.context.idealStart)) {
+            const defPw = { idealStart: def2.context.idealStart, idealEnd: def2.context.idealEnd };
+            if (pw.idealStart !== defPw.idealStart || pw.idealEnd !== defPw.idealEnd) {
+              changes.preferenceWindow = pw;
+            }
+          } else {
+            changes.preferenceWindow = pw;
+          }
+        }
+      } else if (existingOverrides[id]?.preferenceWindow) {
+        changes.preferenceWindow = null;
+      }
+    }
     if (Object.keys(changes).length > 0) visibleOverrides[id] = changes;
   }
   const overrides = mergeVisibleManageOverrides(existingOverrides, visibleOverrides, visibleIds);
@@ -5241,7 +5369,7 @@ function saveManageModal() {
 // ═══════════════════════════════════════════════════════════════════
 // IPHONE INSTALL, OFFLINE, AND DATA TRANSFER
 // ═══════════════════════════════════════════════════════════════════
-const BACKUP_VERSION = 4;
+const BACKUP_VERSION = 5;
 const INSTALL_DISMISS_KEY = 'wavelength_install_tip_dismissed';
 
 function setupInstallTip() {
@@ -5281,6 +5409,9 @@ function createBackupPayload() {
     order: userOrder,
     firstName: firstName,
     customHabits: loadCustomHabits() || {},
+    preferenceWindows: Object.fromEntries(
+      HABITS.filter(h => h.preferenceWindow).map(h => [h.id, h.preferenceWindow])
+    ),
     insightHistory: backupInsightHistory
   };
 }
@@ -5315,7 +5446,7 @@ async function importBackupFile(file) {
   if (!file) return;
   try {
     const payload = JSON.parse(await file.text());
-    if (payload.app !== 'wavelength' || ![1, 2, 3, BACKUP_VERSION].includes(payload.version) || !payload.state || !Array.isArray(payload.order) ||
+    if (payload.app !== 'wavelength' || ![1, 2, 3, 4, BACKUP_VERSION].includes(payload.version) || !payload.state || !Array.isArray(payload.order) ||
         (payload.version >= 2 && !payload.insightHistory) ||
         (payload.version >= 4 && typeof payload.firstName !== 'string')) {
       throw new Error('This is not a compatible Wavelength backup.');
@@ -5323,7 +5454,14 @@ async function importBackupFile(file) {
 
     const importedOrder = normalizeImportedHabitOrder(payload.order, DEFAULT_HABITS);
     const importedFirstName = normalizeFirstName(payload.firstName);
-    const customHabits = normalizeCustomHabitOverrides(payload.customHabits || {}, DEFAULT_HABITS, true);
+    const rawCustomHabits = payload.customHabits || {};
+    if (payload.preferenceWindows && typeof payload.preferenceWindows === 'object' && !Array.isArray(payload.preferenceWindows)) {
+      for (const [hid, pw] of Object.entries(payload.preferenceWindows)) {
+        if (rawCustomHabits[hid]) rawCustomHabits[hid] = { ...rawCustomHabits[hid], preferenceWindow: pw };
+        else rawCustomHabits[hid] = { preferenceWindow: pw };
+      }
+    }
+    const customHabits = normalizeCustomHabitOverrides(rawCustomHabits, DEFAULT_HABITS, true);
     const importedHabits = DEFAULT_HABITS.map(habit => customHabits[habit.id]
       ? { ...habit, ...customHabits[habit.id] }
       : { ...habit });

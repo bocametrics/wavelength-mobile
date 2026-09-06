@@ -207,7 +207,7 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /\.edit-habit\.schedule-error\s*\{[^}]*var\(--danger-border\)/s, `${label}: invalid schedules need a visible semantic error outline`);
   assert.match(html, /getDailyHabitStats\(state\.done[^;]+/, `${label}: rendered calculations must use shared daily stats`);
   if (label === 'mobile') {
-    assert.match(html, /importBackupFile[\s\S]*normalizeCustomHabitOverrides\(payload\.customHabits \|\| \{\}, DEFAULT_HABITS, true\)/, `${label}: backup import must strictly validate custom habit overrides before writing storage`);
+    assert.match(html, /importBackupFile[\s\S]*normalizeCustomHabitOverrides\(rawCustomHabits, DEFAULT_HABITS, true\)/, `${label}: backup import must strictly validate custom habit overrides before writing storage`);
   }
   assert.match(html, /habit-text">\$\{escapeHtml\(h\.text\)\}/, `${label}: habit names inserted into HTML must be escaped`);
   assert.match(html, /habit-note">\$\{escapeHtml\(h\.note\)\}/, `${label}: habit notes inserted into HTML must be escaped`);

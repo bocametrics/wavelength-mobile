@@ -257,7 +257,7 @@ function collectErrors(page) {
   assert.equal(reports.adaptive.eyebrow, 'Context-aware follow-through');
   assert.equal(reports.adaptive.detail, '“Sun protection before outdoor time” and “Drink 16 oz water” were marked complete.');
   assert.equal(reports.learningHidden, false);
-  assert.equal(reports.backup.version, 4);
+  assert.equal(reports.backup.version, 5);
   assert.equal(reports.backup.insightHistory.version, 1);
   assert.equal(reports.width.document, reports.width.viewport);
   assert.doesNotMatch(JSON.stringify(reports.backup.insightHistory), /latitude|longitude|\blat\b|\blon\b/i);

@@ -82,13 +82,13 @@ for (const [label, htmlPath] of builds) {
   assert.equal(greeting.textContent, 'Good morning, Friend ☀️', `${label}: an empty First Name uses the friendly display fallback`);
 
   const backup = extractFunction(html, 'createBackupPayload');
-  assert.match(html, /const BACKUP_VERSION = 4;/,
-    `${label}: First Name backups identify the version-4 schema`);
+  assert.match(html, /const BACKUP_VERSION = 5;/,
+    `${label}: First Name backups identify the version-5 schema`);
   assert.match(backup, /firstName\s*:\s*firstName/,
     `${label}: backup payload includes First Name`);
   const importer = extractFunction(html, 'importBackupFile');
-  assert.match(importer, /\[1, 2, 3, BACKUP_VERSION\]\.includes\(payload\.version\)/,
-    `${label}: backup import preserves versions 1 through 3`);
+  assert.match(importer, /\[1, 2, 3, 4, BACKUP_VERSION\]\.includes\(payload\.version\)/,
+    `${label}: backup import preserves versions 1 through 4`);
   assert.match(importer, /const importedFirstName = normalizeFirstName\(payload\.firstName\)/,
     `${label}: import accepts a missing First Name as empty`);
   assert.match(importer, /if \(importedFirstName\) localStorage\.setItem\(FIRST_NAME_STORAGE_KEY, importedFirstName\);\s*else localStorage\.removeItem\(FIRST_NAME_STORAGE_KEY\)/,
