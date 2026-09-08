@@ -95,8 +95,8 @@ for (const { label, path } of BUILD_FILES) {
 
   // ── source-level wiring assertions ──
   assert(/getPreferenceWindowsMap\(HABITS\)/.test(script), 'renderNextWave builds the preference map');
-  assert(/getNextWaveSuggestion\(HABITS, state\.done \|\| \{\}, state\.progress \|\| \{\}, now, rhythmWeatherData, recentCompletionCue, preferenceWindows\)/.test(script),
-    'renderNextWave passes preferenceWindows to getNextWaveSuggestion');
+  assert(/getNextWaveSuggestion\(\s*HABITS, state\.done \|\| \{\}, state\.progress \|\| \{\}, now, rhythmWeatherData,\s*recentCompletionCue, preferenceWindows, recentNextWaveProgressCue\s*\)/.test(script),
+    'renderNextWave passes preferenceWindows and partial-progress cooldown state to getNextWaveSuggestion');
   assert(/getNextWaveRefreshDelay\(HABITS, now, rhythmWeatherData, getPreferenceWindowsMap\(HABITS\)\)/.test(script),
     'scheduleNextWaveContextRefresh passes preferenceWindows');
   assert(/getEffectiveRecommendationContext\(habit, preferenceWindows\?\.\[habit\.id\]\)/.test(script),

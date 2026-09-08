@@ -239,12 +239,13 @@ function collectErrors(page) {
       title:document.getElementById('conditionInsightTitle').textContent,
       detail:document.getElementById('conditionInsightDetail').textContent,
     },
-    adaptive:{
+    waves:{
       eyebrow:document.getElementById('adaptiveDayEyebrow').textContent,
       title:document.getElementById('adaptiveDayTitle').textContent,
       detail:document.getElementById('adaptiveDayDetail').textContent,
     },
     learningHidden:document.getElementById('insightLearning').hidden,
+    learningText:document.getElementById('insightLearning').textContent.replace(/\s+/g, ' ').trim(),
     backup:createBackupPayload(),
     width:{ document:document.documentElement.scrollWidth, viewport:innerWidth },
   }));
@@ -253,10 +254,11 @@ function collectErrors(page) {
     title:'You marked “Sun protection before outdoor time” complete on 8 of 10 days when Wavelength showed a UV cue.',
     detail:'Observed in your history · Based on 10 closed UV-cue dates',
   });
-  assert.match(reports.adaptive.title, /^You completed two habits after Wavelength showed contextual cues on [A-Z][a-z]{2} \d{1,2}\.$/);
-  assert.equal(reports.adaptive.eyebrow, 'Context-aware follow-through');
-  assert.equal(reports.adaptive.detail, '“Sun protection before outdoor time” and “Drink 16 oz water” were marked complete.');
+  assert.equal(reports.waves.eyebrow, 'Waves ridden');
+  assert.equal(reports.waves.title, 'You followed through on 8 days when conditions shaped your Next Wave.');
+  assert.match(reports.waves.detail, /^9 suggested habits completed in the last 30 days\. Most recently on [A-Z][a-z]{2} \d{1,2}: “Sun protection before outdoor time” and “Drink 16 oz water”\.$/);
   assert.equal(reports.learningHidden, false);
+  assert.match(reports.learningText, /10 of 10 days with conditions met so far$/);
   assert.equal(reports.backup.version, 5);
   assert.equal(reports.backup.insightHistory.version, 1);
   assert.equal(reports.width.document, reports.width.viewport);

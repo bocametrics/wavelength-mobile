@@ -50,7 +50,7 @@ function loadInsightFunctions(html) {
     'pruneInsightHistory',
     'getConditionInsightCards',
     'selectConditionInsightCard',
-    'getAdaptiveDayCard',
+    'getWavesRiddenCard',
   ];
   const context = {};
   vm.createContext(context);
@@ -76,7 +76,7 @@ for (const [label, htmlPath] of builds) {
     pruneInsightHistory,
     getConditionInsightCards,
     selectConditionInsightCard,
-    getAdaptiveDayCard,
+    getWavesRiddenCard,
   } = loadInsightFunctions(html);
 
   const homeStart = html.indexOf('id="homeView"');
@@ -433,32 +433,64 @@ for (const [label, htmlPath] of builds) {
         recommendations:[
           { habitId:'sunscreen', reason:'uv-protect', shownAt:adaptiveTimestamp, lastShownAt:adaptiveTimestamp, observedAt:adaptiveTimestamp - 1000, completedAt:adaptiveCompletedAt, habitLabel:sunscreenExposure.habitLabel, measurementType:'check', ruleVersion:1, rule:sunscreenExposure.rule, conditions:{uv:7}, sources:{weather:'open-meteo'} },
           { habitId:'hydrate', reason:'heat-hydrate', shownAt:adaptiveTimestamp, lastShownAt:adaptiveTimestamp, observedAt:adaptiveTimestamp - 1000, completedAt:adaptiveCompletedAt, habitLabel:'Drink 16 oz water', measurementType:'amount', ruleVersion:1, rule:{channel:'weather',reading:'feel',operator:'>',threshold:85}, conditions:{feel:96}, sources:{weather:'open-meteo'} },
+          { habitId:'sunscreen', reason:'uv-protect', shownAt:adaptiveTimestamp + 10, lastShownAt:adaptiveTimestamp + 10, observedAt:adaptiveTimestamp - 1000, completedAt:adaptiveCompletedAt, habitLabel:sunscreenExposure.habitLabel, measurementType:'check', ruleVersion:1, rule:sunscreenExposure.rule, conditions:{uv:7}, sources:{weather:'open-meteo'} },
+          { habitId:'meditate', reason:'time-fallback', shownAt:adaptiveTimestamp, lastShownAt:adaptiveTimestamp, completedAt:adaptiveCompletedAt, habitLabel:'Meditate 10 min', measurementType:'check', ruleVersion:1, rule:{}, conditions:{}, sources:{} },
         ],
-        completions:{ sunscreen:adaptiveCompletedAt, hydrate:adaptiveCompletedAt },
+        completions:{ sunscreen:adaptiveCompletedAt, hydrate:adaptiveCompletedAt, meditate:adaptiveCompletedAt },
       },
     },
   };
-  assert.equal(getAdaptiveDayCard(adaptiveHistory, new Date(2026, 7, 30, 12)), null,
-    `${label}: the still-open current date cannot produce a retrospective narrative`);
-  assert.deepEqual(plain(getAdaptiveDayCard(adaptiveHistory, new Date(2026, 7, 31, 12))), {
-    id:'adaptive-day', icon:'🏄', eyebrow:'Context-aware follow-through',
-    title:'You completed two habits after Wavelength showed contextual cues on Aug 30.',
-    detail:'“Sun protection before outdoor time” and “Drink 16 oz water” were marked complete.',
-    date:'2026-08-30', completed:2,
-  }, `${label}: a closed multi-exposure day becomes a literal narrative without a hidden score`);
-  adaptiveHistory.days['2026-08-30'].completions = { sunscreen:adaptiveCompletedAt };
+  assert.deepEqual(plain(getWavesRiddenCard(adaptiveHistory, new Date(2026, 7, 30, 12))), {
+    id:'waves-ridden', icon:'🏄', eyebrow:'Waves ridden',
+    title:'You followed through on 1 day when conditions shaped your Next Wave.',
+    detail:'2 suggested habits completed in the last 30 days. Most recently on Aug 30: “Sun protection before outdoor time” and “Drink 16 oz water”.',
+    days:1, completed:2, latestDate:'2026-08-30',
+  }, `${label}: verified context-aware completions today produce one cumulative wave without duplicate inflation`);
+
+  const priorTimestamp = new Date(2026, 7, 29, 8).getTime();
+  adaptiveHistory.days['2026-08-29'] = {
+    recommendations:[{
+      habitId:'daylight', reason:'sunrise-light', shownAt:priorTimestamp, lastShownAt:priorTimestamp,
+      observedAt:priorTimestamp - 1000, completedAt:priorTimestamp + 1000,
+      habitLabel:'Get outdoor light after waking', measurementType:'check', ruleVersion:1,
+      rule:{channel:'light',reading:'sunrise',operator:'after'}, conditions:{sunrise:'6:58 AM'}, sources:{weather:'open-meteo'},
+    }],
+    completions:{daylight:priorTimestamp + 1000},
+  };
+  assert.deepEqual(plain(getWavesRiddenCard(adaptiveHistory, new Date(2026, 7, 30, 12))), {
+    id:'waves-ridden', icon:'🏄', eyebrow:'Waves ridden',
+    title:'You followed through on 2 days when conditions shaped your Next Wave.',
+    detail:'3 suggested habits completed in the last 30 days. Most recently on Aug 30: “Sun protection before outdoor time” and “Drink 16 oz water”.',
+    days:2, completed:3, latestDate:'2026-08-30',
+  }, `${label}: the Waves ridden headline counts distinct days while detail counts distinct completed suggestions`);
+
+  adaptiveHistory.days['2026-08-30'].completions = { sunscreen:adaptiveCompletedAt, meditate:adaptiveCompletedAt };
   delete adaptiveHistory.days['2026-08-30'].recommendations[1].completedAt;
-  assert.equal(getAdaptiveDayCard(adaptiveHistory, new Date(2026, 7, 31, 12)), null,
-    `${label}: removing one completion removes an unsupported adaptive-day story`);
+  assert.deepEqual(plain(getWavesRiddenCard(adaptiveHistory, new Date(2026, 7, 30, 12))), {
+    id:'waves-ridden', icon:'🏄', eyebrow:'Waves ridden',
+    title:'You followed through on 2 days when conditions shaped your Next Wave.',
+    detail:'2 suggested habits completed in the last 30 days. Most recently on Aug 30: “Sun protection before outdoor time”.',
+    days:2, completed:2, latestDate:'2026-08-30',
+  }, `${label}: one verified completion still qualifies a day and singular detail remains grammatical`);
+  assert.equal(getWavesRiddenCard(adaptiveHistory, new Date(2026, 9, 1, 12)), null,
+    `${label}: evidence older than the rolling 30-day window does not produce a Waves ridden card`);
 
   assert.match(html, /id="conditionInsightSection"[^>]*hidden/, `${label}: evidence-gated condition card starts hidden`);
   assert.match(html, /id="adaptiveDaySection"[^>]*hidden/, `${label}: narrative card starts hidden`);
   assert.match(html, /id="insightLearning"/, `${label}: Insights explains why adaptive cards are not visible yet`);
   assert.match(html, /After 10 days with the same condition, a pattern begins to appear\./,
     `${label}: learning copy states the threshold and introduces the pattern concept`);
-  assert.match(html, /function renderAdaptiveInsights\(now = new Date\(\)\)[\s\S]*\.textContent = selected\.title[\s\S]*\.textContent = adaptiveDay\.detail/,
+  assert.doesNotMatch(html, /\d+ of 6 patterns taking shape|allCards\.length\} of 6 patterns taking shape/,
+    `${label}: forming progress never reports only fully eligible output cards`);
+  assert.match(html, /const maxDays = getMaxConditionDays\(insightHistory, now\);[\s\S]*const capped = Math\.min\(maxDays, 10\);[\s\S]*if \(selected \|\| wavesRidden\)/,
+    `${label}: real closed condition-day progress is computed before either learning state renders`);
+  assert.match(html, /progress\.textContent = `\$\{capped\} of 10 days with conditions met so far`;/,
+    `${label}: learning and forming use the same understandable condition-day progress copy`);
+  assert.match(html, /function renderAdaptiveInsights\(now = new Date\(\)\)[\s\S]*\.textContent = selected\.title[\s\S]*\.textContent = wavesRidden\.detail/,
     `${label}: adaptive card copy renders as text rather than HTML`);
-  assert.doesNotMatch(html, /high-UV days met|poor-air days still included|You adapted well|A flexible win|Rescue Swap|Waves Ridden/,
+  assert.match(html, /icon:'🏄', eyebrow:'Waves ridden'/,
+    `${label}: Waves ridden preserves the approved surfer identity`);
+  assert.doesNotMatch(html, /Context-aware follow-through|high-UV days met|poor-air days still included|You adapted well|A flexible win|Rescue Swap/,
     `${label}: reporting copy avoids generalized condition and inferred-adaptation claims`);
 }
 

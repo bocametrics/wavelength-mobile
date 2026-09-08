@@ -53,6 +53,8 @@ function loadFunctions(html) {
     'getHabitRecommendationFit',
     'getHabitAdaptiveSuggestion',
     'getNextWaveRefreshDelay',
+    'createNextWaveProgressCue',
+    'isNextWaveProgressCueActive',
     'getNextWaveSuggestion',
   ];
   const rhythmPrelude = html.match(/const RHYTHM_TYPES\s*=\s*[^;]+;/);
@@ -108,7 +110,10 @@ const dinner = {
 
 for (const [label, htmlPath] of builds) {
   const html = fs.readFileSync(htmlPath, 'utf8');
-  const { getEffectiveRecommendationContext, getHabitRecommendationFit, getNextWaveRefreshDelay, getNextWaveSuggestion } = loadFunctions(html);
+  const {
+    dateKey, getEffectiveRecommendationContext, getHabitRecommendationFit, getNextWaveRefreshDelay,
+    createNextWaveProgressCue, isNextWaveProgressCueActive, getNextWaveSuggestion,
+  } = loadFunctions(html);
   const productionHabits = loadDefaultHabits(html);
   const beach = contextualHabits[0];
   const winddown = contextualHabits[2];
@@ -156,6 +161,65 @@ for (const [label, htmlPath] of builds) {
     'meditate',
     `${label}: a fitting Mind habit outranks an Evening habit whose window has not opened`,
   );
+
+  const progressNow = atTime(9);
+  const progressKey = dateKey(progressNow);
+  const countHabits = [
+    {
+      id:'hydrate', cat:'fuel', icon:'💧', text:'Drink water', note:'One glass at a time',
+      measurement:{ type:'count', target:8, step:1 },
+      context:{ start:0, idealStart:0, end:1440 },
+    },
+    {
+      id:'meditate', cat:'mind', icon:'🧠', text:'Meditate', note:'Take one quiet minute',
+      context:{ start:0, idealStart:0, end:1440 },
+    },
+  ];
+  const partialProgress = { [progressKey]:{ hydrate:1 } };
+  const focusedAt = progressNow.getTime() - 5 * 60 * 1000;
+  const focusCue = { habitId:'hydrate', dateKey:progressKey, focusedAt };
+  const createdProgressCue = plain(createNextWaveProgressCue(focusCue, 'hydrate', 1, false, progressNow));
+  assert.deepEqual(createdProgressCue, { habitId:'hydrate', dateKey:progressKey, actedAt:progressNow.getTime() },
+    `${label}: positive partial progress on a freshly opened Next Wave creates a cooldown cue`);
+  assert.equal(createNextWaveProgressCue(null, 'hydrate', 1, false, progressNow), null,
+    `${label}: an ordinary count increment without a Next Wave focus creates no cooldown`);
+  assert.equal(createNextWaveProgressCue(focusCue, 'hydrate', -1, false, progressNow), null,
+    `${label}: subtracting progress creates no cooldown`);
+  assert.equal(createNextWaveProgressCue(focusCue, 'hydrate', 1, true, progressNow), null,
+    `${label}: completed progress relies on normal completion behavior`);
+  const staleFocus = { ...focusCue, focusedAt:progressNow.getTime() - 16 * 60 * 1000 };
+  assert.equal(createNextWaveProgressCue(staleFocus, 'hydrate', 1, false, progressNow), null,
+    `${label}: a stale Next Wave focus cannot suppress a later unrelated increment`);
+  assert.equal(isNextWaveProgressCueActive(createdProgressCue, progressNow), true,
+    `${label}: a fresh progress cue is active`);
+  assert.equal(isNextWaveProgressCueActive(createdProgressCue, atTime(10, 1)), false,
+    `${label}: a progress cue expires after 60 minutes`);
+
+  const freshProgressCue = { habitId:'hydrate', dateKey:progressKey, actedAt:progressNow.getTime() - 30 * 60 * 1000 };
+  assert.equal(
+    getNextWaveSuggestion(countHabits, {}, partialProgress, progressNow, null, null, null, freshProgressCue)?.habitId,
+    'meditate',
+    `${label}: a partially progressed Next Wave count habit rotates out during its cooldown`,
+  );
+  const expiredProgressCue = { habitId:'hydrate', dateKey:progressKey, actedAt:progressNow.getTime() - 61 * 60 * 1000 };
+  assert.equal(
+    getNextWaveSuggestion(countHabits, {}, partialProgress, progressNow, null, null, null, expiredProgressCue)?.habitId,
+    'hydrate',
+    `${label}: a partially progressed count habit can return after the 60-minute cooldown`,
+  );
+  assert.equal(
+    getNextWaveSuggestion([countHabits[0]], {}, partialProgress, progressNow, null, null, null, freshProgressCue)?.reason,
+    'progress-pause',
+    `${label}: a cooling-down habit alone produces a quiet progress acknowledgment instead of a false completion`,
+  );
+  assert.match(html, /let nextWaveFocusCue = null;[\s\S]*let recentNextWaveProgressCue = null;/,
+    `${label}: focused and acted-on Next Wave cues have explicit runtime state`);
+  assert.match(html, /function focusNextWaveHabit\(\)[\s\S]*nextWaveFocusCue = \{ habitId, dateKey:dateKey\(now\), focusedAt:now\.getTime\(\) \};/,
+    `${label}: opening a Next Wave habit records a fresh focus cue`);
+  assert.match(html, /function adjustMeasuredHabit\(id, direction\)[\s\S]*createNextWaveProgressCue\(nextWaveFocusCue, id, direction, change\.complete, now\)[\s\S]*recentNextWaveProgressCue = progressCue/,
+    `${label}: measured progress converts a matching focus into the cooldown cue`);
+  assert.match(html, /getNextWaveSuggestion\(\s*HABITS,[\s\S]*recentCompletionCue, preferenceWindows, recentNextWaveProgressCue\s*\)/,
+    `${label}: rendering passes the progress cooldown into Next Wave selection`);
 
   const bedtimeWindow = atTime(21, 15);
   assert.deepEqual(

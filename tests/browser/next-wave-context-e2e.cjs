@@ -108,7 +108,29 @@ let browser;
     detail:'Breakfast is done. Take two minutes to floss.',
     persisted:null,
   }, 'checking breakfast surfaces the approved session-only Floss cue');
-  await page.evaluate(() => toggleHabit('floss'));
+  await page.evaluate(() => {
+    const floss = HABITS.find(habit => habit.id === 'floss');
+    floss.measurement = 'count';
+    floss.target = 2;
+    delete floss.step;
+    delete floss.unit;
+    renderHabits(new Date());
+    focusNextWaveHabit('floss', new Date());
+    adjustMeasuredHabit('floss', 1);
+  });
+  const partialFloss = await page.evaluate(() => ({
+    progress:state.progress?.[dateKey(new Date())]?.floss,
+    suggestedId:document.getElementById('nextWaveAction')?.dataset.habitId || null,
+    title:document.getElementById('nextWaveTitle')?.textContent,
+    cue:recentNextWaveProgressCue,
+  }));
+  assert.equal(partialFloss.progress, 1, 'the count increment remains incomplete at 1/2');
+  assert.equal(partialFloss.suggestedId, null, 'the only just-acted-on count habit pauses rather than persisting');
+  assert.equal(partialFloss.title, 'Nice work taking a step.');
+  assert.equal(partialFloss.cue.habitId, 'floss');
+  assert.ok(Date.now() - partialFloss.cue.actedAt < 5_000, 'partial progress starts a fresh cooldown');
+
+  await page.evaluate(() => adjustMeasuredHabit('floss', 1));
   assert.equal(await page.evaluate(() => recentCompletionCue), null, 'completing Floss clears the meal cue');
   assert.notEqual(await page.$eval('#nextWaveAction', el => el.dataset.habitId), 'floss', 'completed Floss is no longer suggested');
 

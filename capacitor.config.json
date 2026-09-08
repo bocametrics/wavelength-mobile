@@ -1,0 +1,10 @@
+{
+  "appId": "com.bocametrics.wavelength",
+  "appName": "Wavelength",
+  "webDir": "www",
+  "plugins": {
+    "LocalNotifications": {
+      "presentationOptions": ["banner", "list", "sound"]
+    }
+  }
+}

@@ -54,6 +54,7 @@ function loadFunctions(html) {
     'getEffectiveRecommendationContext',
     'getHabitRecommendationFit',
     'getHabitAdaptiveSuggestion',
+    'isNextWaveProgressCueActive',
     'getNextWaveSuggestion',
   ];
   const rhythmPrelude = html.match(/const RHYTHM_TYPES\s*=\s*[^;]+;/);

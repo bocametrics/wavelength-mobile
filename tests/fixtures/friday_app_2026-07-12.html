@@ -110,7 +110,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     --danger-border: rgba(240,106,138,0.30);
     --gold-border: rgba(240,192,112,0.30);
     --offline-bg: rgba(18,24,39,0.94);
-    --install-green: rgba(143,219,175,0.05);
+
     --radius: 14px;
     --radius-sm: 10px;
     --dock-space: 82px;
@@ -153,7 +153,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     --danger-border: rgba(184,66,93,0.34);
     --gold-border: rgba(140,85,0,0.30);
     --offline-bg: rgba(255,255,255,0.96);
-    --install-green: rgba(36,118,83,0.06);
+
   }
 
   body {
@@ -1037,6 +1037,68 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     font-size: 16px;
   }
 
+  .native-notification-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .native-notification-heading h2 { margin: 0 0 4px; }
+  .native-notification-heading p {
+    color: var(--text2);
+    font-size: 0.74rem;
+    line-height: 1.45;
+  }
+
+  .native-switch { position: relative; flex: 0 0 auto; width: 50px; height: 30px; }
+  .native-switch input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+  .native-switch-track {
+    position: absolute;
+    inset: 0;
+    border: 1px solid var(--border2);
+    border-radius: 999px;
+    background: var(--surface2);
+    cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease;
+  }
+  .native-switch-track::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--text2);
+    transition: transform 160ms ease, background 160ms ease;
+  }
+  .native-switch input:checked + .native-switch-track {
+    border-color: var(--accent-border-strong);
+    background: var(--accent-strong);
+  }
+  .native-switch input:checked + .native-switch-track::after {
+    transform: translateX(20px);
+    background: var(--accent);
+  }
+  .native-switch input:focus-visible + .native-switch-track {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+  .native-notification-status {
+    min-height: 1.1em;
+    margin-top: 10px;
+    color: var(--text2);
+    font-size: 0.72rem;
+    line-height: 1.45;
+  }
+
   .app-dock {
     position: fixed;
     left: 50%;
@@ -1787,33 +1849,6 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   button, input, select { touch-action: manipulation; }
 
-  .install-card {
-    display: none;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 18px;
-    padding: 14px 16px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--accent-border);
-    background: linear-gradient(135deg, var(--accent-soft), var(--install-green));
-  }
-
-  .install-card.show { display: flex; }
-  .install-card .install-icon { font-size: 1.3rem; line-height: 1.2; }
-  .install-card .install-copy { flex: 1; min-width: 0; }
-  .install-card strong { display: block; font-size: 0.82rem; color: var(--text); margin-bottom: 3px; }
-  .install-card p { font-size: 0.74rem; line-height: 1.45; color: var(--text2); }
-  .install-dismiss {
-    min-width: 36px;
-    min-height: 36px;
-    margin: -6px -8px 0 0;
-    border: 0;
-    border-radius: 8px;
-    background: transparent;
-    color: var(--text3);
-    font: inherit;
-    cursor: pointer;
-  }
 
   .data-tools {
     display: flex;
@@ -1923,7 +1958,6 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   }
 
   @media (display-mode: standalone) {
-    .install-card { display: none !important; }
     header { padding-top: 4px; }
   }
 </style>
@@ -1932,15 +1966,6 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
 <div class="app" id="app">
 
-  <!-- iPhone install guidance (Safari only, hidden after install/dismiss) -->
-  <div class="install-card" id="installCard">
-    <div class="install-icon">📲</div>
-    <div class="install-copy">
-      <strong>Install Wavelength on your iPhone</strong>
-      <p>In Safari, tap Share <span aria-hidden="true">⤴</span>, then “Add to Home Screen.” It will open like a standalone app.</p>
-    </div>
-    <button class="install-dismiss" id="installDismiss" aria-label="Dismiss install tip">✕</button>
-  </div>
 
   <!-- Header -->
   <header>
@@ -2102,6 +2127,24 @@ function getThemeStatusCopy(preference, effectiveTheme) {
         <button class="theme-option" type="button" role="radio" data-theme-option="light" aria-checked="false">☀ Day</button>
         <button class="theme-option" type="button" role="radio" data-theme-option="dark" aria-checked="true">☾ Night</button>
       </div>
+    </section>
+
+    <section class="settings-card" id="nativeNotificationCard" aria-labelledby="nativeNotificationHeading" hidden>
+      <div class="native-notification-heading">
+        <div>
+          <h2 id="nativeNotificationHeading">Next Wave reminder</h2>
+          <p>A quiet reminder to open Wavelength for one useful next step.</p>
+        </div>
+        <label class="native-switch" for="nextWaveNotificationsEnabled">
+          <input id="nextWaveNotificationsEnabled" type="checkbox" role="switch" aria-label="Next Wave reminders">
+          <span class="native-switch-track" aria-hidden="true"></span>
+        </label>
+      </div>
+      <label class="settings-field" for="nextWaveNotificationTime">
+        <span>Reminder time</span>
+        <input id="nextWaveNotificationTime" type="time" value="09:00">
+      </label>
+      <p class="native-notification-status" id="nativeNotificationStatus" role="status" aria-live="polite">Off</p>
     </section>
 
     <section class="settings-card" aria-labelledby="backupHeading">
@@ -2988,17 +3031,35 @@ function scheduleNextWaveContextRefresh(now = new Date()) {
   nextWaveContextTimer = setTimeout(() => renderNextWave(new Date()), delay);
 }
 
-function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, completionCue = null, preferenceWindows = null) {
+function createNextWaveProgressCue(focusCue, habitId, direction, complete, now = new Date()) {
+  if (!focusCue || focusCue.habitId !== habitId || focusCue.dateKey !== dateKey(now) || direction <= 0 || complete) return null;
+  const focusAge = now.getTime() - Number(focusCue.focusedAt);
+  if (!Number.isFinite(focusCue.focusedAt) || focusAge < 0 || focusAge > 15 * 60 * 1000) return null;
+  return { habitId, dateKey:dateKey(now), actedAt:now.getTime() };
+}
+
+function isNextWaveProgressCueActive(progressCue, now = new Date()) {
+  if (!progressCue || progressCue.dateKey !== dateKey(now)) return false;
+  const age = now.getTime() - Number(progressCue.actedAt);
+  return typeof progressCue.habitId === 'string' && Number.isFinite(progressCue.actedAt) &&
+    age >= 0 && age <= 60 * 60 * 1000;
+}
+
+function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, completionCue = null, preferenceWindows = null, progressCue = null) {
   doneByDate = doneByDate || {};
   progressByDate = progressByDate || {};
   const key = dateKey(date);
   const dayDone = doneByDate[key] || {};
   const dayProgress = progressByDate[key] || {};
   const scheduled = getScheduledHabits(habits, date);
-  const openHabits = scheduled.filter(habit => {
+  const incompleteHabits = scheduled.filter(habit => {
     const progress = getHabitProgress(dayDone, dayProgress, habit);
     return !isHabitProgressComplete(habit, progress);
   });
+  const coolingDownHabitId = isNextWaveProgressCueActive(progressCue, date)
+    ? progressCue.habitId
+    : null;
+  const openHabits = incompleteHabits.filter(habit => habit.id !== coolingDownHabitId);
   const result = (habit, reason, eyebrow, detail) => ({
     habitId:habit.id,
     category:habit.cat,
@@ -3013,8 +3074,11 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
   if (scheduled.length === 0) {
     return { habitId:null, category:null, icon:'○', reason:'none', eyebrow:'A quiet day', title:'No habits are scheduled today.', detail:'Use the space in whatever way feels restorative.', action:null };
   }
-  if (openHabits.length === 0) {
+  if (incompleteHabits.length === 0) {
     return { habitId:null, category:null, icon:'✓', reason:'none', eyebrow:'You’re caught up', title:'Today’s habits are complete.', detail:'You followed through on every scheduled habit.', action:null };
+  }
+  if (openHabits.length === 0) {
+    return { habitId:null, category:null, icon:'≈', reason:'progress-pause', eyebrow:'Progress made', title:'Nice work taking a step.', detail:'Give it some room before the next nudge.', action:null };
   }
 
   const fitById = new Map(openHabits.map(habit => [habit.id,
@@ -3146,7 +3210,10 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
 
 function renderNextWave(now = new Date()) {
   const preferenceWindows = getPreferenceWindowsMap(HABITS);
-  const suggestion = getNextWaveSuggestion(HABITS, state.done || {}, state.progress || {}, now, rhythmWeatherData, recentCompletionCue, preferenceWindows);
+  const suggestion = getNextWaveSuggestion(
+    HABITS, state.done || {}, state.progress || {}, now, rhythmWeatherData,
+    recentCompletionCue, preferenceWindows, recentNextWaveProgressCue
+  );
   const icon = document.getElementById('nextWaveIcon');
   const eyebrow = document.getElementById('nextWaveEyebrow');
   const title = document.getElementById('nextWaveTitle');
@@ -3176,6 +3243,7 @@ function focusNextWaveHabit() {
   const habitId = document.getElementById('nextWaveAction')?.dataset.habitId;
   const habit = HABITS.find(item => item.id === habitId);
   if (!habit) return;
+  nextWaveFocusCue = { habitId, dateKey:dateKey(now), focusedAt:now.getTime() };
   if (markInsightViewed(insightHistory, habitId, now)) saveInsightHistory(now);
   setActiveView('home', false);
   currentCat = habit.cat;
@@ -3199,6 +3267,9 @@ let rhythmWeatherGeneration = 0;
 let rhythmWeatherReadyGeneration = -1;
 let rhythmWeatherController = null;
 let nextWaveContextTimer = null;
+let nextWaveFocusCue = null;
+let recentNextWaveProgressCue = null;
+let nextWaveProgressCueTimer = null;
 const COMPLETION_CUE_WINDOW_MS = 15 * 60 * 1000;
 let recentCompletionCue = null;
 let completionCueTimer = null;
@@ -3800,43 +3871,46 @@ function selectConditionInsightCard(cards, now = new Date()) {
   return eligible[Number(key) % eligible.length];
 }
 
-function getAdaptiveDayCard(history, now = new Date()) {
+function getWavesRiddenCard(history, now = new Date()) {
   if (!now || typeof now.getTime !== 'function' || !Number.isFinite(now.getTime())) return null;
   const todaySerial = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-  const eligible = Object.entries((history && history.days) || {})
+  const qualifyingDays = Object.entries((history && history.days) || {})
     .filter(([key]) => isValidDateKey(key))
-    .sort(([a], [b]) => b.localeCompare(a))
-    .find(([key, day]) => {
+    .sort(([left], [right]) => right.localeCompare(left))
+    .map(([key, day]) => {
       const [year, month, date] = key.split('-').map(Number);
       const age = Math.round((todaySerial - Date.UTC(year, month - 1, date)) / 86400000);
-      if (age < 1 || age > 30) return false;
-      const completedHabits = new Set((day.recommendations || [])
-        .filter(record => record.habitLabel && Number.isInteger(record.completedAt) && record.completedAt >= record.shownAt &&
-          day.completions && day.completions[record.habitId] === record.completedAt)
-        .map(record => record.habitId));
-      return completedHabits.size >= 2;
-    });
-  if (!eligible) return null;
-  const [key, day] = eligible;
-  const seenHabits = new Set();
-  const completedLabels = [];
-  (day.recommendations || []).forEach(record => {
-    if (!record.habitLabel || !Number.isInteger(record.completedAt) || record.completedAt < record.shownAt ||
-        seenHabits.has(record.habitId) || !day.completions || day.completions[record.habitId] !== record.completedAt) return;
-    seenHabits.add(record.habitId);
-    completedLabels.push(`“${record.habitLabel}”`);
-  });
-  const phrase = completedLabels.length === 2
-    ? `${completedLabels[0]} and ${completedLabels[1]}`
-    : `${completedLabels.slice(0, -1).join(', ')}, and ${completedLabels.at(-1)}`;
-  const [, month, date] = key.split('-').map(Number);
+      if (age < 0 || age > 29) return null;
+      const seenHabits = new Set();
+      const labels = [];
+      (day.recommendations || []).forEach(record => {
+        if (!CONTEXT_INSIGHT_REASONS.has(record.reason) || !record.habitLabel ||
+            !Number.isInteger(record.completedAt) || record.completedAt < record.shownAt ||
+            seenHabits.has(record.habitId) || !day.completions ||
+            day.completions[record.habitId] !== record.completedAt) return;
+        seenHabits.add(record.habitId);
+        labels.push(`“${record.habitLabel}”`);
+      });
+      return labels.length > 0 ? { key, labels } : null;
+    })
+    .filter(Boolean);
+  if (qualifyingDays.length === 0) return null;
+
+  const completed = qualifyingDays.reduce((total, day) => total + day.labels.length, 0);
+  const latest = qualifyingDays[0];
+  const latestPhrase = latest.labels.length === 1
+    ? latest.labels[0]
+    : latest.labels.length === 2
+      ? `${latest.labels[0]} and ${latest.labels[1]}`
+      : `${latest.labels.slice(0, -1).join(', ')}, and ${latest.labels.at(-1)}`;
+  const [, month, date] = latest.key.split('-').map(Number);
   const monthName = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][month - 1];
-  const countWord = completedLabels.length === 2 ? 'two' : String(completedLabels.length);
+  const days = qualifyingDays.length;
   return {
-    id:'adaptive-day', icon:'🏄', eyebrow:'Context-aware follow-through',
-    title:`You completed ${countWord} habits after Wavelength showed contextual cues on ${monthName} ${date}.`,
-    detail:`${phrase} were marked complete.`,
-    date:key, completed:completedLabels.length,
+    id:'waves-ridden', icon:'🏄', eyebrow:'Waves ridden',
+    title:`You followed through on ${days} ${days === 1 ? 'day' : 'days'} when conditions shaped your Next Wave.`,
+    detail:`${completed} suggested ${completed === 1 ? 'habit' : 'habits'} completed in the last 30 days. Most recently on ${monthName} ${date}: ${latestPhrase}.`,
+    days, completed, latestDate:latest.key,
   };
 }
 
@@ -4062,20 +4136,22 @@ function renderAdaptiveInsights(now = new Date()) {
     document.getElementById('conditionInsightDetail').textContent = selected.detail;
   }
 
-  const adaptiveDay = getAdaptiveDayCard(insightHistory, now);
-  adaptiveSection.hidden = !adaptiveDay;
-  if (adaptiveDay) {
-    document.getElementById('adaptiveDayIcon').textContent = adaptiveDay.icon;
-    document.getElementById('adaptiveDayEyebrow').textContent = adaptiveDay.eyebrow;
-    document.getElementById('adaptiveDayTitle').textContent = adaptiveDay.title;
-    document.getElementById('adaptiveDayDetail').textContent = adaptiveDay.detail;
+  const wavesRidden = getWavesRiddenCard(insightHistory, now);
+  adaptiveSection.hidden = !wavesRidden;
+  if (wavesRidden) {
+    document.getElementById('adaptiveDayIcon').textContent = wavesRidden.icon;
+    document.getElementById('adaptiveDayEyebrow').textContent = wavesRidden.eyebrow;
+    document.getElementById('adaptiveDayTitle').textContent = wavesRidden.title;
+    document.getElementById('adaptiveDayDetail').textContent = wavesRidden.detail;
   }
 
   const heading = document.getElementById('insightLearningHeading');
   const body = document.getElementById('insightLearningBody');
   const progress = document.getElementById('insightLearningProgress');
+  const maxDays = getMaxConditionDays(insightHistory, now);
+  const capped = Math.min(maxDays, 10);
 
-  if (selected || adaptiveDay) {
+  if (selected || wavesRidden) {
     // Some insights are showing — check if all condition patterns are eligible.
     if (allCards.length >= 6) {
       learning.hidden = true;
@@ -4083,21 +4159,162 @@ function renderAdaptiveInsights(now = new Date()) {
       learning.hidden = false;
       heading.textContent = 'More insights forming';
       body.textContent = 'Wavelength is learning how your habits respond to weather, air quality, and light. New patterns appear as conditions repeat in your history.';
-      progress.textContent = `${allCards.length} of 6 patterns taking shape`;
+      progress.textContent = `${capped} of 10 days with conditions met so far`;
     }
   } else {
     // No insights yet — show the learning state with a live progress count.
     learning.hidden = false;
     heading.textContent = 'Learning your rhythm';
     body.textContent = 'Wavelength is learning how your habits respond to weather, air quality, and light. After 10 days with the same condition, a pattern begins to appear.';
-    const maxDays = getMaxConditionDays(insightHistory, now);
-    const capped = Math.min(maxDays, 10);
     progress.textContent = `${capped} of 10 days with conditions met so far`;
   }
 }
 
+function normalizeNativeNotificationSettings(raw) {
+  const value = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const time = typeof value.time === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value.time)
+    ? value.time
+    : '09:00';
+  return { enabled:value.enabled === true, time };
+}
+
+function getNextWaveNotificationRequests(settings, habits, doneByDate, progressByDate, now = new Date(), horizonDays = 14) {
+  const normalized = normalizeNativeNotificationSettings(settings);
+  if (!normalized.enabled || !now || typeof now.getTime !== 'function' || !Number.isFinite(now.getTime())) return [];
+  const horizon = Number.isInteger(horizonDays) ? Math.max(1, Math.min(horizonDays, 31)) : 14;
+  const [hour, minute] = normalized.time.split(':').map(Number);
+  const requests = [];
+  for (let offset = 0; offset < horizon; offset++) {
+    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset, 12);
+    const stats = getDailyHabitStats(doneByDate || {}, habits || [], date, 5, progressByDate || {});
+    if (stats.scheduledCount === 0) continue;
+    const at = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute, 0, 0);
+    if (at.getTime() <= now.getTime()) continue;
+    if (offset === 0 && stats.doneCount === stats.scheduledCount) continue;
+    requests.push({
+      id:100000000 + Number(dateKey(date).replaceAll('-', '')),
+      title:'Your next wave is ready',
+      body:'Open Wavelength for one useful next step.',
+      schedule:{ at },
+      extra:{ route:'home' },
+    });
+  }
+  return requests;
+}
+
+const NATIVE_NOTIFICATION_STORAGE_KEY = 'wavelength_native_notifications';
+const NATIVE_NOTIFICATION_IDS_KEY = 'wavelength_native_notification_ids';
+let nativeNotificationSettings = normalizeNativeNotificationSettings(null);
+let nativeNotificationSyncTimer = null;
+
+function loadNativeNotificationSettings() {
+  try {
+    const raw = localStorage.getItem(NATIVE_NOTIFICATION_STORAGE_KEY);
+    return normalizeNativeNotificationSettings(raw ? JSON.parse(raw) : null);
+  } catch (e) {
+    return normalizeNativeNotificationSettings(null);
+  }
+}
+
+function saveNativeNotificationSettings() {
+  localStorage.setItem(NATIVE_NOTIFICATION_STORAGE_KEY, JSON.stringify(nativeNotificationSettings));
+}
+
+function setNativeNotificationStatus(message) {
+  const status = document.getElementById('nativeNotificationStatus');
+  if (status) status.textContent = message;
+}
+
+async function syncNativeNotifications(now = new Date()) {
+  const notifications = window.WavelengthNative?.notifications;
+  if (!window.WavelengthNative?.isNative || !notifications) return false;
+  let previousIds = [];
+  try {
+    const saved = JSON.parse(localStorage.getItem(NATIVE_NOTIFICATION_IDS_KEY) || '[]');
+    if (Array.isArray(saved)) previousIds = saved.filter(Number.isInteger);
+  } catch (e) {}
+  if (previousIds.length > 0) {
+    await notifications.cancel({ notifications:previousIds.map(id => ({ id })) });
+  }
+  localStorage.removeItem(NATIVE_NOTIFICATION_IDS_KEY);
+  if (!nativeNotificationSettings.enabled) {
+    setNativeNotificationStatus('Off');
+    return true;
+  }
+  const permission = await notifications.checkPermissions();
+  if (permission.display !== 'granted') {
+    setNativeNotificationStatus('Off in iOS Settings');
+    return false;
+  }
+  const requests = getNextWaveNotificationRequests(
+    nativeNotificationSettings, HABITS, state.done || {}, state.progress || {}, now, 14
+  );
+  if (requests.length > 0) {
+    await notifications.schedule({ notifications:requests });
+    localStorage.setItem(NATIVE_NOTIFICATION_IDS_KEY, JSON.stringify(requests.map(request => request.id)));
+  }
+  setNativeNotificationStatus(`Daily at ${formatSystemClockTime(nativeNotificationSettings.time)}`);
+  return true;
+}
+
+function queueNativeNotificationSync() {
+  if (!window.WavelengthNative?.isNative) return;
+  if (nativeNotificationSyncTimer !== null) clearTimeout(nativeNotificationSyncTimer);
+  nativeNotificationSyncTimer = setTimeout(() => {
+    nativeNotificationSyncTimer = null;
+    syncNativeNotifications().catch(() => setNativeNotificationStatus('Unable to schedule reminders'));
+  }, 100);
+}
+
+function setupNativeNotifications() {
+  const native = window.WavelengthNative;
+  if (!native?.isNative || !native.notifications) return;
+  const card = document.getElementById('nativeNotificationCard');
+  const enabled = document.getElementById('nextWaveNotificationsEnabled');
+  const time = document.getElementById('nextWaveNotificationTime');
+  card.hidden = false;
+  nativeNotificationSettings = loadNativeNotificationSettings();
+  enabled.checked = nativeNotificationSettings.enabled;
+  time.value = nativeNotificationSettings.time;
+  setNativeNotificationStatus(nativeNotificationSettings.enabled ? 'Checking permission…' : 'Off');
+
+  enabled.addEventListener('change', async () => {
+    if (enabled.checked) {
+      const permission = await native.notifications.requestPermissions();
+      if (permission.display !== 'granted') {
+        enabled.checked = false;
+        nativeNotificationSettings = { ...nativeNotificationSettings, enabled:false };
+        saveNativeNotificationSettings();
+        await syncNativeNotifications();
+        setNativeNotificationStatus('Off in iOS Settings');
+        return;
+      }
+    }
+    nativeNotificationSettings = { ...nativeNotificationSettings, enabled:enabled.checked };
+    saveNativeNotificationSettings();
+    await syncNativeNotifications();
+  });
+
+  time.addEventListener('change', async () => {
+    nativeNotificationSettings = normalizeNativeNotificationSettings({
+      ...nativeNotificationSettings,
+      time:time.value,
+    });
+    time.value = nativeNotificationSettings.time;
+    saveNativeNotificationSettings();
+    if (nativeNotificationSettings.enabled) await syncNativeNotifications();
+  });
+
+  native.notifications.addActionListener(() => {
+    setActiveView('home', false);
+    renderNextWave(new Date());
+  });
+  syncNativeNotifications().catch(() => setNativeNotificationStatus('Unable to schedule reminders'));
+}
+
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  queueNativeNotificationSync();
 }
 
 function saveOrder() {
@@ -4638,9 +4855,30 @@ function adjustMeasuredHabit(id, direction) {
   const wasComplete = !!(state.done[key] && state.done[key][id]);
   const change = updateMeasuredHabitState(state.done, state.progress, HABITS, now, id, direction);
   if (!change || !change.changed) return;
+  const progressCue = createNextWaveProgressCue(nextWaveFocusCue, id, direction, change.complete, now);
+  if (nextWaveFocusCue?.habitId === id) nextWaveFocusCue = null;
+  if (direction < 0 && recentNextWaveProgressCue?.habitId === id) {
+    recentNextWaveProgressCue = null;
+    if (nextWaveProgressCueTimer !== null) clearTimeout(nextWaveProgressCueTimer);
+    nextWaveProgressCueTimer = null;
+  } else if (progressCue) {
+    recentNextWaveProgressCue = progressCue;
+    if (nextWaveProgressCueTimer !== null) clearTimeout(nextWaveProgressCueTimer);
+    nextWaveProgressCueTimer = setTimeout(() => {
+      recentNextWaveProgressCue = null;
+      nextWaveProgressCueTimer = null;
+      renderNextWave(new Date());
+    }, 60 * 60 * 1000 + 50);
+  }
   const habit = HABITS.find(item => item.id === id);
   const display = getMeasurementDisplay(habit, change.progress);
   const stats = getDailyHabitStats(state.done || {}, HABITS, now, 5, state.progress || {});
+  if (change.complete && !wasComplete) {
+    if (id === 'floss') clearRecentCompletionCue();
+    else setRecentCompletionCue(id, now);
+  } else if (!change.complete && wasComplete) {
+    clearRecentCompletionCue(id);
+  }
   recordInsightCompletion(insightHistory, id, now, change.complete);
   saveState();
   saveInsightHistory(now);
@@ -5367,22 +5605,9 @@ function saveManageModal() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// IPHONE INSTALL, OFFLINE, AND DATA TRANSFER
+// OFFLINE AND DATA TRANSFER
 // ═══════════════════════════════════════════════════════════════════
 const BACKUP_VERSION = 5;
-const INSTALL_DISMISS_KEY = 'wavelength_install_tip_dismissed';
-
-function setupInstallTip() {
-  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-  const dismissed = localStorage.getItem(INSTALL_DISMISS_KEY) === '1';
-  const card = document.getElementById('installCard');
-  if (isIOS && !isStandalone && !dismissed) card.classList.add('show');
-  document.getElementById('installDismiss').addEventListener('click', () => {
-    localStorage.setItem(INSTALL_DISMISS_KEY, '1');
-    card.classList.remove('show');
-  });
-}
 
 function setupOfflineStatus() {
   const pill = document.getElementById('offlinePill');
@@ -5636,8 +5861,8 @@ function init() {
     e.target.value = '';
   });
 
-  setupInstallTip();
   setupOfflineStatus();
+  setupNativeNotifications();
 
   renderInsights(now);
 

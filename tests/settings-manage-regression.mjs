@@ -55,6 +55,8 @@ for (const [label, htmlPath] of builds) {
     `${label}: dock supports three equal destinations`);
   assert.match(html, /id="exportBtn"[\s\S]*id="importBtn"[\s\S]*id="importFile"/,
     `${label}: Settings owns backup and import controls`);
+  assert.doesNotMatch(html, /installCard|install-card|setupInstallTip|INSTALL_DISMISS_KEY|Install Wavelength on your iPhone/,
+    `${label}: the retired install prompt has no markup, styling, or runtime setup`);
   const modalMarkup = html.slice(modalStart, html.indexOf('<script>', modalStart));
   assert.doesNotMatch(modalMarkup, /appearance-tools|data-tools|exportBtn|importBtn/,
     `${label}: Manage contains habit editing only`);

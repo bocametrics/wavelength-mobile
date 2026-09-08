@@ -9,6 +9,7 @@ This folder is the iPhone-first, installable version of Wavelength. Shared behav
 - Web App Manifest and Apple Home Screen icon
 - Standalone/full-screen presentation when installed
 - Offline app shell via service worker
+- Capacitor 8 iOS shell with the official Local Notifications bridge, a Wavelength app icon, and a branded launch screen
 - Fixed **Home / Insights / Settings** dock with iPhone safe-area clearance
 - First Name, Appearance, Backup/Share, and Import controls on the dedicated **Settings** page
 - Per-habit Monday–Sunday schedules under **Manage Habits**, with all seven days selected by default
@@ -76,7 +77,7 @@ Rhythm anchors do not change streaks, daily targets, or completion logic. They r
 
 The Home view begins with a single **Your next wave** recommendation in the former Streak-card position. It considers only habits that are scheduled today and not yet complete, then combines their state with the current time and available environmental readings. The priority order is: adapt activity when AQI is unfavorable, protect against active UV, use time-sensitive daylight, surface a favorable outdoor window, reinforce hydration in heat, then offer one time-appropriate open habit. When every scheduled habit is complete, the card changes to a calm completion message.
 
-Every habit-backed recommendation keeps the current habit title as its stable identity. The eyebrow names the recommendation state, while the detail explains timing, conditions, or an adapted form. For example, **Outdoor walk or movement** remains the title while `Suggested now` and `Good air quality · AQI 43` explain why it fits. This also preserves generated parameter titles such as **Drink 24 oz water**. **View habit** selects the relevant category, scrolls to that habit, and briefly highlights it without changing completion. Completing or updating a habit immediately advances the recommendation. If location is denied or data is unavailable, the card still chooses a helpful habit-based fallback rather than showing a technical weather error.
+Every habit-backed recommendation keeps the current habit title as its stable identity. The eyebrow names the recommendation state, while the detail explains timing, conditions, or an adapted form. For example, **Outdoor walk or movement** remains the title while `Suggested now` and `Good air quality · AQI 43` explain why it fits. This also preserves generated parameter titles such as **Drink 24 oz water**. **View habit** selects the relevant category, scrolls to that habit, and briefly highlights it without changing completion. For Count and Amount habits, opening a recommendation and then making a positive incomplete increment gives that habit a 60-minute quiet cooldown. Wavelength rotates to another honest fit when one exists, or acknowledges the step when it does not. The habit remains incomplete until its target is reached. If location is denied or data is unavailable, the card still chooses a helpful habit-based fallback rather than showing a technical weather error.
 
 AQI health guidance always follows the fixed US AQI bands: a custom movement threshold may be stricter than 100, but it can never loosen the outdoor-opportunity safety ceiling above 100. An explicit `rhythm: null` suppresses environmental opportunity copy for that habit, including sunrise-specific daylight advice. Wavelength schedules a refresh just after local midnight and also checks the date on `visibilitychange` and `pageshow`, so an installed app resumed after sleeping does not retain yesterday’s habits or recommendation.
 
@@ -88,7 +89,7 @@ The fixed bottom dock separates action from reflection:
 
 - **Home** contains the greeting, Your next wave, category controls, today's habits, and Reset today.
 - **Insights** begins with Streak/Today completion, followed by This week and a rolling Last 30 days trend. Evidence-qualified adaptive cards appear beneath those progress summaries.
-- **Settings** contains the local First Name field, Appearance, Backup/Share, and Import. The name is used only in the Home greeting; an empty field displays **Friend** without storing that fallback as user data.
+- **Settings** contains the local First Name field, Appearance, Backup/Share, and Import. Inside the Capacitor iOS app, it also contains an opt-in **Next Wave reminder** with a user-selected time. The name is used only in the Home greeting; an empty field displays **Friend** without storing that fallback as user data.
 
 The three dock buttons explicitly expose `aria-current="page"`, meet the 48px touch-target floor, and reserve enough bottom and safe-area space that the last card remains scrollable above the dock.
 
@@ -112,7 +113,7 @@ Wavelength does not reconstruct past conditions. After the forecast and AQI requ
 
 Condition cards remain hidden until there are at least 10 distinct relevant days. Eligible cards rotate one at a time and always disclose the exact numerator and denominator, for example **8 of 10 high-UV days met with protection** plus **Observed in your history · Based on 10 recorded high-UV days**. Current card families are Sun-wise, Heatwise, Morning light, and literal poor-air movement completion. None claims that movement occurred indoors or that a checkbox produced a medical outcome.
 
-**A flexible win** may appear sooner when one of the last 30 days contains at least two distinct verified context-aware completions. It names the actions that stayed on track without assigning a hidden composite score. Rescue-swap or “waves ridden” claims are intentionally deferred until Wavelength can record explicit approved alternatives rather than infer substitutions from coincidental completions.
+**🏄 Waves ridden** evolves the earlier one-day follow-through story into a rolling 30-day report. Its headline counts distinct days on which at least one prospectively recorded context-aware Next Wave suggestion was completed after it was shown. The detail counts verified suggested habits and names the most recent date and actions. It can appear after one verified completion, counts a busy day only once in the headline, and never infers that one habit substituted for another. The same evidence ledger powers condition learning and Waves ridden, but neither report reconstructs past weather or claims a medical outcome.
 
 Mobile backups now use version 5 and carry the normalized insight ledger, structured system-habit parameters, optional First Name, and per-habit preferred-time windows. Version-1 backups remain importable and begin with no reconstructed historical evidence; version-2 through version-4 backups retain their validated insight ledger, default to an empty stored name, and arrive with no preference windows. All imported evidence is validated against habit completion history before any storage write.
 
@@ -157,6 +158,8 @@ node tests/navigation-insights-regression.mjs
 node tests/next-wave-regression.mjs
 node tests/settings-manage-regression.mjs
 node tests/preference-windows-regression.mjs
+node tests/native-notifications-regression.mjs
+node tests/capacitor-shell-regression.mjs
 ```
 
 All cross-build suites use the tracked desktop fixture at `tests/fixtures/friday_app_2026-07-12.html`, so they run from a clean repository checkout. When shared behavior changes, update both the external standalone desktop file and this byte-identical fixture.
@@ -166,6 +169,26 @@ Custom habit overrides are limited to text, note, typed system parameters, valid
 ## Requirement for iPhone installation
 
 The folder must be published at an **HTTPS URL**. Opening a Windows `file://` path or OneDrive filesystem path on an iPhone cannot provide a proper installable/offline web app.
+
+## Native iOS shell and reminders
+
+The browser app remains Wavelength's source of truth. The optional native shell wraps the same tested HTML, CSS, and JavaScript in Capacitor 8 with the identifier `com.bocametrics.wavelength`.
+
+```bash
+npm install
+npm run native:web
+npm run native:sync
+```
+
+`native:web` copies the app shell into generated `www/` files and bundles only the small native bridge. `native:sync` updates `ios/App/`, including the official Capacitor Local Notifications package. The iOS project is a Swift Package Manager project and opens in Xcode on macOS.
+
+The first native capability is a calm **Next Wave reminder**. It is off by default, requests iOS notification permission only after the user enables it, and schedules a rolling 14-day horizon at the selected local time. It omits today after the time has passed or when today's scheduled habits are already complete. Tapping the notification returns to Home, where Next Wave is recomputed from local state. The reminder contains no habit names, weather readings, calendar details, health data, or location.
+
+Reminder preference and iOS permission are device-local. They are deliberately excluded from version-5 backups, so restoring a backup never silently enables notifications on another device. Safari/Home Screen local storage also does not automatically move into the Capacitor web view; use **Backup / Share** and **Import backup** for a deliberate migration.
+
+The project includes the native location-purpose string needed for Wavelength's existing on-device weather, air-quality, and light context. It does not yet request calendar access, HealthKit access, or add a WidgetKit extension. EventKit and a Next Wave widget remain separate, privacy- and Xcode-validated milestones.
+
+This Windows/WSL checkout can generate and synchronize the Xcode project, run native-bridge regression coverage, and run mock-bridge browser tests. Building, simulator/device testing, signing, archiving, and App Store submission require macOS, Xcode, and Apple Developer signing.
 
 ## Once published
 
