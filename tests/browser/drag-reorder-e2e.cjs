@@ -63,6 +63,24 @@ let browser;
   });
   assert.equal(dragHandleVisible, true, 'drag handle is visible in reorder mode');
 
+  // Every reorder row must retain the same icon, checkbox, text, and grip columns.
+  // A flexible checkbox column makes variable-width habit text stagger horizontally.
+  const rowAlignment = await page.evaluate(() => {
+    const selectors = ['.habit-icon', '.checkbox', '.habit-body', '.drag-handle'];
+    const rows = [...document.querySelectorAll('.habit')].map(habit => Object.fromEntries(
+      selectors.map(selector => [selector, Math.round(habit.querySelector(selector).getBoundingClientRect().left)])
+    ));
+    const spreads = Object.fromEntries(selectors.map(selector => {
+      const positions = rows.map(row => row[selector]);
+      return [selector, Math.max(...positions) - Math.min(...positions)];
+    }));
+    return { rows, spreads };
+  });
+  Object.entries(rowAlignment.spreads).forEach(([selector, spread]) => {
+    assert.ok(spread <= 1,
+      `${IS_MOBILE ? 'mobile' : 'desktop'} reorder ${selector} left edges must align; spread=${spread}px rows=${JSON.stringify(rowAlignment.rows)}`);
+  });
+
   // Simulate a drag and leave the ghost lifted for geometry and screenshot evidence.
   const dragResult = await page.evaluate(async () => {
     const handle = document.querySelector('.drag-handle');
