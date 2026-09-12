@@ -24,6 +24,8 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Wavelength uses your approximate location to tailor weather, air-quality, and light recommendations.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Wavelength uses your approximate location to tailor weather, air-quality, and light recommendations.</string>
 	<key>UIApplicationSceneManifest</key>

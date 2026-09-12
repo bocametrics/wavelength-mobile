@@ -9,7 +9,7 @@ This folder is the iPhone-first, installable version of Wavelength. Shared behav
 - Web App Manifest and Apple Home Screen icon
 - Standalone/full-screen presentation when installed
 - Offline app shell via service worker
-- Capacitor 8 iOS shell with the official Local Notifications bridge, a Wavelength app icon, and a branded launch screen
+- Capacitor 8 iOS shell with official Local Notifications and Geolocation bridges, a Wavelength app icon, and a branded launch screen
 - Fixed **Home / Insights / Settings** dock with iPhone safe-area clearance
 - First Name, Appearance, Backup/Share, and Import controls on the dedicated **Settings** page
 - Per-habit Monday–Sunday schedules under **Manage Habits**, with all seven days selected by default
@@ -158,6 +158,7 @@ node tests/navigation-insights-regression.mjs
 node tests/next-wave-regression.mjs
 node tests/settings-manage-regression.mjs
 node tests/preference-windows-regression.mjs
+node tests/native-geolocation-regression.mjs
 node tests/native-notifications-regression.mjs
 node tests/capacitor-shell-regression.mjs
 ```
@@ -180,15 +181,19 @@ npm run native:web
 npm run native:sync
 ```
 
-`native:web` copies the app shell into generated `www/` files and bundles only the small native bridge. `native:sync` updates `ios/App/`, including the official Capacitor Local Notifications package. The iOS project is a Swift Package Manager project and opens in Xcode on macOS.
+`native:web` copies the app shell into generated `www/` files and bundles only the small native bridge. `native:sync` updates `ios/App/`, including the official Capacitor Local Notifications and Geolocation packages. The iOS project uses Swift Package Manager and opens in Xcode on macOS. Its checked-in `Package.resolved` locks remotely resolved Swift dependencies for reproducible builds.
 
 The first native capability is a calm **Next Wave reminder**. It is off by default, requests iOS notification permission only after the user enables it, and schedules a rolling 14-day horizon at the selected local time. It omits today after the time has passed or when today's scheduled habits are already complete. Tapping the notification returns to Home, where Next Wave is recomputed from local state. The reminder contains no habit names, weather readings, calendar details, health data, or location.
 
 Reminder preference and iOS permission are device-local. They are deliberately excluded from version-5 backups, so restoring a backup never silently enables notifications on another device. Safari/Home Screen local storage also does not automatically move into the Capacitor web view; use **Backup / Share** and **Import backup** for a deliberate migration.
 
-The project includes the native location-purpose string needed for Wavelength's existing on-device weather, air-quality, and light context. It does not yet request calendar access, HealthKit access, or add a WidgetKit extension. EventKit and a Next Wave widget remain separate, privacy- and Xcode-validated milestones.
+Inside Capacitor, Wavelength requests approximate location through the official native Geolocation bridge. This produces one Wavelength-branded iOS prompt and avoids the second `localhost` website prompt created by `navigator.geolocation` inside a web view. The browser and installed PWA retain their normal web-geolocation fallback. Denial or native failure remains location-neutral, and coordinates are not added to backups or insight evidence.
 
-This Windows/WSL checkout can generate and synchronize the Xcode project, run native-bridge regression coverage, and run mock-bridge browser tests. Building, simulator/device testing, signing, archiving, and App Store submission require macOS, Xcode, and Apple Developer signing.
+The iPhone 17e simulator acceptance pass compiles and launches the app with Xcode, verifies native location context without a website prompt, and exercises real notification permission, background delivery, and tap-to-Home routing. The delivered reminder remains generic and privacy-preserving. Physical-device signing, lock-screen delivery, and TestFlight still require an Apple Developer team and an available iPhone.
+
+Wavelength does not request calendar or HealthKit access and does not include a WidgetKit extension. EventKit and a Next Wave widget remain separate privacy and Xcode milestones.
+
+This Windows/WSL checkout can generate and synchronize the Xcode project, run native-bridge regression coverage, and run the 390px mock-bridge browser flows in `tests/browser/native-geolocation-e2e.cjs` and `tests/browser/native-notifications-e2e.cjs`. Building and simulator testing require macOS and Xcode. Physical-device testing, archiving, and App Store submission also require Apple Developer signing.
 
 ## Once published
 

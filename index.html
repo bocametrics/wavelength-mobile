@@ -2863,37 +2863,67 @@ function cacheLoc(loc) {
   try { localStorage.setItem(LOC_CACHE_KEY, JSON.stringify({ ...normalized, ts: Date.now() })); } catch (e) {}
 }
 
+// Resolve one coordinate snapshot without crossing native and browser permission models.
+async function getCurrentCoordinates(nativeBridge = window.WavelengthNative, browserGeolocation = navigator.geolocation) {
+  if (nativeBridge?.isNative) {
+    const geolocation = nativeBridge.geolocation;
+    if (!geolocation) return null;
+    try {
+      let permission = await geolocation.checkPermissions();
+      const granted = value => value?.location === 'granted' || value?.coarseLocation === 'granted';
+      if (!granted(permission)) {
+        permission = await geolocation.requestPermissions({ permissions:['coarseLocation'] });
+      }
+      if (!granted(permission)) return null;
+      const position = await geolocation.getCurrentPosition({
+        enableHighAccuracy:false,
+        timeout:6000,
+        maximumAge:300000,
+      });
+      return normalizeLocation({ lat:position?.coords?.latitude, lon:position?.coords?.longitude, city:'' });
+    } catch (e) {
+      return null;
+    }
+  }
+  return new Promise(resolve => {
+    if (!browserGeolocation) { resolve(null); return; }
+    try {
+      browserGeolocation.getCurrentPosition(
+        position => resolve(normalizeLocation({
+          lat:position?.coords?.latitude,
+          lon:position?.coords?.longitude,
+          city:'',
+        })),
+        () => resolve(null),
+        { timeout:6000, maximumAge:300000 }
+      );
+    } catch (e) {
+      resolve(null);
+    }
+  });
+}
+
 // Resolve the user's actual location. Denial or failure stays location-neutral.
 function getLocation() {
   const cached = cachedLoc();
   if (cached) return Promise.resolve(cached);
-  return new Promise(resolve => {
-    if (!navigator.geolocation) { resolve(null); return; }
-    try {
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          const coordinates = normalizeLocation({ lat:pos.coords.latitude, lon:pos.coords.longitude, city:'' });
-          if (!coordinates) { resolve(null); return; }
-          fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coordinates.lat}&longitude=${coordinates.lon}&localityLanguage=en`)
-            .then(r => {
-              if (!r.ok) throw new Error('Reverse-geocode request failed');
-              return r.json();
-            })
-            .then(d => {
-              const city = typeof (d.locality || d.city) === 'string' ? (d.locality || d.city).trim() : '';
-              const loc = { ...coordinates, city };
-              cacheLoc(loc);
-              resolve(loc);
-            })
-            .catch(() => {
-              cacheLoc(coordinates);
-              resolve(coordinates);
-            });
-        },
-        () => resolve(null),
-        { timeout:6000, maximumAge:300000 }
-      );
-    } catch (e) { resolve(null); }
+  return getCurrentCoordinates().then(coordinates => {
+    if (!coordinates) return null;
+    return fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coordinates.lat}&longitude=${coordinates.lon}&localityLanguage=en`)
+      .then(response => {
+        if (!response.ok) throw new Error('Reverse-geocode request failed');
+        return response.json();
+      })
+      .then(data => {
+        const city = typeof (data.locality || data.city) === 'string' ? (data.locality || data.city).trim() : '';
+        const location = { ...coordinates, city };
+        cacheLoc(location);
+        return location;
+      })
+      .catch(() => {
+        cacheLoc(coordinates);
+        return coordinates;
+      });
   });
 }
 

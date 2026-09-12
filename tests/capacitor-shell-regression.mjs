@@ -26,6 +26,7 @@ const pkg = JSON.parse(read('package.json'));
 assert.equal(pkg.private, true);
 assert.deepEqual(pkg.dependencies, {
   '@capacitor/core':'8.5.1',
+  '@capacitor/geolocation':'8.2.2',
   '@capacitor/ios':'8.5.1',
   '@capacitor/local-notifications':'8.3.1',
 });
@@ -43,11 +44,12 @@ assert.equal(config.appId, 'com.bocametrics.wavelength');
 assert.equal(config.appName, 'Wavelength');
 assert.equal(config.webDir, 'www');
 assert.deepEqual(config.plugins?.LocalNotifications?.presentationOptions, ['banner', 'list', 'sound']);
-assert.match(read('sw.js'), /const CACHE_NAME = 'wavelength-mobile-v30';/,
+assert.match(read('sw.js'), /const CACHE_NAME = 'wavelength-mobile-v31';/,
   'the PWA cache advances with the native-shell and product changes');
 
 const bridge = read('native/native-bridge.js');
 assert.match(bridge, /from '@capacitor\/core'/);
+assert.match(bridge, /from '@capacitor\/geolocation'/);
 assert.match(bridge, /from '@capacitor\/local-notifications'/);
 assert.match(bridge, /Capacitor\.isNativePlatform\(\)/);
 assert.match(bridge, /checkPermissions/);
@@ -74,8 +76,10 @@ assert.match(read('ios/.gitignore'), /^App\/App\/public$/m);
 const project = read('ios/App/App.xcodeproj/project.pbxproj');
 assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.bocametrics\.wavelength;/);
 const packageSwift = read('ios/App/CapApp-SPM/Package.swift');
+assert.match(packageSwift, /CapacitorGeolocation/);
 assert.match(packageSwift, /CapacitorLocalNotifications/);
 const info = read('ios/App/App/Info.plist');
+assert.match(info, /<key>NSLocationAlwaysAndWhenInUseUsageDescription<\/key>\s*<string>Wavelength uses your approximate location to tailor weather, air-quality, and light recommendations\.<\/string>/);
 assert.match(info, /<key>NSLocationWhenInUseUsageDescription<\/key>\s*<string>Wavelength uses your approximate location to tailor weather, air-quality, and light recommendations\.<\/string>/);
 
 assert.notEqual(
