@@ -72,14 +72,14 @@ for (const [label, htmlPath] of builds) {
   const publicCopy = habits.map(habit => `${habit.text} ${habit.note}`).join(' ');
   assert.doesNotMatch(publicCopy, /Florida|WPB|West Palm|coloring book|markets, bio/i, `${label}: default habit copy is location and project agnostic`);
   assert.equal(byId.beach.text, 'Outdoor walk or movement', `${label}: the beach-specific habit becomes universally usable`);
-  assert.equal(byId.medication.note, 'Follow your prescribed timing and instructions', `${label}: medication copy never assumes it should be taken with food`);
+  assert.equal(byId.medication.note, 'Follow your prescribed directions', `${label}: medication copy stays concise and defers to prescribed directions`);
   assert.equal(byId.supplements.cat, 'fuel', `${label}: supplements live in Fuel`);
   assert.equal(byId.supplements.text, 'Take supplements', `${label}: supplements are distinct from prescribed medication`);
-  assert.equal(byId.supplements.note, 'Follow your personal supplement routine', `${label}: supplements avoid dosage or medical-timing advice`);
+  assert.equal(byId.supplements.note, 'Follow your usual routine', `${label}: supplements avoid dosage or medical-timing advice`);
   assert.equal(byId.supplements.activeFrom, '2026-08-28', `${label}: supplements do not rewrite pre-release history`);
   assert.doesNotMatch(`${byId.supplements.text} ${byId.supplements.note}`, /medication|prescrib/i, `${label}: supplement copy stays distinct from medicine`);
   assert.ok(habits.every(habit => habit.text.length <= 48), `${label}: default titles fit the concise Manage limit`);
-  assert.ok(habits.every(habit => habit.note.length <= 80), `${label}: default descriptions fit the concise Manage limit`);
+  assert.ok(habits.every(habit => habit.note.length <= 42), `${label}: default descriptions fit the concise Manage limit`);
   assert.equal(byId.sleep.note, 'Protect at least 7 hours for sleep', `${label}: sleep copy uses a general adult minimum rather than local sunrise`);
   assert.equal(byId.gratitude.note, 'Notice what went well today', `${label}: gratitude copy avoids an unsupported neurological claim`);
 

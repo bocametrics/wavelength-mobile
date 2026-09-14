@@ -1267,18 +1267,23 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     bottom: calc(var(--dock-space) + max(12px, env(safe-area-inset-bottom)));
     left: 50%;
     transform: translateX(-50%) translateY(80px);
+    width: max-content;
+    max-width: calc(100vw - 28px);
     background: var(--surface2);
     border: 1px solid var(--accent-border);
     border-radius: var(--radius-sm);
     padding: 12px 22px;
     font-size: 0.85rem;
+    font-weight: 500;
+    line-height: 1.35;
     color: var(--accent);
     box-shadow: var(--shadow-toast);
     opacity: 0;
     transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
     pointer-events: none;
     z-index: 100;
-    white-space: nowrap;
+    white-space: normal;
+    text-align: center;
   }
 
   .toast.show {
@@ -1498,7 +1503,8 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     box-shadow: inset 0 0 0 1px var(--danger-border);
   }
 
-  .edit-habit.measurement-error {
+  .edit-habit.measurement-error,
+  .edit-habit.note-error {
     border-radius: 10px;
     background: var(--danger-soft);
     box-shadow: inset 0 0 0 1px var(--danger-border);
@@ -1594,6 +1600,26 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   .edit-habit .eh-fields .eh-row input:first-child {
     flex: 1;
   }
+
+  .eh-note-row .eh-note {
+    flex: 1 1 calc(100% - 54px);
+    min-width: 0;
+  }
+
+  .eh-note-row .eh-param-field {
+    flex: 1 0 100%;
+  }
+
+  .eh-note-count {
+    flex: 0 0 auto;
+    min-width: 46px;
+    color: var(--text3);
+    font-size: 0.7rem;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .eh-note-count.over-limit { color: var(--rose); }
 
   .edit-habit .eh-fields .eh-row select {
     width: auto;
@@ -1936,6 +1962,76 @@ function getThemeStatusCopy(preference, effectiveTheme) {
       font-size: 0.72rem;
     }
 
+    /* Mobile-readable type scale */
+    .date-display .day { font-size: 1rem; line-height: 1.25; }
+    .date-display .label { color: var(--text2); font-size: 0.75rem; font-weight: 500; line-height: 1.2; }
+    .greeting h1 { font-size: 1.375rem; line-height: 1.25; }
+    .greeting p { font-size: 0.875rem; line-height: 1.5; }
+    .insights h3,
+    .section-title h2 { font-size: 0.875rem; line-height: 1.25; }
+    .section-title .count { color: var(--text2); font-size: 0.8125rem; font-weight: 500; line-height: 1.3; }
+    .next-wave-eyebrow { font-size: 0.75rem; line-height: 1.3; }
+    .next-wave-title { font-size: 1.0625rem; line-height: 1.3; }
+    .next-wave-detail { font-size: 0.875rem; line-height: 1.45; }
+    .next-wave-action { font-size: 0.8125rem; line-height: 1.2; }
+    .cat-tab { font-size: 0.875rem; font-weight: 500; line-height: 1.2; }
+    .manage-btn { font-size: 0.78125rem; font-weight: 500; line-height: 1.3; }
+    .reset-btn { color: var(--text2); font-size: 0.78125rem; font-weight: 500; line-height: 1.3; }
+    .reorder-hint,
+    .completed-divider { color: var(--text2); font-size: 0.75rem; line-height: 1.3; opacity: 1; }
+    .habit-text { font-size: 1rem; line-height: 1.25; }
+    .habit-note { color: var(--text2); font-size: 0.875rem; line-height: 1.3; }
+    .rhythm-anchor-label { font-size: 0.8125rem; font-weight: 500; line-height: 1.25; opacity: 1; }
+    .progress-chip { font-size: 0.75rem; font-weight: 500; line-height: 1.2; }
+    .progress-step-copy { color: var(--text2); font-size: 0.75rem; font-weight: 500; line-height: 1.2; }
+    .habit-badge { color: var(--text2); font-size: 0.6875rem; font-weight: 500; line-height: 1.2; }
+
+    .insights-intro h1,
+    .settings-intro h1 { font-size: 1.375rem; line-height: 1.25; }
+    .insights-intro p,
+    .settings-intro p { font-size: 0.875rem; line-height: 1.5; }
+    .streak-info .label { font-size: 0.8125rem; line-height: 1.3; }
+    .streak-best,
+    .streak-info .sub { color: var(--text2); font-size: 0.75rem; line-height: 1.35; }
+    .weekly-header h3 { font-size: 0.8125rem; line-height: 1.25; }
+    .weekly-header span { color: var(--text2); font-size: 0.8125rem; line-height: 1.3; }
+    .week-day .label { color: var(--text2); font-size: 0.75rem; font-weight: 600; line-height: 1.2; }
+    .week-day .count { color: var(--text2); font-size: 0.6875rem; line-height: 1.2; }
+    .trend-axis-label,
+    .trend-date-label { fill: var(--text2); font-size: 11px; }
+    .insight-section-label { color: var(--text2); font-size: 0.75rem; line-height: 1.3; }
+    .report-card-eyebrow { font-size: 0.75rem; line-height: 1.3; }
+    .report-card-title { font-size: 1rem; line-height: 1.4; }
+    .report-card-detail { font-size: 0.875rem; line-height: 1.5; }
+    .insight-learning strong { font-size: 0.875rem; line-height: 1.3; }
+    .insight-learning p { font-size: 0.84375rem; line-height: 1.5; }
+    .insight-progress { color: var(--text2); font-size: 0.75rem; line-height: 1.4; }
+
+    .settings-card h2,
+    .appearance-heading strong { font-size: 0.9375rem; line-height: 1.3; }
+    .settings-field { font-size: 0.875rem; line-height: 1.35; }
+    .theme-status { color: var(--text2); font-size: 0.78125rem; line-height: 1.4; }
+    .theme-option { font-size: 0.875rem; line-height: 1.2; }
+    .native-notification-heading p { font-size: 0.8125rem; line-height: 1.45; }
+    .native-notification-status { color: var(--text2); font-size: 0.78125rem; line-height: 1.4; }
+    .dock-button { color: var(--text2); font-size: 0.8125rem; line-height: 1.2; }
+
+    .modal-header h3 { font-size: 1rem; line-height: 1.3; }
+    .manage-all-link { font-size: 0.875rem; line-height: 1.3; }
+    .eh-system-title { font-size: 0.9375rem; line-height: 1.3; }
+    .eh-param-field,
+    .eh-preference-field { color: var(--text2); font-size: 0.8125rem; line-height: 1.35; }
+    .eh-measurement-label,
+    .eh-rhythm-label,
+    .eh-rhythm-field,
+    .eh-schedule-label { color: var(--text2); font-size: 0.75rem; font-weight: 500; line-height: 1.35; }
+    .eh-measure-field { color: var(--text2); font-size: 0.71875rem; font-weight: 500; line-height: 1.3; }
+    .eh-day { font-size: 0.71875rem; line-height: 1; }
+    .eh-note-count { color: var(--text2); font-size: 0.75rem; line-height: 1.3; }
+    .modal-btn { font-size: 0.875rem; font-weight: 500; line-height: 1.2; }
+    .toast { font-size: 0.875rem; line-height: 1.35; }
+    .offline-pill { font-size: 0.75rem; font-weight: 500; line-height: 1.3; }
+
     .modal-overlay {
       align-items: flex-end;
       padding: 0;
@@ -2199,28 +2295,30 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 // ═══════════════════════════════════════════════════════════════════
 const DEFAULT_HABITS = [
   { id:'wake',       cat:'morning',  icon:'⏰', text:'Wake at 6:30 AM',                    note:'Keep the wake time consistent', weight:2, context:{ recommend:false } },
-  { id:'daylight',   cat:'morning',  icon:'🌤️', text:'Get outdoor light after waking',       note:'Step outside near the start of your day', weight:1, activeFrom:'2026-08-28', rhythm:{ type:'sunrise' }, context:{ start:360, idealStart:390, urgencyStart:540, end:660, setting:'outdoor', daylight:'required', duration:10 } },
-  { id:'affirm',     cat:'morning',  icon:'💬', text:'Start the day with an affirmation',    note:'Set a positive tone before the day begins', weight:1, context:{ start:360, idealStart:420, end:660, setting:'indoor', duration:2 } },
-  { id:'hydrate',    cat:'morning',  icon:'💧', text:'Drink 16 oz water',                    note:'Water first; adapt for heat and exertion', weight:2, rhythm:{ type:'temp-above', threshold:85, note:'Drink extra water' }, context:{ start:300, idealStart:360, end:1260, setting:'either', duration:2 } },
+  { id:'daylight',   cat:'morning',  icon:'🌤️', text:'Get outdoor light after waking',       note:'Step outside for 10 minutes', weight:1, activeFrom:'2026-08-28', rhythm:{ type:'sunrise' }, context:{ start:360, idealStart:390, urgencyStart:540, end:660, setting:'outdoor', daylight:'required', duration:10 } },
+  { id:'affirm',     cat:'morning',  icon:'💬', text:'Start the day with an affirmation',    note:'Choose words that encourage you', weight:1, context:{ start:360, idealStart:420, end:660, setting:'indoor', duration:2 } },
+  { id:'hydrate',    cat:'morning',  icon:'💧', text:'Drink 16 oz water',                    note:'Adjust for heat and activity', weight:2, rhythm:{ type:'temp-above', threshold:85, note:'Drink extra water' }, context:{ start:300, idealStart:360, end:1260, setting:'either', duration:2 } },
   { id:'stretch',    cat:'morning',  icon:'🧘', text:'10-min mobility',                      note:'Sun salutation or joint circles', weight:1, context:{ start:360, idealStart:420, idealEnd:720, lateStart:1230, end:1290, setting:'indoor', duration:10, flexibleDetail:'A mobility session can still work later in the day.', lateEyebrow:'Keep it gentle', lateDetail:'A lighter session can still work tonight.' } },
   { id:'beach',      cat:'movement', icon:'🌊', text:'Outdoor walk or movement',             note:'Walk, roll, hike, swim, or paddle', weight:2, rhythm:{ type:'aqi-below', threshold:100 }, context:{ start:390, idealStart:480, end:1260, setting:'outdoor', daylight:'required', daylightClosing:true, duration:20, goal:'Move every day', adaptations:{ afterDark:{ detail:'Try 10 minutes of gentle indoor movement.' } } } },
-  { id:'strength',   cat:'movement', icon:'🏋️', text:'Strength session',                     note:'20+ min, bodyweight or bands', weight:2, context:{ start:480, idealStart:600, end:1260, setting:'indoor', duration:20 } },
-  { id:'cardio',     cat:'movement', icon:'🏃', text:'Cardio burst',                         note:'15 min run, bike, or HIIT', weight:1, context:{ start:480, idealStart:600, end:1260, setting:'either', duration:15 } },
+  { id:'strength',   cat:'movement', icon:'🏋️', text:'Strength session',                     note:'Use bodyweight or bands', weight:2, context:{ start:480, idealStart:600, end:1260, setting:'indoor', duration:20 } },
+  { id:'cardio',     cat:'movement', icon:'🏃', text:'Cardio burst',                         note:'Run, bike, or do intervals', weight:1, context:{ start:480, idealStart:600, end:1260, setting:'either', duration:15 } },
   { id:'meditate',   cat:'mind',     icon:'🧠', text:'Meditate 10 min',                      note:'Breath focus or body scan', weight:1, context:{ start:360, idealStart:720, end:1350, setting:'either', duration:10 } },
   { id:'learn',      cat:'mind',     icon:'📖', text:'Read or learn 20 min',                 note:'Book, course, or focused research', weight:1, context:{ start:420, idealStart:720, end:1320, setting:'indoor', duration:20 } },
   { id:'journal',    cat:'mind',     icon:'✍️', text:'Journal one insight',                  note:'Sentence or page — no wrong answer', weight:1, context:{ start:1080, idealStart:1140, end:1350, setting:'indoor', duration:5 } },
   { id:'goals',      cat:'mind',     icon:'🎯', text:'Write down goals for today',           note:'Name the few outcomes that matter most', weight:1, context:{ start:300, idealStart:360, urgencyStart:600, end:720, setting:'indoor', duration:5 } },
   { id:'breakfast',  cat:'fuel',     icon:'🥑', text:'Whole-food breakfast',                 note:'Protein + healthy fat + produce', weight:1, context:{ start:300, idealStart:390, urgencyStart:570, end:630, setting:'indoor', duration:20 } },
-  { id:'supplements',cat:'fuel',     icon:'🧬', text:'Take supplements',                      note:'Follow your personal supplement routine', weight:1, activeFrom:'2026-08-28', context:{ recommend:false } },
-  { id:'medication', cat:'fuel',     icon:'💊', text:'Take medication as prescribed',        note:'Follow your prescribed timing and instructions', weight:2, context:{ recommend:false } },
+  { id:'supplements',cat:'fuel',     icon:'🧬', text:'Take supplements',                      note:'Follow your usual routine', weight:1, activeFrom:'2026-08-28', context:{ recommend:false } },
+  { id:'medication', cat:'fuel',     icon:'💊', text:'Take medication as prescribed',        note:'Follow your prescribed directions', weight:2, context:{ recommend:false } },
   { id:'lunch',      cat:'fuel',     icon:'🥗', text:'Green & lean lunch',                   note:'Half plate veggies, lean protein', weight:1, context:{ start:660, idealStart:690, urgencyStart:780, end:840, setting:'indoor', duration:20 } },
   { id:'dinner',     cat:'fuel',     icon:'🍳', text:'Early dinner (before 7)',              note:'Finish with enough time to wind down', weight:1, context:{ start:960, idealStart:1020, urgencyStart:1080, end:1140, setting:'indoor', duration:30, timelyDetail:'Your before-7 dinner window is open.', urgentDetail:'Your before-7 dinner window is closing.' } },
-  { id:'sunscreen',  cat:'hygiene',  icon:'🧴', text:'Sun protection before outdoor time',   note:'Shade, clothing, a hat, or sunscreen all count', weight:2, rhythm:{ type:'uv-above', threshold:3, note:'Use sun protection' }, context:{ start:390, idealStart:480, end:1140, setting:'outdoor', daylight:'required', duration:2 } },
+  { id:'sunscreen',  cat:'hygiene',  icon:'🧴', text:'Sun protection before outdoor time',   note:'Shade, clothing, hat, or sunscreen', weight:2, rhythm:{ type:'uv-above', threshold:3, note:'Use sun protection' }, context:{ start:390, idealStart:480, end:1140, setting:'outdoor', daylight:'required', duration:2 } },
   { id:'floss',      cat:'hygiene',  icon:'🦷', text:'Floss',                                note:'Clean between teeth once a day', weight:1, context:{ start:1080, idealStart:1200, end:1380, setting:'indoor', duration:2, afterCompletion:['breakfast','dinner'] } },
   { id:'winddown',   cat:'evening',  icon:'🌙', text:'No screens 30 min before bed',         note:'Read, stretch, or just sit', weight:2, context:{ start:1230, idealStart:1275, urgencyStart:1290, end:1320, setting:'indoor', duration:30, timelyDetail:'Your wind-down window before bed is open.', urgentDetail:'Bedtime is approaching.' } },
   { id:'gratitude',  cat:'evening',  icon:'✨', text:'Name 3 good things',                   note:'Notice what went well today', weight:1, context:{ start:1140, idealStart:1200, end:1380, setting:'indoor', duration:5 } },
   { id:'sleep',      cat:'evening',  icon:'🛌', text:'In bed by 10 PM',                      note:'Protect at least 7 hours for sleep', weight:2, context:{ start:1290, idealStart:1305, urgencyStart:1310, end:1320, setting:'indoor', duration:30 } },
 ];
+
+const HABIT_CARD_NOTE_MAX = 42;
 
 const SYSTEM_HABIT_PARAMETER_DEFS = {
   wake:{ targetTime:{ type:'time', default:'06:30', min:'03:00', max:'12:00', label:'Wake time' } },
@@ -5373,8 +5471,9 @@ function renderManageModal() {
         <div class="eh-icon">${escapeHtml(h.icon)}</div>
         <div class="eh-fields">
           ${isSystem ? `<div class="eh-system-title">${escapeHtml(h.text)}</div><input type="hidden" class="eh-text" value="${escapeHtml(h.text)}">` : `<input type="text" class="eh-text" maxlength="48" value="${escapeHtml(h.text)}" placeholder="Habit name">`}
-          <div class="eh-row">
-            <input type="text" class="eh-note" maxlength="80" value="${escapeHtml(h.note)}" placeholder="Note">
+          <div class="eh-row eh-note-row">
+            <input type="text" class="eh-note" maxlength="${HABIT_CARD_NOTE_MAX}" value="${escapeHtml(h.note)}" placeholder="Card description" aria-label="Card description">
+            <span class="eh-note-count" aria-live="polite">${h.note.length} / ${HABIT_CARD_NOTE_MAX}</span>
             ${paramDefs ? Object.entries(paramDefs).map(([key, field]) => {
               if (field.type === 'time') {
                 const v = h.params?.[key] || field.default;
@@ -5434,6 +5533,14 @@ function renderManageModal() {
     renderManageModal();
   });
 
+  body.querySelectorAll('.eh-note').forEach(input => {
+    input.addEventListener('input', () => {
+      input.nextElementSibling.textContent = `${input.value.length} / ${HABIT_CARD_NOTE_MAX}`;
+      input.nextElementSibling.classList.toggle('over-limit', input.value.length > HABIT_CARD_NOTE_MAX);
+      input.closest('.edit-habit').classList.remove('note-error');
+    });
+  });
+
   body.querySelectorAll('.eh-day').forEach(button => {
     button.addEventListener('click', () => {
       button.setAttribute('aria-checked', button.getAttribute('aria-checked') === 'true' ? 'false' : 'true');
@@ -5488,7 +5595,8 @@ function saveManageModal() {
     const id = row.dataset.id;
     visibleIds.push(id);
     const text = row.querySelector('.eh-text').value.trim();
-    const note = row.querySelector('.eh-note').value.trim();
+    const noteInput = row.querySelector('.eh-note');
+    const note = noteInput.value.trim();
     const hasParams = !!SYSTEM_HABIT_PARAMETER_DEFS[id];
     const isSystem = SYSTEM_HABIT_IDS.has(id);
     const measurementType = row.querySelector('.eh-measurement').value;
@@ -5497,6 +5605,14 @@ function saveManageModal() {
       .sort((a, b) => a - b);
     const def = DEFAULT_HABITS.find(h => h.id === id);
     if (!def) continue;
+    const originalNote = (previousHabits.find(habit => habit.id === id)?.note || '').trim();
+    if (note.length > HABIT_CARD_NOTE_MAX && note !== originalNote) {
+      row.classList.add('note-error');
+      row.scrollIntoView({ behavior:'smooth', block:'center' });
+      noteInput.focus();
+      showToast('Use 42 characters or fewer for the card description');
+      return false;
+    }
     if (days.length === 0) {
       row.classList.add('schedule-error');
       row.scrollIntoView({ behavior:'smooth', block:'center' });

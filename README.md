@@ -18,6 +18,7 @@ This folder is the iPhone-first, installable version of Wavelength. Shared behav
 - Pending-day-aware streaks: an unfinished today does not erase a qualifying streak through yesterday
 - Three appearance modes: **System**, **Day**, and **Night**, shared across iPhone, Android, and desktop
 - A personalized Home greeting with the calm **Friend** fallback, time-consistent icons, and a roomier mobile streak card with the decorative left icon suppressed at widths up to 600px
+- A body-readable mobile type scale: 16px habit titles, 14px card summaries, 13px environmental anchors, and larger supporting text across Home, Insights, Settings, and Manage
 
 ## Appearance behavior
 
@@ -121,7 +122,11 @@ The complete dock/evidence browser flow is `tests/browser/navigation-insights-e2
 
 ### Card copy
 
-Habit titles, descriptions, and rhythm labels stay on one line in daily cards and use an ellipsis when the available width is exhausted, including beside Count or Amount steppers. Manage limits new title edits to 48 characters and new description edits to 80 characters. Wider legacy custom values remain import-compatible and display safely with ellipsis rather than being silently destroyed.
+Habit titles, card summaries, and rhythm labels stay on one line in daily cards, including beside Count or Amount steppers. Every shipped system title and summary must fit without an ellipsis at the approved 390px mobile type scale; ellipsis remains a defensive fallback for legacy or user-authored text. Longer guidance belongs in a future detail surface rather than the daily card.
+
+Manage limits title edits to 48 characters and new card-summary edits to 42 characters, with a live counter. The character budget is an authoring guardrail rather than a substitute for rendered-width acceptance because proportional text varies in width. Existing longer overrides remain import-compatible and survive unrelated saves unchanged; once edited, a replacement must meet the 42-character budget. Wavelength never silently truncates saved text.
+
+The checked-in `tests/browser/typography-e2e.cjs` flow verifies the 390px Day and Night scales across Home, Insights, Settings, and Manage; confirms that shipped titles, summaries, and anchors fit; exercises the visible counter and non-destructive legacy path; and keeps long toasts inside the viewport.
 
 ### Reviewed default habits
 
@@ -161,6 +166,7 @@ node tests/preference-windows-regression.mjs
 node tests/native-geolocation-regression.mjs
 node tests/native-notifications-regression.mjs
 node tests/capacitor-shell-regression.mjs
+node tests/typography-content-regression.mjs
 ```
 
 All cross-build suites use the tracked desktop fixture at `tests/fixtures/friday_app_2026-07-12.html`, so they run from a clean repository checkout. When shared behavior changes, update both the external standalone desktop file and this byte-identical fixture.
