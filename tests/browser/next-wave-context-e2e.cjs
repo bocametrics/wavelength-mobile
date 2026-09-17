@@ -98,13 +98,14 @@ let browser;
     habitId:document.getElementById('nextWaveAction').dataset.habitId,
     eyebrow:document.getElementById('nextWaveEyebrow').textContent,
     title:document.getElementById('nextWaveTitle').textContent,
+    targetLabel:document.getElementById('nextWaveTarget')?.textContent || '',
     detail:document.getElementById('nextWaveDetail').textContent,
     persisted:localStorage.getItem('wavelength_completion_cue'),
   }));
   assert.deepEqual(flossCue, {
     habitId:'floss',
     eyebrow:'An easy next step',
-    title:'Floss',
+    title:'Floss', targetLabel:'',
     detail:'Breakfast is done. Take two minutes to floss.',
     persisted:null,
   }, 'checking breakfast surfaces the approved session-only Floss cue');
@@ -154,9 +155,9 @@ let browser;
     const at2205 = fixed(22, 5);
     const missedBedtime = getNextWaveSuggestion(DEFAULT_HABITS, doneFor(at2205, idsExcept(['sleep'])), {}, at2205, { isDay:0 });
     const at1300 = fixed(13);
-    const mobilityFlexible = getNextWaveSuggestion(DEFAULT_HABITS, doneFor(at1300, idsExcept(['stretch'])), {}, at1300, { isDay:1 });
+    const mobilityFlexible = getNextWaveSuggestion(HABITS, doneFor(at1300, idsExcept(['stretch'])), {}, at1300, { isDay:1 });
     const at2109 = fixed(21, 9);
-    const mobilityLate = getNextWaveSuggestion(DEFAULT_HABITS, doneFor(at2109, idsExcept(['stretch'])), {}, at2109, { isDay:0 });
+    const mobilityLate = getNextWaveSuggestion(HABITS, doneFor(at2109, idsExcept(['stretch'])), {}, at2109, { isDay:0 });
     state.done[dateKey(at2000)] = Object.fromEntries(idsExcept(['beach']).map(id => [id, true]));
     renderNextWave(at2000);
     return {
@@ -190,11 +191,11 @@ let browser;
   assert.equal(contextResults.missedBedtime.reason, 'not-timely');
   assert.deepEqual(contextResults.mobilityFlexible, {
     habitId:'stretch', category:'morning', icon:'🧘', reason:'still-fits', eyebrow:'Still fits today',
-    title:'10-min mobility', detail:'A mobility session can still work later in the day.', action:'View habit',
+    title:'Mobility', detail:'A mobility session can still work later in the day.', action:'View habit', targetLabel:'10 min',
   });
   assert.deepEqual(contextResults.mobilityLate, {
     habitId:'stretch', category:'morning', icon:'🧘', reason:'late-form', eyebrow:'Keep it gentle',
-    title:'10-min mobility', detail:'A lighter session can still work tonight.', action:'View habit',
+    title:'Mobility', detail:'A lighter session can still work tonight.', action:'View habit', targetLabel:'10 min',
   });
   assert.equal(contextResults.rendered.eyebrow, 'Adapt tonight');
   assert.equal(contextResults.rendered.title, 'Outdoor walk or movement');
@@ -225,6 +226,7 @@ let browser;
     return {
       eyebrow:document.getElementById('nextWaveEyebrow').textContent,
       title:document.getElementById('nextWaveTitle').textContent,
+      targetLabel:document.getElementById('nextWaveTarget')?.textContent || '',
       detail:document.getElementById('nextWaveDetail').textContent,
       habitId:document.getElementById('nextWaveAction').dataset.habitId,
       habitTitle:HABITS.find(habit => habit.id === 'stretch').text,
@@ -234,10 +236,10 @@ let browser;
   });
   assert.deepEqual(renderedMobility, {
     eyebrow:'Keep it gentle',
-    title:'10-minute mobility',
+    title:'Mobility', targetLabel:'10 min',
     detail:'A lighter session can still work tonight.',
     habitId:'stretch',
-    habitTitle:'10-minute mobility',
+    habitTitle:'Mobility',
     documentWidth:390,
     viewportWidth:390,
   });

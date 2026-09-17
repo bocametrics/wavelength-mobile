@@ -116,6 +116,35 @@ let browser;
   assert.deepEqual(grandfathered.stored, { text:'Sleep when the moon feels right' },
     'save preserves only the grandfathered unknown title override');
 
+  await page.click('#modalClose');
+  await page.waitForSelector('#modalOverlay.open', { hidden:true });
+  await page.evaluate(() => {
+    localStorage.setItem('wavelength_wpb_habits', JSON.stringify({
+      sleep:{ text:'Sleep when the moon feels right' },
+      affirm:{ text:'A legacy affirming phrase' },
+    }));
+  });
+  await page.reload({ waitUntil:'networkidle0' });
+  await page.click('#manageBtn');
+  await page.waitForSelector('#modalOverlay.open');
+  assert.equal(
+    await page.$eval('.edit-habit[data-id="affirm"] .eh-system-title', el => el.textContent),
+    'A legacy affirming phrase',
+    'unknown legacy titles on unparameterized system habits remain locked and visible',
+  );
+  await page.click('#modalSave');
+  await page.waitForSelector('#modalOverlay.open', { hidden:true });
+  await page.click('#manageBtn');
+  await page.waitForSelector('#modalOverlay.open');
+  const grandfatheredAffirm = await page.evaluate(() => ({
+    title:document.querySelector('.edit-habit[data-id="affirm"] .eh-system-title').textContent,
+    stored:JSON.parse(localStorage.getItem('wavelength_wpb_habits')).affirm,
+  }));
+  assert.equal(grandfatheredAffirm.title, 'A legacy affirming phrase',
+    'unparameterized grandfathered titles survive an unrelated Manage save and reopen');
+  assert.deepEqual(grandfatheredAffirm.stored, { text:'A legacy affirming phrase' },
+    'unparameterized grandfathered titles retain their stored override after save');
+
   const importVersions = await page.evaluate(async () => {
     const results = [];
     for (const version of [1, 2, 3]) {

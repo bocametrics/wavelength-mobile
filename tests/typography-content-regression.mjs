@@ -24,9 +24,9 @@ function extractDefaultHabits(source) {
 const expectedNotes = {
   daylight:'Step outside for 10 minutes',
   affirm:'Choose words that encourage you',
-  hydrate:'Adjust for heat and activity',
+  hydrate:'Set an amount that works for you',
   strength:'Use bodyweight or bands',
-  cardio:'Run, bike, or do intervals',
+  cardio:'Run, bike, dance, or do intervals',
   supplements:'Follow your usual routine',
   medication:'Follow your prescribed directions',
   sunscreen:'Shade, clothing, hat, or sunscreen',

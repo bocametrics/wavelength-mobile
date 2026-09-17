@@ -73,11 +73,11 @@ function loadFunctions(html) {
 
 const baseHabits = [
   { id:'daylight', cat:'morning', icon:'🌤️', text:'Get outdoor light after waking', note:'Morning light', rhythm:{ type:'sunrise' } },
-  { id:'hydrate', cat:'morning', icon:'💧', text:'Drink 16 oz water', note:'Water first', measurement:'amount', target:48, step:16, unit:'oz', rhythm:{ type:'temp-above', threshold:85, note:'Drink extra water' } },
+  { id:'hydrate', cat:'morning', icon:'💧', text:'Drink water', note:'Water first', measurement:'amount', target:48, step:16, unit:'oz', rhythm:{ type:'temp-above', threshold:85, note:'Drink extra water' } },
   { id:'beach', cat:'movement', icon:'🌊', text:'Outdoor walk or movement', note:'Walk or roll', rhythm:{ type:'aqi-below', threshold:100 } },
   { id:'sunscreen', cat:'hygiene', icon:'🧴', text:'Sun protection before outdoor time', note:'Protect your skin', rhythm:{ type:'uv-above', threshold:3, note:'Use sun protection' } },
-  { id:'meditate', cat:'mind', icon:'🧠', text:'Meditate 10 min', note:'Breath focus' },
-  { id:'winddown', cat:'evening', icon:'🌙', text:'No screens 30 min before bed', note:'Settle down' },
+  { id:'meditate', cat:'mind', icon:'🧠', text:'Meditate', note:'Breath focus' },
+  { id:'winddown', cat:'evening', icon:'🌙', text:'Wind down', note:'Settle down' },
 ];
 
 const atHour = hour => new Date(2026, 7, 28, hour, 0, 0, 0);
@@ -97,7 +97,7 @@ for (const [label, htmlPath] of builds) {
     plain(getNextWaveSuggestion(baseHabits, emptyDone, {}, morning, { aqi:121, uv:4, feel:96, sunrise:'6:58 AM' })),
     {
       habitId:'beach', category:'movement', icon:'🌊', reason:'aqi-adapt', eyebrow:'Adapt today',
-      title:'Outdoor walk or movement',
+      title:'Outdoor walk or movement', targetLabel:'',
       detail:'AQI 121 · Move indoors if you’re sensitive.', action:'View habit',
     },
     `${label}: unfavorable AQI adapts an incomplete outdoor habit before other cues`,
@@ -113,7 +113,7 @@ for (const [label, htmlPath] of builds) {
     plain(getNextWaveSuggestion(baseHabits, emptyDone, {}, morning, { aqi:43, uv:4, feel:96, sunrise:'6:58 AM' })),
     {
       habitId:'sunscreen', category:'hygiene', icon:'🧴', reason:'uv-protect', eyebrow:'Suggested now',
-      title:'Sun protection before outdoor time', detail:'UV 4 · Protection matters now', action:'View habit',
+      title:'Sun protection before outdoor time', detail:'UV 4 · Protection matters now', action:'View habit', targetLabel:'',
     },
     `${label}: active UV protection takes priority before an outdoor recommendation`,
   );
@@ -122,7 +122,7 @@ for (const [label, htmlPath] of builds) {
     plain(getNextWaveSuggestion(baseHabits, doneFor(morning, ['sunscreen']), {}, morning, { aqi:43, uv:4, feel:96, sunrise:'6:58 AM' })),
     {
       habitId:'daylight', category:'morning', icon:'🌤️', reason:'sunrise-light', eyebrow:'Suggested now',
-      title:'Get outdoor light after waking', detail:'Sunrise today · 6:58 AM', action:'View habit',
+      title:'Get outdoor light after waking', detail:'Sunrise today · 6:58 AM', action:'View habit', targetLabel:'',
     },
     `${label}: morning light is offered near the start of the day when still incomplete`,
   );
@@ -131,7 +131,7 @@ for (const [label, htmlPath] of builds) {
     plain(getNextWaveSuggestion(baseHabits, doneFor(morning, ['sunscreen','daylight']), {}, morning, { aqi:43, uv:4, feel:96, sunrise:'6:58 AM' })),
     {
       habitId:'beach', category:'movement', icon:'🌊', reason:'aqi-opportunity', eyebrow:'Suggested now',
-      title:'Outdoor walk or movement', detail:'Good air quality · AQI 43', action:'View habit',
+      title:'Outdoor walk or movement', detail:'Good air quality · AQI 43', action:'View habit', targetLabel:'',
     },
     `${label}: favorable AQI connects directly to the incomplete outdoor habit`,
   );
@@ -146,7 +146,7 @@ for (const [label, htmlPath] of builds) {
     plain(getNextWaveSuggestion(baseHabits, doneFor(morning, ['sunscreen','daylight','beach']), {}, morning, { aqi:43, uv:4, feel:96 })),
     {
       habitId:'hydrate', category:'morning', icon:'💧', reason:'heat-hydrate', eyebrow:'Suggested now',
-      title:'Drink 16 oz water', detail:'Feels like 96°F · Extra water may help', action:'View habit',
+      title:'Drink water', detail:'Feels like 96°F · Extra water may help', action:'View habit', targetLabel:'',
     },
     `${label}: heat amplifies an incomplete hydration habit after higher priorities are covered`,
   );
@@ -160,8 +160,8 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(
     plain(getNextWaveSuggestion(baseHabits, doneFor(morning, ['daylight']), {}, morning, null)),
     {
-      habitId:'hydrate', category:'morning', icon:'💧', reason:'time-fallback', eyebrow:'A simple next step',
-      title:'Drink 16 oz water', detail:'A calm way to begin the day.', action:'View habit',
+      habitId:'hydrate', category:'morning', icon:'💧', reason:'available-now', eyebrow:'Your next small win',
+      title:'Drink water', detail:'One open habit that fits right now.', action:'View habit', targetLabel:'',
     },
     `${label}: missing location still yields a helpful morning habit rather than technical fallback copy`,
   );
@@ -171,7 +171,7 @@ for (const [label, htmlPath] of builds) {
     plain(getNextWaveSuggestion(baseHabits, doneFor(afternoon, ['daylight','hydrate','beach','sunscreen']), {}, afternoon, null)),
     {
       habitId:'meditate', category:'mind', icon:'🧠', reason:'available-now', eyebrow:'Your next small win',
-      title:'Meditate 10 min', detail:'One open habit that fits right now.', action:'View habit',
+      title:'Meditate', detail:'One open habit that fits right now.', action:'View habit', targetLabel:'',
     },
     `${label}: a time-relevant incomplete habit becomes the fallback`,
   );

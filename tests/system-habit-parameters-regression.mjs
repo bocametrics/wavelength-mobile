@@ -38,14 +38,19 @@ function extractFunction(source, name) {
 }
 
 function loadSystemFunctions(html) {
+  const defaultHabits = html.match(/const DEFAULT_HABITS\s*=\s*\[[\s\S]*?\n\];/);
+  assert.ok(defaultHabits, 'default habits are missing');
   const definitions = html.match(/const SYSTEM_HABIT_PARAMETER_DEFS\s*=\s*\{[\s\S]*?\n\};/);
   assert.ok(definitions, 'system habit parameter definitions are missing');
+  const systemIds = html.match(/const SYSTEM_HABIT_IDS\s*=\s*new Set\(DEFAULT_HABITS\.map\(h => h\.id\)\);/);
+  assert.ok(systemIds, 'system habit identity set is missing');
   const names = [
     'parseSystemClockTime',
     'formatSystemClockTime',
     'normalizeSystemHabitParams',
     'parseLegacySystemHabitTitle',
     'formatSystemHabitTitle',
+    'formatSystemHabitTarget',
     'deriveSystemHabitContext',
     'buildRuntimeHabits',
     'normalizeCustomHabitOverrides',
@@ -53,7 +58,7 @@ function loadSystemFunctions(html) {
   const context = {};
   vm.createContext(context);
   vm.runInContext(
-    `${definitions[0]}\n${names.map(name => extractFunction(html, name)).join('\n')}\n` +
+    `${defaultHabits[0]}\n${definitions[0]}\n${systemIds[0]}\n${names.map(name => extractFunction(html, name)).join('\n')}\n` +
     `globalThis.exports = { ${names.join(', ')} };`,
     context,
   );
@@ -160,7 +165,7 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(
     plain(normalizeCustomHabitOverrides(
       { sleep:{ text:'In bed by 11:30 PM', weight:2 } },
-      [{ id:'sleep', text:'In bed by 10 PM', weight:2 }],
+      [{ id:'sleep', text:'In bed', weight:2 }],
       true,
     )),
     { sleep:{ params:{ targetTime:'23:30' } } },
@@ -169,7 +174,7 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(
     plain(normalizeCustomHabitOverrides(
       { wake:{ text:'Wake at 7:30 AM' } },
-      [{ id:'wake', text:'Wake at 6:30 AM' }],
+      [{ id:'wake', text:'Wake' }],
       true,
     )),
     { wake:{ params:{ targetTime:'07:30' } } },
@@ -178,7 +183,7 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(
     plain(normalizeCustomHabitOverrides(
       { sleep:{ text:'Sleep when the moon feels right' } },
-      [{ id:'sleep', text:'In bed by 10 PM' }],
+      [{ id:'sleep', text:'In bed' }],
       true,
     )),
     { sleep:{ text:'Sleep when the moon feels right' } },
@@ -194,8 +199,25 @@ for (const [label, htmlPath] of builds) {
   );
   assert.deepEqual(
     plain(normalizeCustomHabitOverrides(
+      { affirm:{ text:'A legacy affirming phrase' } },
+      [{ id:'affirm', text:'Start the day with an affirmation' }],
+      true,
+    )),
+    { affirm:{ text:'A legacy affirming phrase' } },
+    `${label}: an unparameterized system title survives strict backup import`,
+  );
+  const legacyAffirm = buildRuntimeHabits(
+    [{ id:'affirm', text:'Start the day with an affirmation', context:{} }],
+    { affirm:{ text:'A legacy affirming phrase' } },
+  )[0];
+  assert.equal(legacyAffirm.text, 'A legacy affirming phrase',
+    `${label}: an unparameterized grandfathered title survives runtime construction`);
+  assert.equal(legacyAffirm.targetLabel, '',
+    `${label}: an unparameterized grandfathered title does not invent a target qualifier`);
+  assert.deepEqual(
+    plain(normalizeCustomHabitOverrides(
       { sleep:{ params:{ targetTime:'23:30' } } },
-      [{ id:'sleep', text:'In bed by 10 PM' }],
+      [{ id:'sleep', text:'In bed' }],
       true,
     )),
     { sleep:{ params:{ targetTime:'23:30' } } },
@@ -204,7 +226,7 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(
     plain(normalizeCustomHabitOverrides(
       { sleep:{ params:{ targetTime:'22:00' } } },
-      [{ id:'sleep', text:'In bed by 10 PM' }],
+      [{ id:'sleep', text:'In bed' }],
       true,
     )),
     {},
@@ -213,7 +235,7 @@ for (const [label, htmlPath] of builds) {
   assert.throws(
     () => normalizeCustomHabitOverrides(
       { sleep:{ params:{ targetTime:'tomorrow' } } },
-      [{ id:'sleep', text:'In bed by 10 PM' }],
+      [{ id:'sleep', text:'In bed' }],
       true,
     ),
     /invalid time/i,
@@ -227,8 +249,8 @@ for (const [label, htmlPath] of builds) {
     `${label}: system anchors render as visible read-only summaries`);
   assert.match(html, /<div class="eh-rhythm-block" \$\{isSystem \? 'hidden' : ''\}>/,
     `${label}: system rhythm editors are withheld from the active UI`);
-  assert.match(html, /const existingOverrides = loadCustomHabits\(\) \|\| \{\};[\s\S]*?const hasGrandfatheredTitle = hasParams[\s\S]*?parseLegacySystemHabitTitle\(id, existingText\) === null;[\s\S]*?else if \(hasGrandfatheredTitle\) changes\.text = existingText;/,
-    `${label}: Manage saves retain only existing unrecognized parameterized-system titles`);
+  assert.match(html, /const existingOverrides = loadCustomHabits\(\) \|\| \{\};[\s\S]*?const hasGrandfatheredTitle = isSystem[\s\S]*?parseLegacySystemHabitTitle\(id, existingText\) === null;[\s\S]*?if \(!isSystem && text !== def\.text\) changes\.text = text;[\s\S]*?else if \(hasGrandfatheredTitle\) changes\.text = existingText;/,
+    `${label}: Manage saves retain every existing unrecognized system title, including unparameterized defaults`);
 
   const paramsById = {
     sleep:{ targetTime:'23:30' },
@@ -249,13 +271,13 @@ for (const [label, htmlPath] of builds) {
   );
 
   const defaults = [
-    { id:'winddown', text:'No screens 30 min before bed', context:{ setting:'indoor', duration:30 } },
-    { id:'sleep', text:'In bed by 10 PM', context:{ setting:'indoor', duration:30 } },
+    { id:'winddown', text:'Wind down', context:{ setting:'indoor', duration:30 } },
+    { id:'sleep', text:'In bed', context:{ setting:'indoor', duration:30 } },
   ];
   const runtime = buildRuntimeHabits(defaults, {
     sleep:{ params:{ targetTime:'23:30' } },
   });
-  assert.equal(runtime.find(habit => habit.id === 'sleep').text, 'In bed by 11:30 PM', `${label}: runtime sleep title uses the saved parameter`);
+  assert.equal(runtime.find(habit => habit.id === 'sleep').text, 'In bed', `${label}: runtime sleep title uses the saved parameter`);
   assert.equal(runtime.find(habit => habit.id === 'sleep').context.end, 1410, `${label}: runtime sleep eligibility closes at 11:30 PM`);
   assert.equal(runtime.find(habit => habit.id === 'winddown').context.urgencyStart, 1380, `${label}: runtime screen-free urgency begins 30 minutes before bedtime`);
 

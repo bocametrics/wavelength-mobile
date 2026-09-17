@@ -606,7 +606,7 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /\.drag-handle\s*\{[^}]*min-width:\s*32px[^}]*min-height:\s*44px/s, `${label}: Reorder grip has a deliberate hold target`);
   assert.match(html, /\.progress-stepper\s*\{[^}]*grid-template-rows:\s*40px 40px/s, `${label}: measured controls use a vertical 40px rail`);
   assert.match(html, /\.progress-step\s*\{[^}]*min-height:\s*40px/s, `${label}: measured card controls need mobile-sized targets`);
-  assert.match(html, /\.habit-text\s*\{[^}]*white-space:\s*nowrap;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;/s, `${label}: habit titles stay on one line and ellipsize`);
+  assert.match(html, /\.habit-name\s*\{[^}]*white-space:\s*nowrap;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;/s, `${label}: habit titles stay on one line and ellipsize`);
   assert.match(html, /\.habit-note\s*\{[^}]*white-space:\s*nowrap;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;/s, `${label}: habit descriptions stay on one line and ellipsize`);
   assert.match(html, /\.rhythm-anchor-label\s*\{[^}]*white-space:\s*nowrap;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;/s, `${label}: anchor labels stay on one line and ellipsize`);
   assert.match(html, /class=["']eh-text["'] maxlength=["']48["']/, `${label}: Manage keeps new habit titles concise`);

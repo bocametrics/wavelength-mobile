@@ -217,7 +217,7 @@ function collectErrors(page) {
       if (index === 7) {
         recommendations.push({
           habitId:'hydrate', reason:'heat-hydrate', shownAt:timestamp + 1, lastShownAt:timestamp + 1,
-          observedAt:timestamp + 1, habitLabel:'Drink 16 oz water', measurementType:'amount',
+          observedAt:timestamp + 1, habitLabel:'Drink water', measurementType:'amount',
           ruleVersion:1, rule:{ channel:'weather', reading:'feel', operator:'>', threshold:85 },
           completedAt:timestamp + 1, conditions:{ feel:96 }, sources:{ weather:'open-meteo', aqi:'open-meteo' },
         });
@@ -256,7 +256,7 @@ function collectErrors(page) {
   });
   assert.equal(reports.waves.eyebrow, 'Waves ridden');
   assert.equal(reports.waves.title, 'You followed through on 8 days when conditions shaped your Next Wave.');
-  assert.match(reports.waves.detail, /^9 suggested habits completed in the last 30 days\. Most recently on [A-Z][a-z]{2} \d{1,2}: “Sun protection before outdoor time” and “Drink 16 oz water”\.$/);
+  assert.match(reports.waves.detail, /^9 suggested habits completed in the last 30 days\. Most recently on [A-Z][a-z]{2} \d{1,2}: “Sun protection before outdoor time” and “Drink water”\.$/);
   assert.equal(reports.learningHidden, false);
   assert.match(reports.learningText, /10 of 10 days with conditions met so far$/);
   assert.equal(reports.backup.version, 5);

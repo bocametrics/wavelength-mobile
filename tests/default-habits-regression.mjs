@@ -80,7 +80,7 @@ for (const [label, htmlPath] of builds) {
   assert.doesNotMatch(`${byId.supplements.text} ${byId.supplements.note}`, /medication|prescrib/i, `${label}: supplement copy stays distinct from medicine`);
   assert.ok(habits.every(habit => habit.text.length <= 48), `${label}: default titles fit the concise Manage limit`);
   assert.ok(habits.every(habit => habit.note.length <= 42), `${label}: default descriptions fit the concise Manage limit`);
-  assert.equal(byId.sleep.note, 'Protect at least 7 hours for sleep', `${label}: sleep copy uses a general adult minimum rather than local sunrise`);
+  assert.equal(byId.sleep.note, "Make room for a full night's sleep", `${label}: sleep copy uses a general adult minimum rather than local sunrise`);
   assert.equal(byId.gratitude.note, 'Notice what went well today', `${label}: gratitude copy avoids an unsupported neurological claim`);
 
   assert.deepEqual(byId.hydrate.rhythm, {

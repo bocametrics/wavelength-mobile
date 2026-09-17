@@ -146,7 +146,7 @@ for (const [label, htmlPath] of builds) {
 
   const habits = [
     { id:'sunscreen', title:'Sun protection before outdoor time', measurement:{ type:'check' }, rhythm:{ type:'uv-above', threshold:3 } },
-    { id:'hydrate', title:'Drink 16 oz water', measurement:{ type:'amount' }, rhythm:{ type:'temp-above', threshold:85 } },
+    { id:'hydrate', title:'Drink water', measurement:{ type:'amount' }, rhythm:{ type:'temp-above', threshold:85 } },
     { id:'beach', title:'Outdoor walk or movement', measurement:{ type:'check' }, rhythm:{ type:'aqi-below', threshold:100 } },
     { id:'daylight', title:'Get outdoor light after waking', measurement:{ type:'check' }, rhythm:{ type:'sunrise' } },
   ];
@@ -407,7 +407,7 @@ for (const [label, htmlPath] of builds) {
     const timestamp = day.recommendations[0].shownAt + 1;
     day.recommendations.push({
       habitId:'hydrate', reason:'heat-hydrate', shownAt:timestamp, lastShownAt:timestamp, observedAt:timestamp - 1000,
-      habitLabel:'Drink 16 oz water', measurementType:'amount', ruleVersion:1,
+      habitLabel:'Drink water', measurementType:'amount', ruleVersion:1,
       rule:{channel:'weather',reading:'feel',operator:'>',threshold:85},
       ...(index < 6 ? { completedAt:timestamp + 1000 } : {}),
       conditions:{feel:96}, sources:{weather:'open-meteo'},
@@ -432,9 +432,9 @@ for (const [label, htmlPath] of builds) {
       '2026-08-30':{
         recommendations:[
           { habitId:'sunscreen', reason:'uv-protect', shownAt:adaptiveTimestamp, lastShownAt:adaptiveTimestamp, observedAt:adaptiveTimestamp - 1000, completedAt:adaptiveCompletedAt, habitLabel:sunscreenExposure.habitLabel, measurementType:'check', ruleVersion:1, rule:sunscreenExposure.rule, conditions:{uv:7}, sources:{weather:'open-meteo'} },
-          { habitId:'hydrate', reason:'heat-hydrate', shownAt:adaptiveTimestamp, lastShownAt:adaptiveTimestamp, observedAt:adaptiveTimestamp - 1000, completedAt:adaptiveCompletedAt, habitLabel:'Drink 16 oz water', measurementType:'amount', ruleVersion:1, rule:{channel:'weather',reading:'feel',operator:'>',threshold:85}, conditions:{feel:96}, sources:{weather:'open-meteo'} },
+          { habitId:'hydrate', reason:'heat-hydrate', shownAt:adaptiveTimestamp, lastShownAt:adaptiveTimestamp, observedAt:adaptiveTimestamp - 1000, completedAt:adaptiveCompletedAt, habitLabel:'Drink water', measurementType:'amount', ruleVersion:1, rule:{channel:'weather',reading:'feel',operator:'>',threshold:85}, conditions:{feel:96}, sources:{weather:'open-meteo'} },
           { habitId:'sunscreen', reason:'uv-protect', shownAt:adaptiveTimestamp + 10, lastShownAt:adaptiveTimestamp + 10, observedAt:adaptiveTimestamp - 1000, completedAt:adaptiveCompletedAt, habitLabel:sunscreenExposure.habitLabel, measurementType:'check', ruleVersion:1, rule:sunscreenExposure.rule, conditions:{uv:7}, sources:{weather:'open-meteo'} },
-          { habitId:'meditate', reason:'time-fallback', shownAt:adaptiveTimestamp, lastShownAt:adaptiveTimestamp, completedAt:adaptiveCompletedAt, habitLabel:'Meditate 10 min', measurementType:'check', ruleVersion:1, rule:{}, conditions:{}, sources:{} },
+          { habitId:'meditate', reason:'time-fallback', shownAt:adaptiveTimestamp, lastShownAt:adaptiveTimestamp, completedAt:adaptiveCompletedAt, habitLabel:'Meditate', measurementType:'check', ruleVersion:1, rule:{}, conditions:{}, sources:{} },
         ],
         completions:{ sunscreen:adaptiveCompletedAt, hydrate:adaptiveCompletedAt, meditate:adaptiveCompletedAt },
       },
@@ -443,7 +443,7 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(plain(getWavesRiddenCard(adaptiveHistory, new Date(2026, 7, 30, 12))), {
     id:'waves-ridden', icon:'🏄', eyebrow:'Waves ridden',
     title:'You followed through on 1 day when conditions shaped your Next Wave.',
-    detail:'2 suggested habits completed in the last 30 days. Most recently on Aug 30: “Sun protection before outdoor time” and “Drink 16 oz water”.',
+    detail:'2 suggested habits completed in the last 30 days. Most recently on Aug 30: “Sun protection before outdoor time” and “Drink water”.',
     days:1, completed:2, latestDate:'2026-08-30',
   }, `${label}: verified context-aware completions today produce one cumulative wave without duplicate inflation`);
 
@@ -460,7 +460,7 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(plain(getWavesRiddenCard(adaptiveHistory, new Date(2026, 7, 30, 12))), {
     id:'waves-ridden', icon:'🏄', eyebrow:'Waves ridden',
     title:'You followed through on 2 days when conditions shaped your Next Wave.',
-    detail:'3 suggested habits completed in the last 30 days. Most recently on Aug 30: “Sun protection before outdoor time” and “Drink 16 oz water”.',
+    detail:'3 suggested habits completed in the last 30 days. Most recently on Aug 30: “Sun protection before outdoor time” and “Drink water”.',
     days:2, completed:3, latestDate:'2026-08-30',
   }, `${label}: the Waves ridden headline counts distinct days while detail counts distinct completed suggestions`);
 

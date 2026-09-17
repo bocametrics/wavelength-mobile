@@ -92,20 +92,20 @@ const contextualHabits = [
       goal:'Move every day', adaptations:{ afterDark:{ title:'Keep your movement habit indoors tonight.', detail:'Try 10 minutes of gentle indoor movement.' } } },
   },
   {
-    id:'meditate', cat:'mind', icon:'🧠', text:'Meditate 10 min', note:'Breath focus',
+    id:'meditate', cat:'mind', icon:'🧠', text:'Meditate', note:'Breath focus',
     context:{ start:360, idealStart:720, end:1350, setting:'either', duration:10 },
   },
   {
-    id:'winddown', cat:'evening', icon:'🌙', text:'No screens 30 min before bed', note:'Settle down',
+    id:'winddown', cat:'evening', icon:'🌙', text:'Wind down', note:'Settle down',
     context:{ start:1230, idealStart:1275, urgencyStart:1290, end:1320, setting:'indoor', duration:30,
       timelyDetail:'Your wind-down window before bed is open.', urgentDetail:'Bedtime is approaching.' },
   },
 ];
 
 const dinner = {
-  id:'dinner', cat:'fuel', icon:'🍳', text:'Early dinner (before 7)', note:'Finish with enough time to wind down',
+  id:'dinner', cat:'fuel', icon:'🍳', text:'Finish dinner', note:'Leave time to wind down before bed',
   context:{ start:960, idealStart:1020, urgencyStart:1080, end:1140, setting:'indoor', duration:30,
-    timelyDetail:'Your before-7 dinner window is open.', urgentDetail:'Your before-7 dinner window is closing.' },
+    timelyDetail:'Your dinner window is open.', urgentDetail:'Your dinner window is closing.' },
 };
 
 for (const [label, htmlPath] of builds) {
@@ -226,7 +226,7 @@ for (const [label, htmlPath] of builds) {
     plain(getNextWaveSuggestion(contextualHabits, doneFor(bedtimeWindow, ['beach']), {}, bedtimeWindow, { isDay:0 })),
     {
       habitId:'winddown', category:'evening', icon:'🌙', reason:'ideal-now', eyebrow:'Ideal now',
-      title:'No screens 30 min before bed', detail:'Your wind-down window before bed is open.', action:'View habit',
+      title:'Wind down', detail:'Your wind-down window before bed is open.', action:'View habit', targetLabel:'',
     },
     `${label}: the opening wind-down window is explained rather than selected only by category`,
   );
@@ -236,7 +236,7 @@ for (const [label, htmlPath] of builds) {
     plain(getNextWaveSuggestion([contextualHabits[0], dinner], doneFor(dinnerClosing, []), {}, dinnerClosing, { aqi:43, isDay:1 })),
     {
       habitId:'dinner', category:'fuel', icon:'🍳', reason:'window-closing', eyebrow:'Window closing',
-      title:'Early dinner (before 7)', detail:'Your before-7 dinner window is closing.', action:'View habit',
+      title:'Finish dinner', detail:'Your dinner window is closing.', action:'View habit', targetLabel:'',
     },
     `${label}: a closing meal window outranks favorable AQI as an optional outdoor opportunity`,
   );
@@ -252,7 +252,7 @@ for (const [label, htmlPath] of builds) {
     plain(getNextWaveSuggestion([beach], doneFor(afterDark, []), {}, afterDark, { aqi:43, isDay:0 })),
     {
       habitId:'beach', category:'movement', icon:'🌊', reason:'after-dark-adapt', eyebrow:'Adapt tonight',
-      title:'Outdoor walk or movement', detail:'Try 10 minutes of gentle indoor movement.', action:'View habit',
+      title:'Outdoor walk or movement', detail:'Try 10 minutes of gentle indoor movement.', action:'View habit', targetLabel:'',
     },
     `${label}: an indoor version preserves the movement goal when darkness is the only blocker`,
   );
@@ -346,7 +346,7 @@ for (const [label, htmlPath] of builds) {
     plain(mobilityIdeal),
     {
       habitId:'stretch', category:'morning', icon:'🧘', reason:'ideal-now', eyebrow:'Ideal now',
-      title:'10-min mobility', detail:'This is a good time for it.', action:'View habit',
+      title:'Mobility', detail:'This is a good time for it.', action:'View habit', targetLabel:'',
     },
     `${label}: mobility keeps its habit title during its ideal window`,
   );
@@ -357,7 +357,7 @@ for (const [label, htmlPath] of builds) {
     plain(mobilityFlexible),
     {
       habitId:'stretch', category:'morning', icon:'🧘', reason:'still-fits', eyebrow:'Still fits today',
-      title:'10-min mobility', detail:'A mobility session can still work later in the day.', action:'View habit',
+      title:'Mobility', detail:'A mobility session can still work later in the day.', action:'View habit', targetLabel:'',
     },
     `${label}: mobility is framed as flexible after its preferred window`,
   );
@@ -368,7 +368,7 @@ for (const [label, htmlPath] of builds) {
     plain(mobilityLate),
     {
       habitId:'stretch', category:'morning', icon:'🧘', reason:'late-form', eyebrow:'Keep it gentle',
-      title:'10-min mobility', detail:'A lighter session can still work tonight.', action:'View habit',
+      title:'Mobility', detail:'A lighter session can still work tonight.', action:'View habit', targetLabel:'',
     },
     `${label}: mobility keeps its title while late-form copy changes around it`,
   );
@@ -409,7 +409,7 @@ for (const [label, htmlPath] of builds) {
     )),
     {
       habitId:'floss', category:'hygiene', icon:'🦷', reason:'completion-cue', eyebrow:'An easy next step',
-      title:'Floss',
+      title:'Floss', targetLabel:'',
       detail:'Breakfast is done. Take two minutes to floss.',
       action:'View habit',
     },
@@ -497,7 +497,7 @@ for (const [label, htmlPath] of builds) {
     plain(getNextWaveSuggestion(productionHabits, completedExcept(daylightClosing, ['beach']), {}, daylightClosing, sunsetData)),
     {
       habitId:'beach', category:'movement', icon:'🌊', reason:'daylight-closing', eyebrow:'Daylight closing',
-      title:'Outdoor walk or movement', detail:'About 21 minutes of daylight remain.', action:'View habit',
+      title:'Outdoor walk or movement', detail:'About 21 minutes of daylight remain.', action:'View habit', targetLabel:'',
     },
     `${label}: a barely sufficient daylight window is surfaced as closing rather than broadly favorable`,
   );

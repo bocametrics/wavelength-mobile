@@ -209,7 +209,7 @@ for (const [label, htmlPath] of builds) {
   if (label === 'mobile') {
     assert.match(html, /importBackupFile[\s\S]*normalizeCustomHabitOverrides\(rawCustomHabits, DEFAULT_HABITS, true\)/, `${label}: backup import must strictly validate custom habit overrides before writing storage`);
   }
-  assert.match(html, /habit-text">\$\{escapeHtml\(h\.text\)\}/, `${label}: habit names inserted into HTML must be escaped`);
+  assert.match(html, /habit-name">\$\{escapeHtml\(h\.text\)\}/, `${label}: habit names inserted into HTML must be escaped`);
   assert.match(html, /habit-note">\$\{escapeHtml\(h\.note\)\}/, `${label}: habit notes inserted into HTML must be escaped`);
   assert.match(html, /ghost\.textContent\s*=/, `${label}: drag ghost content must not use innerHTML`);
   assert.match(html, /state\.longestStreak\s*=\s*resolveLongestStreak\(historicalBest, streak\)/, `${label}: longest streak must recalculate under the current schedule`);

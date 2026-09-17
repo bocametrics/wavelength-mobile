@@ -60,6 +60,7 @@ function collectErrors(page) {
     renderHabits(now);
     const capture = () => ({
       title:document.getElementById('nextWaveTitle').textContent,
+      targetLabel:document.getElementById('nextWaveTarget')?.textContent || '',
       detail:document.getElementById('nextWaveDetail').textContent,
       snapshot:{ ...rhythmWeatherData },
     });
@@ -147,6 +148,7 @@ function collectErrors(page) {
     return {
       eyebrow:document.getElementById('nextWaveEyebrow').textContent,
       title:document.getElementById('nextWaveTitle').textContent,
+      targetLabel:document.getElementById('nextWaveTarget')?.textContent || '',
       detail:document.getElementById('nextWaveDetail').textContent,
       icon:document.getElementById('nextWaveIcon').textContent,
       habitId:action.dataset.habitId,
@@ -158,13 +160,14 @@ function collectErrors(page) {
   assert.deepEqual({
     eyebrow:favorable.eyebrow,
     title:favorable.title,
+    targetLabel:favorable.targetLabel,
     detail:favorable.detail,
     icon:favorable.icon,
     habitId:favorable.habitId,
     actionHeight:favorable.actionHeight,
   }, {
     eyebrow:'Suggested now',
-    title:'Outdoor walk or movement',
+    title:'Outdoor walk or movement', targetLabel:'',
     detail:'Good air quality · AQI 43',
     icon:'🌊',
     habitId:'beach',
@@ -208,25 +211,41 @@ function collectErrors(page) {
   assert.equal(jump.scrollBehavior, 'auto');
   await page.screenshot({ path:path.join(SHOT_DIR, 'wavelength-next-wave-focus.png') });
 
-  await page.click('.habit[data-id="beach"]');
   await page.evaluate(() => {
     const now = new Date();
-    now.setHours(12, 0, 0, 0);
+    now.setHours(8, 0, 0, 0);
+    const key = dateKey(now);
+    state.done[key] = { sunscreen:true, daylight:true, beach:true };
+    state.progress[key] = {};
+    saveState();
     renderHabits(now);
   });
-  await page.waitForFunction(() => document.getElementById('nextWaveTitle').textContent === 'Drink 16 oz water');
-  const advanced = await page.evaluate(() => ({
-    title:document.getElementById('nextWaveTitle').textContent,
-    detail:document.getElementById('nextWaveDetail').textContent,
-    habitId:document.getElementById('nextWaveAction').dataset.habitId,
-    walkDone:document.querySelector('.habit[data-id="beach"]')?.classList.contains('done') || false,
-  }));
+  await page.waitForFunction(() => document.getElementById('nextWaveTitle').textContent === 'Drink water');
+  const advanced = await page.evaluate(() => {
+    const title = document.getElementById('nextWaveTitle');
+    const target = document.getElementById('nextWaveTarget');
+    return {
+      title:title.textContent,
+      titleOverflow:title.scrollWidth > title.clientWidth,
+      target:{
+        label:target?.textContent || '',
+        hidden:target?.hidden || false,
+        overflow:target ? target.scrollWidth > target.clientWidth : true,
+      },
+      detail:document.getElementById('nextWaveDetail').textContent,
+      habitId:document.getElementById('nextWaveAction').dataset.habitId,
+      walkDone:document.querySelector('.habit[data-id="beach"]')?.classList.contains('done') || false,
+    };
+  });
   assert.deepEqual(advanced, {
-    title:'Drink 16 oz water',
+    title:'Drink water',
+    titleOverflow:false,
+    target:{ label:'16 oz', hidden:false, overflow:false },
     detail:'Feels like 96°F · Extra water may help',
     habitId:'hydrate',
     walkDone:true,
   });
+  await page.screenshot({ path:path.join(SHOT_DIR, 'wavelength-next-wave-hydrate-target.png') });
 
   await page.evaluate(() => {
     const now = new Date();
@@ -249,7 +268,7 @@ function collectErrors(page) {
   assert.equal(safeCustomText.injectedNode, false);
 
   await page.evaluate(() => {
-    HABITS.find(habit => habit.id === 'meditate').text = 'Meditate 10 min';
+    HABITS.find(habit => habit.id === 'meditate').text = 'Meditate';
     const now = new Date();
     now.setHours(12, 0, 0, 0);
     const key = dateKey(now);
@@ -263,12 +282,13 @@ function collectErrors(page) {
   const unfavorable = await page.evaluate(() => ({
     eyebrow:document.getElementById('nextWaveEyebrow').textContent,
     title:document.getElementById('nextWaveTitle').textContent,
+    targetLabel:document.getElementById('nextWaveTarget')?.textContent || '',
     detail:document.getElementById('nextWaveDetail').textContent,
     habitId:document.getElementById('nextWaveAction').dataset.habitId,
   }));
   assert.deepEqual(unfavorable, {
     eyebrow:'Adapt today',
-    title:'Outdoor walk or movement',
+    title:'Outdoor walk or movement', targetLabel:'',
     detail:'AQI 121 · Move indoors if you’re sensitive.',
     habitId:'beach',
   });
@@ -284,6 +304,7 @@ function collectErrors(page) {
   const complete = await page.evaluate(() => ({
     eyebrow:document.getElementById('nextWaveEyebrow').textContent,
     title:document.getElementById('nextWaveTitle').textContent,
+    targetLabel:document.getElementById('nextWaveTarget')?.textContent || '',
     detail:document.getElementById('nextWaveDetail').textContent,
     actionHidden:document.getElementById('nextWaveAction').hidden,
     runtimeWidth:document.documentElement.scrollWidth,
@@ -291,7 +312,7 @@ function collectErrors(page) {
   }));
   assert.deepEqual(complete, {
     eyebrow:'You’re caught up',
-    title:'Today’s habits are complete.',
+    title:'Today’s habits are complete.', targetLabel:'',
     detail:'You followed through on every scheduled habit.',
     actionHidden:true,
     runtimeWidth:390,
@@ -307,6 +328,7 @@ function collectErrors(page) {
     const result = {
       eyebrow:document.getElementById('nextWaveEyebrow').textContent,
       title:document.getElementById('nextWaveTitle').textContent,
+      targetLabel:document.getElementById('nextWaveTarget')?.textContent || '',
       actionHidden:document.getElementById('nextWaveAction').hidden,
     };
     originalDays.forEach(original => {
@@ -319,7 +341,7 @@ function collectErrors(page) {
   });
   assert.deepEqual(noScheduled, {
     eyebrow:'A quiet day',
-    title:'No habits are scheduled today.',
+    title:'No habits are scheduled today.', targetLabel:'',
     actionHidden:true,
   });
 

@@ -81,7 +81,14 @@ function contrastRatio(foreground, background) {
       ].map(selector => [selector, style(selector)])),
       documentWidth:document.documentElement.scrollWidth,
       viewportWidth:innerWidth,
-      titleOverflow:cards.filter(card => card.querySelector('.habit-text').scrollWidth > card.querySelector('.habit-text').clientWidth).map(card => card.dataset.id),
+      identityOverflow:cards.filter(card => {
+        const identity = card.querySelector('.habit-name');
+        return identity && identity.scrollWidth > identity.clientWidth;
+      }).map(card => card.dataset.id),
+      targetOverflow:cards.filter(card => {
+        const target = card.querySelector('.habit-target');
+        return target && target.scrollWidth > target.clientWidth;
+      }).map(card => card.dataset.id),
       noteOverflow:cards.filter(card => card.querySelector('.habit-note').scrollWidth > card.querySelector('.habit-note').clientWidth).map(card => card.dataset.id),
       anchorOverflow:cards.filter(card => {
         const anchor = card.querySelector('.rhythm-anchor-label');
@@ -108,7 +115,8 @@ function contrastRatio(foreground, background) {
   }
   assert.equal(home.typography['.rhythm-anchor-label'].opacity, '1');
   assert.equal(home.documentWidth, home.viewportWidth, 'Home has no horizontal overflow');
-  assert.deepEqual(home.titleOverflow, [], 'shipped titles fit without ellipsis');
+  assert.deepEqual(home.identityOverflow, [], 'shipped habit identities fit without ellipsis');
+  assert.deepEqual(home.targetOverflow, [], 'shipped habit targets fit without ellipsis');
   assert.deepEqual(home.noteOverflow, [], 'shipped descriptions fit without ellipsis');
   assert.deepEqual(home.anchorOverflow, [], 'live anchor labels fit without ellipsis');
   assert.deepEqual(home.verticalOverflow, [], 'habit content stays inside fixed cards');
