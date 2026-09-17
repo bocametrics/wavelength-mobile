@@ -44,7 +44,7 @@ assert.equal(config.appId, 'com.bocametrics.wavelength');
 assert.equal(config.appName, 'Wavelength');
 assert.equal(config.webDir, 'www');
 assert.deepEqual(config.plugins?.LocalNotifications?.presentationOptions, ['banner', 'list', 'sound']);
-assert.match(read('sw.js'), /const CACHE_NAME = 'wavelength-mobile-v33';/,
+assert.match(read('sw.js'), /const CACHE_NAME = 'wavelength-mobile-v34';/,
   'the PWA cache advances with the typography and card-copy release');
 
 const bridge = read('native/native-bridge.js');
