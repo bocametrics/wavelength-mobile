@@ -593,17 +593,12 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /class=["']progress-stepper["']/, `${label}: measured controls use a dedicated trailing rail`);
   assert.doesNotMatch(html, /<div class=["']progress-meter["']/, `${label}: measured cards must not render the wrapping meter row`);
   assert.match(html, /\.habit\s*\{[^}]*height:\s*104px[^}]*min-height:\s*104px/s, `${label}: every habit card uses the same fixed height`);
-  assert.match(html, /id=["']reorderBtn["'][^>]*aria-pressed=["']false["']/, `${label}: the list exposes an accessible Reorder-mode toggle`);
-  assert.match(html, /let reorderMode = false;/, `${label}: tracking mode is the default`);
-  assert.match(html, /classList\.toggle\(['"]reorder-mode['"], reorderMode\)/, `${label}: list rendering exposes Reorder mode to CSS`);
-  assert.match(html, /if \(reorderMode\) return;/, `${label}: card completion is disabled while reordering`);
-  assert.match(html, /\.move-btns\s*\{[^}]*display:\s*none/s, `${label}: arrows are hidden in tracking mode`);
-  assert.match(html, /\.drag-handle\s*\{[^}]*display:\s*none/s, `${label}: grips are hidden in tracking mode`);
-  assert.match(html, /\.habits\.reorder-mode \.move-btns\s*\{[^}]*display:\s*flex/s, `${label}: arrows appear only in Reorder mode`);
-  assert.match(html, /\.habits\.reorder-mode \.drag-handle\s*\{[^}]*display:\s*grid/s, `${label}: grips appear only in Reorder mode`);
-  assert.match(html, /\.habits\.reorder-mode \.progress-stepper,[\s\S]*?display:\s*none;/, `${label}: measurement controls leave the rail in Reorder mode`);
-  assert.match(html, /\.move-btn\s*\{[^}]*min-width:\s*40px[^}]*min-height:\s*40px/s, `${label}: Reorder arrows use mobile-sized targets`);
-  assert.match(html, /\.drag-handle\s*\{[^}]*min-width:\s*32px[^}]*min-height:\s*44px/s, `${label}: Reorder grip has a deliberate hold target`);
+  assert.doesNotMatch(html, /id=["']reorderBtn["']/, `${label}: Home no longer exposes a separate Reorder action`);
+  assert.match(html, /id=["']manageCategoryView["'][^>]*hidden[^>]*inert/, `${label}: habit organization lives in a full-screen category manager`);
+  assert.match(html, /className = isAll \? 'category-lock' : 'manage-habit-grip'/, `${label}: All remains aggregate-only while real categories expose habit grips`);
+  assert.match(html, /function attachGripReorder\(container, rowSelector, gripSelector, onCommit\)/, `${label}: full-screen ordering is grip-scoped`);
+  assert.match(html, /reorderHabitIdsWithinCategory\(userOrder, HABITS, managedCategoryId, reorderedIds\)/, `${label}: scoped reorder preserves other categories' canonical slots`);
+  assert.match(html, /\.manage-habit-grip,[\s\S]*?min-width:\s*28px;[\s\S]*?min-height:\s*42px;/, `${label}: category-management grips have deliberate touch targets`);
   assert.match(html, /\.progress-stepper\s*\{[^}]*grid-template-rows:\s*40px 40px/s, `${label}: measured controls use a vertical 40px rail`);
   assert.match(html, /\.progress-step\s*\{[^}]*min-height:\s*40px/s, `${label}: measured card controls need mobile-sized targets`);
   assert.match(html, /\.habit-name\s*\{[^}]*white-space:\s*nowrap;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;/s, `${label}: habit titles stay on one line and ellipsize`);
@@ -637,12 +632,12 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /case 'aqi-below':[\s\S]*!Number\.isFinite\(data\.aqi\)[\s\S]*US AQI cue at or below \$\{rhythm\.threshold\}[\s\S]*data\.aqi <= rhythm\.threshold/, `${label}: partial air-quality data keeps the configured AQI threshold visible`);
   assert.match(html, /normalizeRhythmConfig/, `${label}: rhythm config is normalized for validation and rendering`);
   assert.match(html, /JSON\.stringify\(rhythm\)\s*!==\s*JSON\.stringify\(defaultRhythm\)/, `${label}: Manage does not persist rhythm overrides identical to shipped defaults`);
-  assert.match(html, /getElementById\('modalReset'\)[\s\S]*previousHabits[\s\S]*reconcileMeasurementTypeChanges[\s\S]*saveState\(\)[\s\S]*renderHabits\(resetDate\)/, `${label}: Reset defaults reconciles measured state and saves before rendering with the reset timestamp`);
+  assert.match(html, /function resetHabitEditorDefaults\(\)[\s\S]*previousHabits[\s\S]*reconcileMeasurementTypeChanges[\s\S]*saveState\(\)[\s\S]*renderHabits\(resetDate\)/, `${label}: focused Reset defaults reconciles measured state and saves before rerendering`);
   assert.match(html, /getDailyHabitStats\(state\.done \|\| \{\}, HABITS, [^;]+state\.progress \|\| \{\}\)/, `${label}: rendered totals pass measured progress to shared calculations`);
   if (label === 'mobile') {
-    assert.match(html, /const importedHabits = DEFAULT_HABITS\.map/, `${label}: backup import merges custom measurements before validating progress`);
+    assert.match(html, /const importedHabits = applyCategoryStateToHabits\(buildRuntimeHabits\(DEFAULT_HABITS, customHabits\), importedCategoryState\)/, `${label}: backup import builds runtime measurements and category assignments before validating progress`);
     assert.match(html, /const importedState = normalizeStoredState\(payload\.state, importedHabits, true\)/, `${label}: backup import validates measured progress against imported habit types`);
-    assert.match(html, /reconcileMeasuredDay\(importedState\.done, importedState\.progress, importedHabits, importDate\);[\s\S]*localStorage\.setItem\(STORAGE_KEY/, `${label}: backup import reconciles today before its first state write`);
+    assert.match(html, /reconcileMeasuredDay\(importedState\.done, importedState\.progress, importedHabits, importDate\);[\s\S]*commitStorageSnapshot\(localStorage, importedSnapshot\)/, `${label}: backup import reconciles today before its journaled storage commit`);
   }
 }
 

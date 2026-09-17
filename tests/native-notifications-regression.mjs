@@ -61,11 +61,11 @@ for (const [label, htmlPath] of builds) {
   const html = fs.readFileSync(htmlPath, 'utf8');
   const { normalizeNativeNotificationSettings, getNextWaveNotificationRequests } = loadFunctions(html);
 
-  assert.deepEqual(plain(normalizeNativeNotificationSettings(null)), { enabled:false, time:'09:00' },
+  assert.deepEqual(plain(normalizeNativeNotificationSettings(null)), { enabled:false, time:'11:00' },
     `${label}: native reminders default off without prompting`);
   assert.deepEqual(plain(normalizeNativeNotificationSettings({ enabled:true, time:'07:30' })), { enabled:true, time:'07:30' },
     `${label}: a valid local reminder time is retained`);
-  assert.deepEqual(plain(normalizeNativeNotificationSettings({ enabled:true, time:'24:00' })), { enabled:true, time:'09:00' },
+  assert.deepEqual(plain(normalizeNativeNotificationSettings({ enabled:true, time:'24:00' })), { enabled:true, time:'11:00' },
     `${label}: malformed native reminder times fail to the bounded default`);
 
   const habits = [{ id:'daily' }];
@@ -93,7 +93,7 @@ for (const [label, htmlPath] of builds) {
     `${label}: the native notification Settings card is hidden in browser builds`);
   assert.match(html, /id="nextWaveNotificationsEnabled"[^>]*type="checkbox"[^>]*role="switch"/,
     `${label}: reminder consent uses an accessible explicit switch`);
-  assert.match(html, /id="nextWaveNotificationTime"[^>]*type="time"[^>]*value="09:00"/,
+  assert.match(html, /id="nextWaveNotificationTime"[^>]*type="time"[^>]*value="11:00"/,
     `${label}: reminder time uses a native bounded time control`);
   assert.match(html, /function setupNativeNotifications\(\)[\s\S]*addEventListener\('change'[\s\S]*requestPermissions\(\)/,
     `${label}: notification permission is requested from an explicit Settings change`);

@@ -83,7 +83,7 @@ for (const [label, htmlPath] of builds) {
   const insightsStart = html.indexOf('id="insightsView"');
   const settingsStart = html.indexOf('id="settingsView"');
   const wave = html.indexOf('id="nextWaveCard"');
-  const tabs = html.indexOf('id="tabs"');
+  const tabs = html.indexOf('id="categoryTabRail"');
   const habitList = html.indexOf('id="habitList"');
   const reset = html.indexOf('id="resetBtn"');
   const streak = html.indexOf('class="streak-bar"');
@@ -333,17 +333,17 @@ for (const [label, htmlPath] of builds) {
     `${label}: measured completion synchronizes prospective evidence`);
   assert.match(html, /resetHabitDay\(state, resetDate\)[\s\S]*clearInsightDate\(insightHistory, resetDate\)[\s\S]*renderInsights\(resetDate\)/,
     `${label}: Reset today removes the date's evidence and requires a fresh finalized cue`);
-  assert.match(html, /function saveManageModal\(\)[\s\S]*saveState\(\);[\s\S]*saveInsightHistory\(editDate\);[\s\S]*renderHabits\(editDate\)/,
+  assert.match(html, /function saveHabitEditorForm\(\)[\s\S]*saveState\(\);[\s\S]*saveInsightHistory\(editDate\);[\s\S]*renderHabits\(editDate\)/,
     `${label}: Manage changes remove completion evidence invalidated by a goal edit`);
 
   if (label === 'mobile') {
     assert.match(html, /function createBackupPayload\(\)[\s\S]*normalizeInsightHistoryAgainstState\([\s\S]*state, false\)/,
       `${label}: backup export repairs contradictory local evidence before serializing it`);
-    assert.match(html, /const BACKUP_VERSION = 5;/, `${label}: personalized backups identify the version-5 schema`);
+    assert.match(html, /const BACKUP_VERSION = 6;/, `${label}: personalized backups identify the version-6 category schema`);
     assert.match(html, /const backupInsightHistory = normalizeInsightHistory\(insightHistory, HABITS, false\)[\s\S]*insightHistory:\s*backupInsightHistory/,
-      `${label}: version-5 backups carry validated prospective evidence`);
-    assert.match(html, /!\[1, 2, 3, 4, BACKUP_VERSION\]\.includes\(payload\.version\)/,
-      `${label}: version-1 through version-3 backups remain importable`);
+      `${label}: version-6 backups carry validated prospective evidence`);
+    assert.match(html, /!\[1, 2, 3, 4, 5, BACKUP_VERSION\]\.includes\(payload\.version\)/,
+      `${label}: version-1 through version-5 backups remain importable`);
     assert.match(html, /payload\.version === 1\s*\?\s*normalizeInsightHistory\(null, importedHabits\)\s*:\s*normalizeInsightHistory\(payload\.insightHistory, importedHabits, true\)/,
       `${label}: legacy imports start with no fabricated insight history`);
     assert.match(html, /normalizeInsightHistoryAgainstState\(importedInsightHistory, importedState, true\)/,

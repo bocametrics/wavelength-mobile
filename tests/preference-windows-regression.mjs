@@ -107,18 +107,18 @@ for (const { label, path } of BUILD_FILES) {
     'buildRuntimeHabits merges and re-normalizes preferenceWindow');
 
   // ── Manage UI source ──
-  assert(/eh-preference/.test(script), 'Manage modal renders the preferred-time field');
+  assert(/eh-preference/.test(script), 'focused habit editor renders the preferred-time field');
   assert(/isEligibleForPreferenceWindow\(h\)/.test(script), 'preferred-time field is eligibility-gated');
-  assert(/displayTimeToPreferenceWindow\(prefValue\)/.test(script), 'saveManageModal converts display time to a window');
+  assert(/displayTimeToPreferenceWindow\(prefValue\)/.test(script), 'saveHabitEditorForm converts display time to a window');
   assert(/changes\.preferenceWindow = null/.test(script), 'clearing the field clears the preference');
-  assert(/preferenceWindowToDisplayTime\(h\.preferenceWindow\)/.test(script), 'modal pre-fills from stored preference');
+  assert(/preferenceWindowToDisplayTime\(h\.preferenceWindow\)/.test(script), 'editor pre-fills from stored preference');
 
-  // ── backup schema (v5) ──
-  assert(/const BACKUP_VERSION = 5;/.test(script), 'backup schema is version 5');
-  assert(/preferenceWindows:\s*Object\.fromEntries\(/.test(script), 'payload carries a preferenceWindows map');
-  assert(/\[1, 2, 3, 4, BACKUP_VERSION\]\.includes\(payload\.version\)/.test(html), 'import still accepts v1–v4');
-  assert(/if \(payload\.preferenceWindows && typeof payload\.preferenceWindows === 'object'/.test(script),
-    'import restores the preferenceWindows map');
+  // ── backup schema (v6) ──
+  assert(/const BACKUP_VERSION = 6;/.test(script), 'backup schema is version 6');
+  assert(!/preferenceWindows:\s*Object\.fromEntries\(/.test(script), 'v6 avoids a duplicate top-level preferenceWindows map');
+  assert(/\[1, 2, 3, 4, 5, BACKUP_VERSION\]\.includes\(payload\.version\)/.test(html), 'import still accepts v1–v5');
+  assert(/payload\.version <= 5 && payload\.preferenceWindows/.test(script),
+    'legacy v5 and earlier imports restore the former preferenceWindows map');
 
   console.log(`${label}: preference-window regression tests passed`);
 }

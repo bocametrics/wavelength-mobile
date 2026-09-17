@@ -5,7 +5,7 @@ const ORIGIN = process.env.WAVELENGTH_ORIGIN || 'http://127.0.0.1:8777';
 const URL = process.env.WAVELENGTH_URL || `${ORIGIN}/?completed-grouping-e2e=local`;
 const ALL_SHOT = process.env.WAVELENGTH_ALL_SHOT || 'C:\\Temp\\wavelength-completed-all.png';
 const FUEL_SHOT = process.env.WAVELENGTH_FUEL_SHOT || 'C:\\Temp\\wavelength-completed-fuel.png';
-const REORDER_SHOT = process.env.WAVELENGTH_REORDER_SHOT || 'C:\\Temp\\wavelength-completed-reorder.png';
+
 const THEME = process.env.WAVELENGTH_THEME || 'light';
 let browser;
 
@@ -96,7 +96,7 @@ function contrastRatio(foreground, background) {
     const expected = partitionHabitsForTracking(canonical, todayDone, todayProgress);
     return {
       category:currentCat,
-      reorderMode,
+      reorderMode:false,
       ids:cards.map(card => card.dataset.id),
       activeIds:dividerIndex < 0 ? cards.map(card => card.dataset.id) : children.slice(0, dividerIndex).filter(node => node.classList.contains('habit')).map(card => card.dataset.id),
       completedIds:dividerIndex < 0 ? [] : children.slice(dividerIndex + 1).filter(node => node.classList.contains('habit')).map(card => card.dataset.id),
@@ -150,20 +150,7 @@ function contrastRatio(foreground, background) {
   await new Promise(resolve => setTimeout(resolve, 250));
   await page.screenshot({ path:FUEL_SHOT, fullPage:false });
 
-  await page.click('#reorderBtn');
-  await page.waitForFunction(() => document.getElementById('reorderBtn').getAttribute('aria-pressed') === 'true');
-  const reorder = await snapshot();
-  assert.equal(reorder.reorderMode, true);
-  assert.equal(reorder.dividerCount, 0, 'Reorder removes completion grouping');
-  assert.deepEqual(reorder.ids, reorder.expectedCanonical, 'Reorder restores canonical sequence');
-  assert.deepEqual(reorder.completedClassIds, ['breakfast'], 'completed styling remains in Reorder');
-  assert.equal(reorder.storedOrder, originalStoredOrder, 'entering Reorder does not mutate saved order');
-
-  await page.evaluate(() => document.getElementById('habitList').scrollIntoView({ block:'start' }));
-  await new Promise(resolve => setTimeout(resolve, 250));
-  await page.screenshot({ path:REORDER_SHOT, fullPage:false });
-
-  await page.click('#reorderBtn');
+  assert.equal(await page.$('#reorderBtn'), null, 'Home does not expose a competing Reorder mode');
   await page.click('.cat-tab[data-cat="morning"]');
   await page.waitForSelector('.habit[data-id="hydrate"] .progress-minus:not([disabled])');
   let morning = await snapshot();

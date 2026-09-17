@@ -176,6 +176,32 @@ for (const [label, htmlPath] of builds) {
     `${label}: a time-relevant incomplete habit becomes the fallback`,
   );
 
+  const allDayHydrationHabits = baseHabits.map(habit => habit.id === 'hydrate'
+    ? { ...habit, context:{ start:480, idealStart:480, idealEnd:600, end:1260, setting:'either', duration:2 } }
+    : habit);
+  assert.equal(
+    getNextWaveSuggestion(
+      allDayHydrationHabits,
+      doneFor(afternoon, ['daylight','beach','sunscreen','meditate','winddown']),
+      {},
+      afternoon,
+      null,
+    )?.habitId,
+    'hydrate',
+    `${label}: hydration remains a Next Wave candidate after its two-hour ideal window`,
+  );
+  assert.equal(
+    getNextWaveSuggestion(
+      allDayHydrationHabits,
+      doneFor(atHour(22), ['daylight','beach','sunscreen','meditate','winddown']),
+      {},
+      atHour(22),
+      null,
+    )?.habitId ?? null,
+    null,
+    `${label}: hydration's Next Wave eligibility ends at its evening boundary`,
+  );
+
   const evening = atHour(20);
   assert.equal(
     getNextWaveSuggestion(baseHabits, doneFor(evening, ['daylight','hydrate','beach','sunscreen','meditate']), {}, evening, null)?.habitId,

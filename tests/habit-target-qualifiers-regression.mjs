@@ -75,7 +75,7 @@ function loadTargetFunctions(html) {
 const plain = value => JSON.parse(JSON.stringify(value));
 
 const expectedIdentities = {
-  wake:'Wake', hydrate:'Drink water', stretch:'Mobility', strength:'Strength', cardio:'Cardio',
+  wake:'Wake', hydrate:'Drink water', stretch:'Mobility', strength:'Strength Training', cardio:'Cardio',
   meditate:'Meditate', learn:'Focused learning', dinner:'Finish dinner', winddown:'Wind down',
   gratitude:'Name good things', sleep:'In bed', journal:'Journal',
   breakfast:'Have a balanced breakfast', lunch:'Have a balanced lunch',
@@ -167,6 +167,27 @@ for (const [label, htmlPath] of builds) {
     `${label}: runtime identity and target cannot drift or collapse back into one title`,
   );
 
+  const measuredHydration = buildRuntimeHabits([
+    { id:'hydrate', text:'Drink water', context:{ start:300, end:1260 } },
+  ], {
+    hydrate:{
+      params:{ amount:162 },
+      measurement:'amount', target:48, step:12, unit:'oz',
+    },
+  })[0];
+  assert.equal(measuredHydration.text, 'Drink water',
+    `${label}: measured hydration keeps the stable action identity`);
+  assert.equal(measuredHydration.targetLabel, '',
+    `${label}: measured hydration does not duplicate or contradict the progress goal`);
+  assert.deepEqual(plain(normalizeMeasurementConfig(measuredHydration)),
+    { type:'amount', target:48, step:12, unit:'oz' },
+    `${label}: suppressing the duplicate qualifier does not alter the daily goal or increment`);
+  const checkOnceHydration = buildRuntimeHabits([
+    { id:'hydrate', text:'Drink water', context:{ start:300, end:1260 } },
+  ], { hydrate:{ params:{ amount:20 } } })[0];
+  assert.equal(checkOnceHydration.targetLabel, '20 oz',
+    `${label}: check-once hydration still communicates its configured amount`);
+
   const wakeRelativeParams = {
     wake:{ targetTime:'08:00' },
     meditate:{ durationMinutes:5 },
@@ -186,8 +207,8 @@ for (const [label, htmlPath] of builds) {
     plain(deriveSystemHabitContext('hydrate', {
       start:300, idealStart:360, end:1260, setting:'either', duration:2,
     }, wakeRelativeParams)),
-    { start:480, idealStart:480, idealEnd:600, end:600, setting:'either', duration:2 },
-    `${label}: hydration uses a two-hour after-wake window`,
+    { start:480, idealStart:480, idealEnd:600, end:1260, setting:'either', duration:2 },
+    `${label}: hydration is ideal for two hours after Wake and stays eligible through the evening`,
   );
   assert.deepEqual(
     plain(deriveSystemHabitContext('meditate', {
@@ -234,6 +255,10 @@ for (const [label, htmlPath] of builds) {
     `${label}: Manage previews the adjustable target separately`);
   assert.match(html, /\.habit-target\s*\{[\s\S]*?color:\s*var\(--text2\)/,
     `${label}: the target has a secondary visual treatment that does not rely on title text`);
+  assert.match(html, /@media\s*\(max-width:\s*600px\)[\s\S]*?\.next-wave-target\s*\{[^}]*font-size:\s*0\.9375rem;[^}]*font-weight:\s*600;/,
+    `${label}: the mobile Next Wave target is 15px semibold neutral metadata`);
+  assert.match(html, /@media\s*\(max-width:\s*600px\)[\s\S]*?\.habit-target\s*\{[^}]*font-size:\s*0\.9375rem;[^}]*font-weight:\s*600;/,
+    `${label}: the mobile Home target is 15px semibold neutral metadata`);
 }
 
 console.log('habit target qualifier regression tests passed for mobile and desktop');

@@ -1339,6 +1339,275 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     transform: translateX(-50%) translateY(0);
   }
 
+  /* ── Full-screen management flow ── */
+  .category-nav {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .category-nav .category-tabs { margin-bottom: 0; }
+
+  .manage-categories-btn {
+    width: 44px;
+    min-height: 42px;
+    border: 1px solid var(--accent-border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--accent);
+    font: 600 1.25rem/1 inherit;
+    cursor: pointer;
+    box-shadow: -8px 0 18px var(--bg);
+  }
+
+  .management-view {
+    min-height: calc(100vh - 60px);
+    padding-bottom: max(34px, env(safe-area-inset-bottom));
+    animation: managementEnter 0.2s ease-out;
+  }
+
+  .management-view[hidden] { display: none !important; }
+
+  @keyframes managementEnter {
+    from { opacity: 0; transform: translateX(14px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .management-view { animation: none; }
+  }
+
+  html[data-management-open="true"] #app > header,
+  html[data-management-open="true"] #homeView,
+  html[data-management-open="true"] #insightsView,
+  html[data-management-open="true"] #settingsView,
+  html[data-management-open="true"] .app-dock {
+    display: none !important;
+  }
+
+  .management-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: minmax(72px, auto) minmax(0, 1fr) minmax(72px, auto);
+    align-items: center;
+    gap: 8px;
+    min-height: 58px;
+    margin: 0 0 22px;
+    padding: max(8px, env(safe-area-inset-top)) 0 10px;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg) 94%, transparent);
+    backdrop-filter: blur(16px);
+  }
+
+  .management-header h1 {
+    overflow: hidden;
+    color: var(--text);
+    font-size: 1.08rem;
+    font-weight: 650;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .management-back,
+  .management-action {
+    min-height: 42px;
+    border: 0;
+    background: transparent;
+    color: var(--accent);
+    font: 600 0.84rem/1.2 inherit;
+    cursor: pointer;
+  }
+
+  .management-back { text-align: left; }
+  .management-action { text-align: right; }
+
+  .category-list,
+  .manage-habit-list,
+  .archived-category-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .category-row,
+  .manage-habit-row {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    min-height: 64px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+  }
+
+  .category-row-button,
+  .manage-habit-row-button {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .category-grip,
+  .manage-habit-grip,
+  .category-lock {
+    display: grid;
+    place-items: center;
+    min-width: 28px;
+    min-height: 42px;
+    border: 0;
+    background: transparent;
+    color: var(--text3);
+    font: 600 1rem/1 inherit;
+    touch-action: none;
+  }
+
+  .category-row-icon,
+  .manage-habit-row-icon { font-size: 1.22rem; text-align: center; }
+
+  .category-row-copy,
+  .manage-habit-row-copy { min-width: 0; }
+
+  .category-row-name,
+  .manage-habit-row-name {
+    overflow: hidden;
+    color: var(--text);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .category-row-meta,
+  .manage-habit-row-meta {
+    margin-top: 3px;
+    color: var(--text2);
+    font-size: 0.76rem;
+  }
+
+  .category-chevron,
+  .manage-habit-chevron { color: var(--text3); font-size: 1.2rem; }
+
+  .start-category-btn {
+    width: 100%;
+    min-height: 50px;
+    margin-top: 18px;
+    border: 1px solid var(--accent-border);
+    border-radius: var(--radius-sm);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font: 600 0.88rem/1.2 inherit;
+    cursor: pointer;
+  }
+
+  .management-empty {
+    padding: 24px 16px;
+    border: 1px dashed var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--text2);
+    font-size: 0.84rem;
+    line-height: 1.55;
+    text-align: center;
+  }
+
+  .category-editor-card {
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+
+  .category-editor-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--text2);
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  .category-editor-field input,
+  .eh-category {
+    width: 100%;
+    min-height: 46px;
+    padding: 10px 12px;
+    border: 1px solid var(--border2);
+    border-radius: 9px;
+    background: var(--surface2);
+    color: var(--text);
+    font: 500 0.9rem/1.2 inherit;
+  }
+
+  .eh-category-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 14px;
+    color: var(--text2);
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+
+  .category-icon-choices {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  .category-icon-choice {
+    display: grid;
+    place-items: center;
+    min-height: 48px;
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    background: var(--surface2);
+    font-size: 1.3rem;
+    cursor: pointer;
+  }
+
+  .category-icon-choice[aria-checked="true"] {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  .category-action-area {
+    margin-top: 28px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+
+  .archive-category-btn {
+    width: 100%;
+    min-height: 46px;
+    border: 1px solid var(--danger-border);
+    border-radius: var(--radius-sm);
+    background: var(--danger-soft);
+    color: var(--rose);
+    font: 600 0.84rem/1.2 inherit;
+    cursor: pointer;
+  }
+
+  .archive-category-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
   /* ── Responsive ── */
   @media (max-width: 480px) {
     body { padding: 18px 14px 40px; }
@@ -2047,7 +2316,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     .section-title .count { color: var(--text2); font-size: 0.8125rem; font-weight: 500; line-height: 1.3; }
     .next-wave-eyebrow { font-size: 0.75rem; line-height: 1.3; }
     .next-wave-title { font-size: 1.0625rem; line-height: 1.3; }
-    .next-wave-target { font-size: 0.8125rem; line-height: 1.3; }
+    .next-wave-target { font-size: 0.9375rem; font-weight: 600; line-height: 1.3; }
     .next-wave-detail { font-size: 0.875rem; line-height: 1.45; }
     .next-wave-action { font-size: 0.8125rem; line-height: 1.2; }
     .cat-tab { font-size: 0.875rem; font-weight: 500; line-height: 1.2; }
@@ -2056,7 +2325,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     .reorder-hint,
     .completed-divider { color: var(--text2); font-size: 0.75rem; line-height: 1.3; opacity: 1; }
     .habit-text { font-size: 1rem; line-height: 1.25; }
-    .habit-target { font-size: 0.8125rem; line-height: 1.25; }
+    .habit-target { font-size: 0.9375rem; font-weight: 600; line-height: 1.25; }
     .habit-note { color: var(--text2); font-size: 0.875rem; line-height: 1.3; }
     .rhythm-anchor-label { font-size: 0.8125rem; font-weight: 500; line-height: 1.25; opacity: 1; }
     .progress-chip { font-size: 0.75rem; font-weight: 500; line-height: 1.2; }
@@ -2175,23 +2444,16 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     </section>
 
     <!-- Category Tabs -->
-    <div class="category-tabs" id="tabs">
-      <button class="cat-tab active" data-cat="all">All</button>
-      <button class="cat-tab" data-cat="morning">🌅 Morning</button>
-      <button class="cat-tab" data-cat="movement">🏃 Movement</button>
-      <button class="cat-tab" data-cat="mind">🧠 Mind</button>
-      <button class="cat-tab" data-cat="fuel">🥗 Fuel</button>
-      <button class="cat-tab" data-cat="hygiene">🧼 Hygiene</button>
-      <button class="cat-tab" data-cat="evening">🌙 Evening</button>
+    <div class="category-nav">
+      <div class="category-tabs" id="categoryTabRail" aria-label="Habit categories"></div>
+      <button class="manage-categories-btn" id="manageCategoriesBtn" type="button" aria-label="Manage categories">+</button>
     </div>
 
     <!-- Habits -->
     <div class="section-title">
-      <h2>Today's habits <button class="manage-btn" id="manageBtn">✎ Manage</button><button class="manage-btn" id="reorderBtn" type="button" aria-pressed="false">↕ Reorder</button></h2>
+      <h2>Today's habits <button class="manage-btn" id="manageBtn">✎ Manage</button></h2>
       <span class="count" id="doneCount">0 / 20</span>
     </div>
-
-    <div class="reorder-hint" id="reorderHint"><svg class="grip-icon" width="12" height="15" viewBox="0 0 12 15" aria-hidden="true" focusable="false"><circle cx="3" cy="2.5" r="1.4"/><circle cx="9" cy="2.5" r="1.4"/><circle cx="3" cy="7.5" r="1.4"/><circle cx="9" cy="7.5" r="1.4"/><circle cx="3" cy="12.5" r="1.4"/><circle cx="9" cy="12.5" r="1.4"/></svg> <span class="reorder-hint-touch">Hold the right grip to drag</span><span class="reorder-hint-desktop">Hold the right grip to drag — or use ↑↓ arrows</span></div>
 
     <div class="habits" id="habitList"></div>
 
@@ -2316,7 +2578,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
       </div>
       <label class="settings-field" for="nextWaveNotificationTime">
         <span>Reminder time</span>
-        <input id="nextWaveNotificationTime" type="time" value="09:00">
+        <input id="nextWaveNotificationTime" type="time" value="11:00">
       </label>
       <p class="native-notification-status" id="nativeNotificationStatus" role="status" aria-live="polite">Off</p>
     </section>
@@ -2329,6 +2591,61 @@ function getThemeStatusCopy(preference, effectiveTheme) {
         <input type="file" id="importFile" accept="application/json,.json">
       </div>
     </section>
+  </section>
+
+  <section class="management-view" id="categoriesView" aria-labelledby="categoriesHeading" hidden inert>
+    <div class="management-header">
+      <button class="management-back" id="categoriesBack" type="button">‹ Home</button>
+      <h1 id="categoriesHeading">Categories</h1>
+      <span aria-hidden="true"></span>
+    </div>
+    <div class="category-list" id="categoriesList"></div>
+    <button class="start-category-btn" id="newCategoryBtn" type="button">+ Start a New Category</button>
+    <button class="manage-all-link" id="archivedCategoriesBtn" type="button" hidden>Archived Categories</button>
+  </section>
+
+  <section class="management-view" id="manageCategoryView" aria-labelledby="manageCategoryHeading" hidden inert>
+    <div class="management-header">
+      <button class="management-back" id="manageCategoryBack" type="button">‹ Categories</button>
+      <h1 id="manageCategoryHeading">Manage Habits</h1>
+      <button class="management-action" id="editCategoryBtn" type="button">Edit</button>
+    </div>
+    <div class="manage-habit-list" id="manageCategoryList"></div>
+    <div id="categoryActions"></div>
+  </section>
+
+  <section class="management-view" id="habitEditorView" aria-labelledby="habitEditorHeading" hidden inert>
+    <div class="management-header">
+      <button class="management-back" id="habitEditorBack" type="button">‹ Habits</button>
+      <h1 id="habitEditorHeading">Edit Habit</h1>
+      <button class="management-action" id="habitEditorSave" type="button">Save</button>
+    </div>
+    <div id="habitEditorBody"></div>
+    <button class="modal-btn danger" id="habitEditorReset" type="button">Reset habit defaults</button>
+  </section>
+
+  <section class="management-view" id="categoryEditorView" aria-labelledby="categoryEditorHeading" hidden inert>
+    <div class="management-header">
+      <button class="management-back" id="categoryEditorBack" type="button">‹ Categories</button>
+      <h1 id="categoryEditorHeading">New Category</h1>
+      <button class="management-action" id="categoryEditorSave" type="button">Save</button>
+    </div>
+    <div class="category-editor-card">
+      <label class="category-editor-field" for="categoryNameInput">
+        <span>Category name</span>
+        <input id="categoryNameInput" type="text" maxlength="24" autocomplete="off" placeholder="e.g. Recovery">
+      </label>
+      <div class="category-icon-choices" id="categoryIconChoices" role="radiogroup" aria-label="Category icon"></div>
+    </div>
+  </section>
+
+  <section class="management-view" id="archivedCategoriesView" aria-labelledby="archivedCategoriesHeading" hidden inert>
+    <div class="management-header">
+      <button class="management-back" id="archivedCategoriesBack" type="button">‹ Categories</button>
+      <h1 id="archivedCategoriesHeading">Archived Categories</h1>
+      <span aria-hidden="true"></span>
+    </div>
+    <div class="archived-category-list" id="archivedCategoriesList"></div>
   </section>
 
   <nav class="app-dock" aria-label="Primary navigation" role="tablist">
@@ -2350,21 +2667,6 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
-<!-- Manage Habits Modal -->
-<div class="modal-overlay" id="modalOverlay">
-  <div class="modal">
-    <div class="modal-header">
-      <h3 id="modalTitle">Manage All Habits</h3>
-      <button class="modal-close" id="modalClose">✕</button>
-    </div>
-    <div class="modal-body" id="modalBody"></div>
-    <div class="modal-footer">
-      <button class="modal-btn danger" id="modalReset">Reset defaults</button>
-      <button class="modal-btn primary" id="modalSave">Save changes</button>
-    </div>
-  </div>
-</div>
-
 <div class="offline-pill" id="offlinePill" role="status">Offline — changes stay on this device</div>
 
 <script>
@@ -2374,11 +2676,11 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 const DEFAULT_HABITS = [
   { id:'wake',       cat:'morning',  icon:'⏰', text:'Wake',                               note:'Keep the wake time consistent', weight:2, context:{ recommend:false } },
   { id:'daylight',   cat:'morning',  icon:'🌤️', text:'Get outdoor light after waking',       note:'Step outside for 10 minutes', weight:1, activeFrom:'2026-08-28', rhythm:{ type:'sunrise' }, context:{ start:360, idealStart:390, urgencyStart:540, end:660, setting:'outdoor', daylight:'required', duration:10 } },
-  { id:'affirm',     cat:'morning',  icon:'💬', text:'Start the day with an affirmation',    note:'Choose words that encourage you', weight:1, context:{ start:360, idealStart:420, end:660, setting:'indoor', duration:2 } },
+  { id:'affirm',     cat:'morning',  icon:'💬', text:'Say an affirmation',                   note:'Choose words that encourage you', weight:1, context:{ start:360, idealStart:420, end:660, setting:'indoor', duration:2 } },
   { id:'hydrate',    cat:'morning',  icon:'💧', text:'Drink water',                          note:'Set an amount that works for you', weight:2, rhythm:{ type:'temp-above', threshold:85, note:'Drink extra water' }, context:{ start:300, idealStart:360, end:1260, setting:'either', duration:2 } },
   { id:'stretch',    cat:'morning',  icon:'🧘', text:'Mobility',                             note:'Sun salutation or joint circles', weight:1, context:{ start:360, idealStart:420, idealEnd:720, lateStart:1230, end:1290, setting:'indoor', duration:10, flexibleDetail:'A mobility session can still work later in the day.', lateEyebrow:'Keep it gentle', lateDetail:'A lighter session can still work tonight.' } },
   { id:'beach',      cat:'movement', icon:'🌊', text:'Outdoor walk or movement',             note:'Walk, roll, hike, swim, or paddle', weight:2, rhythm:{ type:'aqi-below', threshold:100 }, context:{ start:390, idealStart:480, end:1260, setting:'outdoor', daylight:'required', daylightClosing:true, duration:20, goal:'Move every day', adaptations:{ afterDark:{ detail:'Try 10 minutes of gentle indoor movement.' } }, afterCompletion:['lunch'], completionCue:{ eyebrow:'A good time to move', detail:'{source} is done. A 5–10 minute walk can fit here.', requiresEligibility:true } } },
-  { id:'strength',   cat:'movement', icon:'🏋️', text:'Strength',                             note:'Use bodyweight or bands', weight:2, context:{ start:480, idealStart:600, end:1260, setting:'indoor', duration:20 } },
+  { id:'strength',   cat:'movement', icon:'🏋️', text:'Strength Training',                    note:'Use bodyweight or bands', weight:2, context:{ start:480, idealStart:600, end:1260, setting:'indoor', duration:20 } },
   { id:'cardio',     cat:'movement', icon:'🏃', text:'Cardio',                               note:'Run, bike, dance, or do intervals', weight:1, context:{ start:480, idealStart:600, end:1260, setting:'either', duration:15 } },
   { id:'meditate',   cat:'mind',     icon:'🧠', text:'Meditate',                             note:'Breath focus or body scan', weight:1, context:{ start:360, idealStart:720, end:1350, setting:'either', duration:5 } },
   { id:'learn',      cat:'mind',     icon:'📖', text:'Focused learning',                     note:'Practice, recall, or focused research', weight:1, context:{ start:420, idealStart:720, end:1320, setting:'indoor', duration:20 } },
@@ -2560,7 +2862,7 @@ function deriveSystemHabitContext(habitId, baseContext = {}, paramsById = {}) {
   if (habitId === 'hydrate' && wake !== null) {
     const idealEnd = Math.min(1440, wake + 120);
     const { urgencyStart, lateStart, ...context } = baseContext;
-    return { ...context, start:wake, idealStart:wake, idealEnd, end:idealEnd };
+    return { ...context, start:wake, idealStart:wake, idealEnd, end:context.end ?? idealEnd };
   }
   if (habitId === 'meditate' && wake !== null) {
     const duration = paramsById.meditate?.durationMinutes;
@@ -2622,7 +2924,8 @@ function buildRuntimeHabits(defaults, overrides = {}) {
       runtime.text = Object.hasOwn(override, 'text')
         ? override.text
         : habit.text;
-      runtime.targetLabel = Object.hasOwn(override, 'text')
+      runtime.targetLabel = Object.hasOwn(override, 'text') ||
+        (habit.id === 'hydrate' && normalizeMeasurementConfig(runtime).type === 'amount')
         ? ''
         : formatSystemHabitTarget(habit.id, runtime.params);
       runtime.context = deriveSystemHabitContext(habit.id, habit.context, paramsById);
@@ -2657,13 +2960,342 @@ function saveCustomHabits(overrides) {
 
 function reloadHabits() {
   const overrides = loadCustomHabits();
-  HABITS = buildRuntimeHabits(DEFAULT_HABITS, overrides || {});
+  HABITS = applyCategoryStateToHabits(buildRuntimeHabits(DEFAULT_HABITS, overrides || {}), categoryState);
 }
 
 let HABITS = [];
 
-const CATS = ['all','morning','movement','mind','fuel','hygiene','evening'];
-const CATEGORY_NAMES = { morning:'Morning', movement:'Movement', mind:'Mind', fuel:'Fuel', hygiene:'Hygiene', evening:'Evening' };
+const CATEGORY_SCHEMA_VERSION = 1;
+const CATEGORY_CATALOG_VERSION = 1;
+const CATEGORY_STATE_KEY = 'wavelength_categories_v1';
+const IMPORT_JOURNAL_KEY = 'wavelength_import_journal_v1';
+const CATEGORY_NAME_MAX = 24;
+const CATEGORY_ICON_MAP = Object.freeze({
+  sunrise:'🌅', movement:'🏃', mind:'🧠', fuel:'🥗', hygiene:'🧼', evening:'🌙',
+  recovery:'🌿', strength:'💪', heart:'❤️', focus:'🎯', creative:'🎨', social:'🤝',
+  outdoors:'🌤️', home:'🏠', work:'💼', sleep:'😴', water:'💧', star:'⭐',
+});
+const DEFAULT_CATEGORY_DEFINITIONS = [
+  { id:'morning', name:'Morning', iconKey:'sunrise', archived:false },
+  { id:'movement', name:'Movement', iconKey:'movement', archived:false },
+  { id:'mind', name:'Mind', iconKey:'mind', archived:false },
+  { id:'fuel', name:'Fuel', iconKey:'fuel', archived:false },
+  { id:'hygiene', name:'Hygiene', iconKey:'hygiene', archived:false },
+  { id:'evening', name:'Evening', iconKey:'evening', archived:false },
+];
+
+function createDefaultCategoryState() {
+  return {
+    schemaVersion:CATEGORY_SCHEMA_VERSION,
+    catalogVersion:CATEGORY_CATALOG_VERSION,
+    definitions:DEFAULT_CATEGORY_DEFINITIONS.map(category => ({ ...category })),
+    order:DEFAULT_CATEGORY_DEFINITIONS.map(category => category.id),
+    assignments:[],
+  };
+}
+
+function normalizeCategoryState(raw, habits, strict = false) {
+  const fallback = () => createDefaultCategoryState();
+  const invalid = message => {
+    if (strict) throw new Error(message);
+    return null;
+  };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    invalid('Category settings must be an object.');
+    return fallback();
+  }
+  const allowedRoot = new Set(['schemaVersion','catalogVersion','definitions','order','assignments']);
+  if (strict && Object.keys(raw).some(key => !allowedRoot.has(key))) {
+    throw new Error('Category settings contain unsupported fields.');
+  }
+  if (raw.schemaVersion !== CATEGORY_SCHEMA_VERSION || raw.catalogVersion !== CATEGORY_CATALOG_VERSION ||
+      !Array.isArray(raw.definitions) || !Array.isArray(raw.order) || !Array.isArray(raw.assignments)) {
+    invalid('Category settings are not compatible with this version.');
+    return fallback();
+  }
+  if (raw.definitions.length < DEFAULT_CATEGORY_DEFINITIONS.length || raw.definitions.length > 24) {
+    invalid('Category count is outside the supported range.');
+    return fallback();
+  }
+  const shippedIds = new Set(DEFAULT_CATEGORY_DEFINITIONS.map(category => category.id));
+  const definitions = [];
+  const ids = new Set();
+  const names = new Set();
+  for (const value of raw.definitions) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      invalid('Each category must be an object.');
+      return fallback();
+    }
+    const allowedDefinition = new Set(['id','name','iconKey','archived']);
+    if (strict && Object.keys(value).some(key => !allowedDefinition.has(key))) {
+      throw new Error('A category contains unsupported fields.');
+    }
+    const id = typeof value.id === 'string' ? value.id : '';
+    const customId = /^cat_[a-f0-9-]{8,64}$/.test(id);
+    if ((!shippedIds.has(id) && !customId) || id === 'all' || ids.has(id)) {
+      invalid('Category IDs must be unique and supported.');
+      return fallback();
+    }
+    const rawName = typeof value.name === 'string' ? value.name : '';
+    const name = rawName.normalize('NFKC').trim().replace(/\s+/g, ' ');
+    const hasUnsafeCharacters = /[\u0000-\u001f\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]/.test(name);
+    if (!name || name.length > CATEGORY_NAME_MAX || hasUnsafeCharacters ||
+        !/^[\p{L}\p{N}][\p{L}\p{N} &'’.\-]*$/u.test(name) ||
+        (strict && name !== rawName)) {
+      invalid('Category names must be concise plain text.');
+      return fallback();
+    }
+    const nameKey = name.toLocaleLowerCase('en-US');
+    if (nameKey === 'all' || names.has(nameKey)) {
+      invalid('Category names must be unique and cannot be All.');
+      return fallback();
+    }
+    if (typeof value.iconKey !== 'string' || !Object.hasOwn(CATEGORY_ICON_MAP, value.iconKey) || typeof value.archived !== 'boolean') {
+      invalid('Category icon or archive state is invalid.');
+      return fallback();
+    }
+    ids.add(id);
+    names.add(nameKey);
+    definitions.push({ id, name, iconKey:value.iconKey, archived:value.archived });
+  }
+  if ([...shippedIds].some(id => !ids.has(id))) {
+    invalid('Shipped categories cannot be removed.');
+    return fallback();
+  }
+  if (raw.order.length !== definitions.length || new Set(raw.order).size !== raw.order.length ||
+      raw.order.some(id => typeof id !== 'string' || !ids.has(id))) {
+    invalid('Category order must contain every category exactly once.');
+    return fallback();
+  }
+  const habitList = Array.isArray(habits) ? habits : [];
+  const habitById = new Map(habitList.map(habit => [habit.id, habit]));
+  const definitionById = new Map(definitions.map(category => [category.id, category]));
+  const assignments = [];
+  const assignedHabitIds = new Set();
+  if (raw.assignments.length > habitList.length) {
+    invalid('Category assignments exceed the habit catalog.');
+    return fallback();
+  }
+  for (const value of raw.assignments) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      invalid('Each category assignment must be an object.');
+      return fallback();
+    }
+    const allowedAssignment = new Set(['habitId','categoryId']);
+    if (strict && Object.keys(value).some(key => !allowedAssignment.has(key))) {
+      throw new Error('A category assignment contains unsupported fields.');
+    }
+    const habit = habitById.get(value.habitId);
+    const category = definitionById.get(value.categoryId);
+    if (!habit || !category || category.archived || assignedHabitIds.has(value.habitId) || value.categoryId === 'all') {
+      invalid('Category assignments must reference unique habits and active real categories.');
+      return fallback();
+    }
+    assignedHabitIds.add(value.habitId);
+    if (habit.cat !== value.categoryId) assignments.push({ habitId:value.habitId, categoryId:value.categoryId });
+  }
+  const assignmentMap = new Map(assignments.map(value => [value.habitId, value.categoryId]));
+  for (const habit of habitList) {
+    const effectiveId = assignmentMap.get(habit.id) || habit.cat;
+    const category = definitionById.get(effectiveId);
+    if (!category || category.archived) {
+      invalid('Every habit must belong to an active real category.');
+      return fallback();
+    }
+  }
+  for (const category of definitions) {
+    if (!category.archived) continue;
+    if (habitList.some(habit => (assignmentMap.get(habit.id) || habit.cat) === category.id)) {
+      invalid('A category must be empty before it can be archived.');
+      return fallback();
+    }
+  }
+  return {
+    schemaVersion:CATEGORY_SCHEMA_VERSION,
+    catalogVersion:CATEGORY_CATALOG_VERSION,
+    definitions:raw.order.map(id => definitions.find(category => category.id === id)),
+    order:[...raw.order],
+    assignments,
+  };
+}
+
+function getActiveCategoryDefinitions(state) {
+  const safe = state && Array.isArray(state.definitions) && Array.isArray(state.order)
+    ? state
+    : createDefaultCategoryState();
+  const definitions = new Map(safe.definitions.map(category => [category.id, category]));
+  return safe.order.map(id => definitions.get(id)).filter(category => category && !category.archived);
+}
+
+function getEffectiveCategoryId(habit, state) {
+  if (!habit || typeof habit.id !== 'string') return null;
+  const assignment = Array.isArray(state?.assignments)
+    ? state.assignments.find(value => value.habitId === habit.id)
+    : null;
+  return assignment?.categoryId || habit.cat || null;
+}
+
+function applyCategoryStateToHabits(habits, state) {
+  return (Array.isArray(habits) ? habits : []).map(habit => ({
+    ...habit,
+    cat:getEffectiveCategoryId(habit, state),
+  }));
+}
+
+function setHabitCategoryAssignment(state, habitId, categoryId, habits) {
+  const safe = normalizeCategoryState(state, habits, true);
+  const habit = (habits || []).find(value => value.id === habitId);
+  const category = safe.definitions.find(value => value.id === categoryId && !value.archived);
+  if (!habit || !category || categoryId === 'all') throw new Error('Choose an active real category.');
+  const assignments = safe.assignments.filter(value => value.habitId !== habitId);
+  if (habit.cat !== categoryId) assignments.push({ habitId, categoryId });
+  return normalizeCategoryState({ ...safe, assignments }, habits, true);
+}
+
+function moveCategoryInOrder(state, movedId, beforeId) {
+  const safe = normalizeCategoryState(state, [], true);
+  if (movedId === beforeId || !safe.order.includes(movedId) || !safe.order.includes(beforeId)) return safe;
+  const order = safe.order.filter(id => id !== movedId);
+  order.splice(order.indexOf(beforeId), 0, movedId);
+  return { ...safe, definitions:order.map(id => safe.definitions.find(category => category.id === id)), order };
+}
+
+function reorderActiveCategoryIds(state, reorderedIds, habits) {
+  const safe = normalizeCategoryState(state, habits, true);
+  const activeIds = safe.order.filter(id => !safe.definitions.find(category => category.id === id)?.archived);
+  if (!Array.isArray(reorderedIds) || reorderedIds.length !== activeIds.length ||
+      new Set(reorderedIds).size !== reorderedIds.length ||
+      reorderedIds.some(id => !activeIds.includes(id))) {
+    throw new Error('Active category order must include every active category exactly once.');
+  }
+  let index = 0;
+  const order = safe.order.map(id => safe.definitions.find(category => category.id === id)?.archived
+    ? id
+    : reorderedIds[index++]);
+  return {
+    ...safe,
+    definitions:order.map(id => safe.definitions.find(category => category.id === id)),
+    order,
+  };
+}
+
+function reorderHabitIdsWithinCategory(order, habits, categoryId, reorderedIds) {
+  const currentOrder = Array.isArray(order) ? [...order] : [];
+  const byId = new Map((habits || []).map(habit => [habit.id, habit]));
+  const scopedIds = currentOrder.filter(id => byId.get(id)?.cat === categoryId);
+  if (!Array.isArray(reorderedIds) || reorderedIds.length !== scopedIds.length ||
+      new Set(reorderedIds).size !== reorderedIds.length ||
+      reorderedIds.some(id => !scopedIds.includes(id))) {
+    throw new Error('Scoped habit order must include every category habit exactly once.');
+  }
+  let index = 0;
+  return currentOrder.map(id => byId.get(id)?.cat === categoryId ? reorderedIds[index++] : id);
+}
+
+function setCategoryArchived(state, categoryId, archived, habits) {
+  const safe = normalizeCategoryState(state, habits, true);
+  const category = safe.definitions.find(value => value.id === categoryId);
+  if (!category || categoryId === 'all') throw new Error('Choose a real category.');
+  if (archived && (habits || []).some(habit => getEffectiveCategoryId(habit, safe) === categoryId)) {
+    throw new Error('A category must be empty before it can be archived.');
+  }
+  const definitions = safe.definitions.map(value => value.id === categoryId
+    ? { ...value, archived:!!archived }
+    : { ...value });
+  return normalizeCategoryState({ ...safe, definitions }, habits, true);
+}
+
+function addCategoryDefinition(state, categoryId, name, iconKey, habits) {
+  const safe = normalizeCategoryState(state, habits, true);
+  const candidate = {
+    id:categoryId,
+    name,
+    iconKey,
+    archived:false,
+  };
+  return normalizeCategoryState({
+    ...safe,
+    definitions:[...safe.definitions.map(category => ({ ...category })), candidate],
+    order:[...safe.order, categoryId],
+  }, habits, true);
+}
+
+function updateCategoryDefinition(state, categoryId, name, iconKey, habits) {
+  const safe = normalizeCategoryState(state, habits, true);
+  if (!safe.definitions.some(category => category.id === categoryId) || categoryId === 'all') {
+    throw new Error('Choose a real category.');
+  }
+  const definitions = safe.definitions.map(category => category.id === categoryId
+    ? { ...category, name, iconKey }
+    : { ...category });
+  return normalizeCategoryState({ ...safe, definitions }, habits, true);
+}
+
+function loadCategoryState(habits, storage = localStorage) {
+  try {
+    const raw = storage.getItem(CATEGORY_STATE_KEY);
+    if (!raw) return createDefaultCategoryState();
+    return normalizeCategoryState(JSON.parse(raw), habits, false);
+  } catch (error) {
+    return createDefaultCategoryState();
+  }
+}
+
+function saveCategoryState(state, habits, storage = localStorage) {
+  const normalized = normalizeCategoryState(state, habits, true);
+  storage.setItem(CATEGORY_STATE_KEY, JSON.stringify(normalized));
+  return normalized;
+}
+
+function recoverStorageSnapshot(storage = localStorage) {
+  const raw = storage.getItem(IMPORT_JOURNAL_KEY);
+  if (!raw) return false;
+  const journal = JSON.parse(raw);
+  if (!journal || !Array.isArray(journal.previous)) throw new Error('Import recovery data is invalid.');
+  for (const entry of journal.previous) {
+    if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== 'string' ||
+        (entry[1] !== null && typeof entry[1] !== 'string')) {
+      throw new Error('Import recovery data is invalid.');
+    }
+    if (entry[1] === null) storage.removeItem(entry[0]);
+    else storage.setItem(entry[0], entry[1]);
+  }
+  storage.removeItem(IMPORT_JOURNAL_KEY);
+  return true;
+}
+
+function commitStorageSnapshot(storage, values) {
+  const entries = Object.entries(values || {});
+  if (entries.some(([key, value]) => typeof key !== 'string' || (value !== null && typeof value !== 'string'))) {
+    throw new Error('Import snapshot is invalid.');
+  }
+  const previous = entries.map(([key]) => [key, storage.getItem(key)]);
+  storage.setItem(IMPORT_JOURNAL_KEY, JSON.stringify({ previous }));
+  try {
+    for (const [key, value] of entries) {
+      if (value === null) storage.removeItem(key);
+      else storage.setItem(key, value);
+    }
+    storage.removeItem(IMPORT_JOURNAL_KEY);
+  } catch (error) {
+    for (const [key, value] of previous) {
+      if (value === null) storage.removeItem(key);
+      else storage.setItem(key, value);
+    }
+    storage.removeItem(IMPORT_JOURNAL_KEY);
+    throw error;
+  }
+}
+
+try {
+  recoverStorageSnapshot(localStorage);
+} catch (error) {
+  localStorage.removeItem(IMPORT_JOURNAL_KEY);
+}
+let categoryState = loadCategoryState(DEFAULT_HABITS);
+
+const CATS = ['all', ...DEFAULT_CATEGORY_DEFINITIONS.map(category => category.id)];
+const CATEGORY_NAMES = Object.fromEntries(DEFAULT_CATEGORY_DEFINITIONS.map(category => [category.id, category.name]));
 
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const SCHEDULE_DAYS = [
@@ -3542,8 +4174,7 @@ function focusNextWaveHabit() {
   document.querySelectorAll('.cat-tab').forEach(tab => {
     tab.classList.toggle('active', tab.dataset.cat === currentCat);
   });
-  if (reorderMode) setReorderMode(false);
-  else renderHabits(now);
+  renderHabits(now);
   requestAnimationFrame(() => {
     const target = [...document.querySelectorAll('.habit[data-id]')].find(element => element.dataset.id === habitId);
     if (!target) return;
@@ -4466,7 +5097,7 @@ function normalizeNativeNotificationSettings(raw) {
   const value = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const time = typeof value.time === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value.time)
     ? value.time
-    : '09:00';
+    : '11:00';
   return { enabled:value.enabled === true, time };
 }
 
@@ -4714,9 +5345,517 @@ function getLast30DayTrend(doneByDate, habits, now = new Date(), progressByDate 
 // ═══════════════════════════════════════════════════════════════════
 let currentCat = 'all';
 let manageCategory = 'all';
-let reorderMode = false;
+
 let lastRenderedDateKey = null;
 let dateRolloverTimer = null;
+let managementOrigin = 'home';
+let managedCategoryId = 'all';
+let editingHabitId = null;
+let habitEditorDirty = false;
+let editingCategoryId = null;
+let categoryEditorOrigin = 'categories';
+let selectedCategoryIconKey = 'star';
+const MANAGEMENT_HISTORY_KEY = 'wavelengthManagementRoute';
+let suppressNextManagementPop = false;
+
+function getCategoryDefinition(categoryId) {
+  return categoryState.definitions.find(category => category.id === categoryId) || null;
+}
+
+function getCategoryDisplayName(categoryId) {
+  return categoryId === 'all' ? 'All' : (getCategoryDefinition(categoryId)?.name || 'Category');
+}
+
+function renderCategoryTabs() {
+  const rail = document.getElementById('categoryTabRail');
+  if (!rail) return;
+  const activeCategories = getActiveCategoryDefinitions(categoryState);
+  if (currentCat !== 'all' && !activeCategories.some(category => category.id === currentCat)) currentCat = 'all';
+  rail.replaceChildren();
+
+  const appendTab = category => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'cat-tab';
+    button.dataset.cat = category?.id || 'all';
+    button.classList.toggle('active', button.dataset.cat === currentCat);
+    button.textContent = category
+      ? `${CATEGORY_ICON_MAP[category.iconKey]} ${category.name}`
+      : 'All';
+    button.addEventListener('click', () => {
+      currentCat = button.dataset.cat;
+      rail.querySelectorAll('.cat-tab').forEach(tab => tab.classList.toggle('active', tab === button));
+      renderHabits();
+    });
+    rail.appendChild(button);
+  };
+
+  appendTab(null);
+  activeCategories.forEach(appendTab);
+}
+
+function getManagementRoute(viewId) {
+  return {
+    viewId,
+    categoryId:managedCategoryId,
+    habitId:editingHabitId,
+    categoryEditorId:editingCategoryId,
+    categoryEditorOrigin,
+    managementOrigin,
+  };
+}
+
+function showManagementView(viewId, pushHistory = true) {
+  document.documentElement.dataset.managementOpen = 'true';
+  document.querySelectorAll('.management-view').forEach(view => {
+    const selected = view.id === viewId;
+    view.hidden = !selected;
+    view.inert = !selected;
+  });
+  if (pushHistory) {
+    const route = getManagementRoute(viewId);
+    const currentRoute = history.state?.[MANAGEMENT_HISTORY_KEY];
+    if (JSON.stringify(currentRoute) !== JSON.stringify(route)) {
+      history.pushState({ ...(history.state || {}), [MANAGEMENT_HISTORY_KEY]:route }, '', location.href);
+    }
+  }
+  window.scrollTo({ top:0, behavior:'auto' });
+}
+
+function closeManagementFlow(fromHistory = false) {
+  delete document.documentElement.dataset.managementOpen;
+  document.querySelectorAll('.management-view').forEach(view => {
+    view.hidden = true;
+    view.inert = true;
+  });
+  editingHabitId = null;
+  habitEditorDirty = false;
+  renderCategoryTabs();
+  renderHabits();
+  setActiveView(currentActiveView, false);
+  if (!fromHistory && history.state?.[MANAGEMENT_HISTORY_KEY]) history.back();
+}
+
+function makeCategoryRow(category, isAll = false) {
+  const row = document.createElement('div');
+  row.className = 'category-row';
+  row.dataset.categoryId = isAll ? 'all' : category.id;
+
+  const lead = document.createElement(isAll ? 'span' : 'button');
+  if (!isAll) lead.type = 'button';
+  lead.className = isAll ? 'category-lock' : 'category-grip';
+  if (isAll) {
+    lead.dataset.icon = '🔒';
+    lead.textContent = '🔒';
+  } else {
+    lead.textContent = '⠿';
+    lead.setAttribute('aria-label', `Reorder ${category.name}`);
+  }
+  row.appendChild(lead);
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'category-row-button';
+  const icon = document.createElement('span');
+  icon.className = 'category-row-icon';
+  icon.textContent = isAll ? '≈' : CATEGORY_ICON_MAP[category.iconKey];
+  const copy = document.createElement('span');
+  copy.className = 'category-row-copy';
+  const name = document.createElement('span');
+  name.className = 'category-row-name';
+  name.textContent = isAll ? 'All habits' : category.name;
+  const meta = document.createElement('span');
+  meta.className = 'category-row-meta';
+  const count = isAll ? HABITS.length : HABITS.filter(habit => habit.cat === category.id).length;
+  meta.textContent = `${count} ${count === 1 ? 'habit' : 'habits'}`;
+  copy.append(name, meta);
+  const chevron = document.createElement('span');
+  chevron.className = 'category-chevron';
+  chevron.textContent = '›';
+  button.append(icon, copy, chevron);
+  button.addEventListener('click', () => openManageCategoryPage(isAll ? 'all' : category.id, 'categories'));
+  row.appendChild(button);
+  return row;
+}
+
+function attachGripReorder(container, rowSelector, gripSelector, onCommit) {
+  let active = null;
+  const finish = event => {
+    if (!active) return;
+    active.grip.releasePointerCapture?.(active.pointerId);
+    active.row.classList.remove('dragging');
+    document.body.classList.remove('dragging-active');
+    const changed = active.moved;
+    active = null;
+    if (changed) onCommit([...container.querySelectorAll(rowSelector)]);
+    event?.preventDefault();
+  };
+  container.querySelectorAll(gripSelector).forEach(grip => {
+    grip.addEventListener('pointerdown', event => {
+      if (active) return;
+      const row = grip.closest(rowSelector);
+      if (!row) return;
+      event.preventDefault();
+      grip.setPointerCapture?.(event.pointerId);
+      active = { row, grip, pointerId:event.pointerId, startY:event.clientY, moved:false };
+      row.classList.add('dragging');
+      document.body.classList.add('dragging-active');
+    });
+    grip.addEventListener('pointermove', event => {
+      if (!active || event.pointerId !== active.pointerId) return;
+      event.preventDefault();
+      if (Math.abs(event.clientY - active.startY) < 8 && !active.moved) return;
+      const candidates = [...container.querySelectorAll(rowSelector)].filter(row => row !== active.row && row.querySelector(gripSelector));
+      const target = candidates.find(row => event.clientY < row.getBoundingClientRect().top + row.getBoundingClientRect().height / 2);
+      if (target) container.insertBefore(active.row, target);
+      else if (candidates.length) container.appendChild(active.row);
+      active.moved = true;
+    });
+    grip.addEventListener('pointerup', finish);
+    grip.addEventListener('pointercancel', finish);
+    grip.addEventListener('keydown', event => {
+      if (!['ArrowUp','ArrowDown'].includes(event.key)) return;
+      event.preventDefault();
+      const row = grip.closest(rowSelector);
+      const rows = [...container.querySelectorAll(rowSelector)].filter(item => item.querySelector(gripSelector));
+      const index = rows.indexOf(row);
+      const nextIndex = event.key === 'ArrowUp' ? index - 1 : index + 1;
+      if (index < 0 || nextIndex < 0 || nextIndex >= rows.length) return;
+      if (event.key === 'ArrowUp') container.insertBefore(row, rows[nextIndex]);
+      else container.insertBefore(rows[nextIndex], row);
+      onCommit([...container.querySelectorAll(rowSelector)]);
+      grip.focus();
+    });
+  });
+}
+
+function renderCategoriesPage() {
+  const list = document.getElementById('categoriesList');
+  list.replaceChildren();
+  const allRow = makeCategoryRow(null, true);
+  allRow.setAttribute('aria-label', '🔒 All habits is protected');
+  list.appendChild(allRow);
+  getActiveCategoryDefinitions(categoryState).forEach(category => list.appendChild(makeCategoryRow(category)));
+  const archivedCount = categoryState.definitions.filter(category => category.archived).length;
+  const archivedButton = document.getElementById('archivedCategoriesBtn');
+  archivedButton.hidden = archivedCount === 0;
+  archivedButton.textContent = `Archived Categories · ${archivedCount}`;
+  attachGripReorder(list, '.category-row[data-category-id]', '.category-grip', rows => {
+    const reorderedIds = rows.filter(row => row.querySelector('.category-grip')).map(row => row.dataset.categoryId);
+    categoryState = reorderActiveCategoryIds(categoryState, reorderedIds, DEFAULT_HABITS);
+    categoryState = saveCategoryState(categoryState, DEFAULT_HABITS);
+    renderCategoryTabs();
+    renderCategoriesPage();
+  });
+}
+
+function openCategoriesPage() {
+  managementOrigin = 'home';
+  renderCategoriesPage();
+  showManagementView('categoriesView');
+}
+
+function renderManageCategoryPage() {
+  const isAll = managedCategoryId === 'all';
+  const category = isAll ? null : getCategoryDefinition(managedCategoryId);
+  if (!isAll && (!category || category.archived)) {
+    openCategoriesPage();
+    return;
+  }
+  document.getElementById('manageCategoryHeading').textContent = isAll ? 'Manage All Habits' : `Manage ${category.name}`;
+  document.getElementById('editCategoryBtn').hidden = isAll;
+  const list = document.getElementById('manageCategoryList');
+  list.replaceChildren();
+  const habits = (isAll ? HABITS : HABITS.filter(habit => habit.cat === managedCategoryId))
+    .slice().sort((a, b) => userOrder.indexOf(a.id) - userOrder.indexOf(b.id));
+  if (habits.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'management-empty';
+    empty.textContent = 'No habits are assigned to this category yet. Open All habits to move an existing habit here.';
+    list.appendChild(empty);
+  }
+  habits.forEach(habit => {
+    const row = document.createElement('div');
+    row.className = 'manage-habit-row';
+    row.dataset.habitId = habit.id;
+    const lead = document.createElement(isAll ? 'span' : 'button');
+    if (!isAll) lead.type = 'button';
+    lead.className = isAll ? 'category-lock' : 'manage-habit-grip';
+    lead.textContent = isAll ? '' : '⠿';
+    if (!isAll) lead.setAttribute('aria-label', `Reorder ${habit.text}`);
+    row.appendChild(lead);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'manage-habit-row-button';
+    const icon = document.createElement('span');
+    icon.className = 'manage-habit-row-icon';
+    icon.textContent = habit.icon;
+    const copy = document.createElement('span');
+    copy.className = 'manage-habit-row-copy';
+    const name = document.createElement('span');
+    name.className = 'manage-habit-row-name';
+    name.textContent = habit.targetLabel ? `${habit.text} · ${habit.targetLabel}` : habit.text;
+    const meta = document.createElement('span');
+    meta.className = 'manage-habit-row-meta';
+    meta.textContent = isAll ? getCategoryDisplayName(habit.cat) : habit.note;
+    copy.append(name, meta);
+    const chevron = document.createElement('span');
+    chevron.className = 'manage-habit-chevron';
+    chevron.textContent = '›';
+    button.append(icon, copy, chevron);
+    button.addEventListener('click', () => openHabitEditorPage(habit.id));
+    row.appendChild(button);
+    list.appendChild(row);
+  });
+  renderCategoryActions(habits);
+  if (!isAll) {
+    attachGripReorder(list, '.manage-habit-row[data-habit-id]', '.manage-habit-grip', rows => {
+      const reorderedIds = rows.map(row => row.dataset.habitId);
+      userOrder = reorderHabitIdsWithinCategory(userOrder, HABITS, managedCategoryId, reorderedIds);
+      saveOrder();
+      renderManageCategoryPage();
+    });
+  }
+}
+
+function renderCategoryActions(habits) {
+  const actions = document.getElementById('categoryActions');
+  actions.replaceChildren();
+  if (managedCategoryId === 'all') return;
+  actions.className = 'category-action-area';
+  const archiveButton = document.createElement('button');
+  archiveButton.type = 'button';
+  archiveButton.className = 'archive-category-btn';
+  archiveButton.textContent = 'Archive category';
+  archiveButton.disabled = habits.length !== 0;
+  archiveButton.addEventListener('click', archiveManagedCategory);
+  const help = document.createElement('p');
+  help.className = 'category-row-meta';
+  help.textContent = habits.length === 0
+    ? 'This empty category can be archived and restored later.'
+    : `Move its ${habits.length} ${habits.length === 1 ? 'habit' : 'habits'} to other categories before archiving.`;
+  actions.append(archiveButton, help);
+}
+
+function archiveManagedCategory() {
+  const category = getCategoryDefinition(managedCategoryId);
+  if (!category) return false;
+  const habits = HABITS.filter(habit => habit.cat === managedCategoryId);
+  if (habits.length !== 0) return false;
+  if (!window.confirm(`Archive “${category.name}”?\n\nIt will leave Home categories and can be restored later.`)) return false;
+  categoryState = saveCategoryState(setCategoryArchived(categoryState, category.id, true, DEFAULT_HABITS), DEFAULT_HABITS);
+  if (currentCat === category.id) currentCat = 'all';
+  reloadHabits();
+  renderCategoryTabs();
+  renderCategoriesPage();
+  showManagementView('categoriesView');
+  showToast(`✓ ${category.name} archived`);
+  return true;
+}
+
+function openManageCategoryPage(categoryId, origin = 'categories') {
+  managedCategoryId = categoryId;
+  manageCategory = categoryId;
+  managementOrigin = origin;
+  renderManageCategoryPage();
+  showManagementView('manageCategoryView');
+}
+
+function openHabitEditorPage(habitId) {
+  const habit = HABITS.find(value => value.id === habitId);
+  if (!habit) return;
+  editingHabitId = habitId;
+  habitEditorDirty = false;
+  document.getElementById('habitEditorHeading').textContent = habit.text;
+  if (!renderHabitEditorForm(habitId)) return;
+  showManagementView('habitEditorView');
+}
+
+function requestLeaveHabitEditor() {
+  if (habitEditorDirty && !window.confirm('Discard unsaved changes?')) return false;
+  habitEditorDirty = false;
+  if (history.state?.[MANAGEMENT_HISTORY_KEY]?.viewId === 'habitEditorView') {
+    history.back();
+  } else {
+    editingHabitId = null;
+    renderManageCategoryPage();
+    showManagementView('manageCategoryView');
+  }
+  return true;
+}
+
+function restoreManagementRoute(route) {
+  if (!route) {
+    closeManagementFlow(true);
+    return;
+  }
+  managedCategoryId = route.categoryId || 'all';
+  managementOrigin = route.managementOrigin || 'home';
+  editingCategoryId = route.categoryEditorId || null;
+  categoryEditorOrigin = route.categoryEditorOrigin || 'categories';
+  if (route.viewId === 'categoriesView') {
+    renderCategoriesPage();
+    showManagementView('categoriesView', false);
+  } else if (route.viewId === 'manageCategoryView') {
+    renderManageCategoryPage();
+    showManagementView('manageCategoryView', false);
+  } else if (route.viewId === 'habitEditorView') {
+    const habit = HABITS.find(value => value.id === route.habitId);
+    if (!habit) {
+      renderManageCategoryPage();
+      showManagementView('manageCategoryView', false);
+      return;
+    }
+    editingHabitId = habit.id;
+    habitEditorDirty = false;
+    document.getElementById('habitEditorHeading').textContent = habit.text;
+    renderHabitEditorForm(habit.id);
+    showManagementView('habitEditorView', false);
+  } else if (route.viewId === 'categoryEditorView') {
+    openCategoryEditorPage(editingCategoryId, categoryEditorOrigin, false);
+  } else if (route.viewId === 'archivedCategoriesView') {
+    renderArchivedCategoriesPage();
+    showManagementView('archivedCategoriesView', false);
+  } else {
+    closeManagementFlow(true);
+  }
+}
+
+function goBackFromManageCategory() {
+  if (managementOrigin === 'categories') {
+    renderCategoriesPage();
+    showManagementView('categoriesView');
+  } else {
+    closeManagementFlow();
+  }
+}
+
+function createCustomCategoryId() {
+  let id;
+  do {
+    const token = globalThis.crypto?.randomUUID
+      ? globalThis.crypto.randomUUID().toLowerCase()
+      : Array.from(globalThis.crypto.getRandomValues(new Uint8Array(16)), value => value.toString(16).padStart(2, '0')).join('');
+    id = `cat_${token}`;
+  } while (categoryState.definitions.some(category => category.id === id));
+  return id;
+}
+
+function renderCategoryIconChoices() {
+  const container = document.getElementById('categoryIconChoices');
+  container.replaceChildren();
+  Object.entries(CATEGORY_ICON_MAP).forEach(([iconKey, icon]) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'category-icon-choice';
+    button.dataset.iconKey = iconKey;
+    button.setAttribute('role', 'radio');
+    button.setAttribute('aria-checked', String(iconKey === selectedCategoryIconKey));
+    button.setAttribute('aria-label', `${iconKey} icon`);
+    button.textContent = icon;
+    button.addEventListener('click', () => {
+      selectedCategoryIconKey = iconKey;
+      container.querySelectorAll('.category-icon-choice').forEach(choice =>
+        choice.setAttribute('aria-checked', String(choice === button)));
+    });
+    container.appendChild(button);
+  });
+}
+
+function openCategoryEditorPage(categoryId = null, origin = 'categories', pushHistory = true) {
+  const category = categoryId ? getCategoryDefinition(categoryId) : null;
+  if (categoryId && !category) return false;
+  editingCategoryId = categoryId;
+  categoryEditorOrigin = origin;
+  selectedCategoryIconKey = category?.iconKey || 'star';
+  document.getElementById('categoryEditorHeading').textContent = category ? 'Edit Category' : 'New Category';
+  document.getElementById('categoryNameInput').value = category?.name || '';
+  renderCategoryIconChoices();
+  showManagementView('categoryEditorView', pushHistory);
+  requestAnimationFrame(() => document.getElementById('categoryNameInput').focus());
+  return true;
+}
+
+function saveCategoryEditor() {
+  const input = document.getElementById('categoryNameInput');
+  const name = input.value.normalize('NFKC').trim().replace(/\s+/g, ' ');
+  try {
+    if (editingCategoryId) {
+      categoryState = updateCategoryDefinition(categoryState, editingCategoryId, name, selectedCategoryIconKey, DEFAULT_HABITS);
+    } else {
+      const categoryId = createCustomCategoryId();
+      categoryState = addCategoryDefinition(categoryState, categoryId, name, selectedCategoryIconKey, DEFAULT_HABITS);
+      editingCategoryId = categoryId;
+      managedCategoryId = categoryId;
+    }
+    categoryState = saveCategoryState(categoryState, DEFAULT_HABITS);
+  } catch (error) {
+    input.focus();
+    showToast(error.message || 'Choose a different category name');
+    return false;
+  }
+  reloadHabits();
+  renderCategoryTabs();
+  if (categoryEditorOrigin === 'manage') {
+    managedCategoryId = editingCategoryId;
+    renderManageCategoryPage();
+    showManagementView('manageCategoryView');
+  } else if (editingCategoryId && !HABITS.some(habit => habit.cat === editingCategoryId)) {
+    managedCategoryId = editingCategoryId;
+    managementOrigin = 'categories';
+    renderManageCategoryPage();
+    showManagementView('manageCategoryView');
+  } else {
+    renderCategoriesPage();
+    showManagementView('categoriesView');
+  }
+  showToast('✓ Category saved');
+  return true;
+}
+
+function renderArchivedCategoriesPage() {
+  const list = document.getElementById('archivedCategoriesList');
+  list.replaceChildren();
+  const archived = categoryState.order
+    .map(id => getCategoryDefinition(id))
+    .filter(category => category?.archived);
+  if (archived.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'management-empty';
+    empty.textContent = 'No archived categories.';
+    list.appendChild(empty);
+    return;
+  }
+  archived.forEach(category => {
+    const row = document.createElement('div');
+    row.className = 'category-row';
+    const spacer = document.createElement('span');
+    spacer.className = 'category-lock';
+    const icon = document.createElement('span');
+    icon.className = 'category-row-icon';
+    icon.textContent = CATEGORY_ICON_MAP[category.iconKey];
+    const name = document.createElement('span');
+    name.className = 'category-row-name';
+    name.textContent = category.name;
+    const restore = document.createElement('button');
+    restore.type = 'button';
+    restore.className = 'management-action';
+    restore.textContent = 'Restore';
+    restore.addEventListener('click', () => restoreArchivedCategory(category.id));
+    row.append(spacer, icon, name, restore);
+    list.appendChild(row);
+  });
+}
+
+function restoreArchivedCategory(categoryId) {
+  categoryState = setCategoryArchived(categoryState, categoryId, false, DEFAULT_HABITS);
+  categoryState = saveCategoryState(categoryState, DEFAULT_HABITS);
+  reloadHabits();
+  renderCategoryTabs();
+  renderArchivedCategoriesPage();
+  showToast(`✓ ${getCategoryDisplayName(categoryId)} restored`);
+  return true;
+}
 
 function updateDateDisplay(now = new Date()) {
   document.getElementById('dateDay').textContent = todayStr(now);
@@ -4773,7 +5912,7 @@ function getCompletedHabitsAriaLabel(count) {
 function renderHabits(now = new Date()) {
   lastRenderedDateKey = dateKey(now);
   const list = document.getElementById('habitList');
-  list.classList.toggle('reorder-mode', reorderMode);
+
   const todayStats = getDailyHabitStats(state.done || {}, HABITS, now, 5, state.progress || {});
   const todayDone = state.done[dateKey(now)] || {};
   const todayProgress = (state.progress && state.progress[dateKey(now)]) || {};
@@ -4790,9 +5929,6 @@ function renderHabits(now = new Date()) {
 
   document.getElementById('doneCount').textContent = `${todayStats.doneCount} / ${todayStats.scheduledCount}`;
 
-  // Determine first/last indices in this filtered view for disabling arrows
-  const firstId = sorted.length > 0 ? sorted[0].id : null;
-  const lastId = sorted.length > 0 ? sorted[sorted.length - 1].id : null;
 
   const renderHabitCards = habits => habits.map(h => {
     const measurement = normalizeMeasurementConfig(h);
@@ -4814,8 +5950,7 @@ function renderHabits(now = new Date()) {
         <div class="progress-edge" role="progressbar" aria-label="Progress for ${escapeHtml(h.text)}" aria-valuemin="0" aria-valuemax="${measurement.target}" aria-valuenow="${Math.min(progress, measurement.target)}">
           <div class="progress-fill" style="width:${measurementDisplay.pct}%"></div>
         </div>` : '';
-    const isFirst = h.id === firstId;
-    const isLast = h.id === lastId;
+
     return `
       <div class="habit ${measurementDisplay ? 'measured' : ''} ${isDone ? 'done' : ''}" data-id="${escapeHtml(h.id)}" data-cat="${escapeHtml(h.cat)}">
         <div class="habit-icon">${escapeHtml(h.icon)}</div>
@@ -4831,18 +5966,7 @@ function renderHabits(now = new Date()) {
           ${progressMarkup}
         </div>
         ${progressControls}
-        <div class="move-btns">
-          <button class="move-btn" data-move="${h.id}" data-dir="up" ${isFirst ? 'disabled' : ''} title="Move up">▲</button>
-          <button class="move-btn" data-move="${h.id}" data-dir="down" ${isLast ? 'disabled' : ''} title="Move down">▼</button>
-        </div>
-        <div class="drag-handle" data-handle="${h.id}" title="Hold to reorder">
-          <div class="drag-handle-dot"></div>
-          <div class="drag-handle-dot"></div>
-          <div class="drag-handle-dot"></div>
-          <div class="drag-handle-dot"></div>
-          <div class="drag-handle-dot"></div>
-          <div class="drag-handle-dot"></div>
-        </div>
+
         ${progressEdge}
       </div>
       `;
@@ -4854,17 +5978,12 @@ function renderHabits(now = new Date()) {
       ${renderHabitCards(grouped.completed)}`;
   list.innerHTML = sorted.length === 0
     ? `<div class="habit-empty">No ${currentCat === 'all' ? '' : `${currentCat} `}habits scheduled today.</div>`
-    : reorderMode
-      ? renderHabitCards(sorted)
-      : `${renderHabitCards(grouped.active)}${completedMarkup}`;
+    : `${renderHabitCards(grouped.active)}${completedMarkup}`;
 
   // Attach click-to-toggle on the habit card (skip clicks on handle, buttons, badge)
   list.querySelectorAll('.habit').forEach(el => {
     el.addEventListener('click', (e) => {
-      if (reorderMode) return;
-      if (e.target.closest('.drag-handle') ||
-          e.target.closest('.move-btn') ||
-          e.target.closest('.habit-badge') ||
+      if (e.target.closest('.habit-badge') ||
           e.target.closest('.progress-step')) {
         return;
       }
@@ -4880,25 +5999,6 @@ function renderHabits(now = new Date()) {
     });
   });
 
-  // Attach move buttons
-  list.querySelectorAll('.move-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const id = btn.dataset.move;
-      const dir = btn.dataset.dir;
-      moveHabit(id, dir);
-    });
-  });
-
-  // Attach pointer-based drag on drag handles (mouse + touch unified)
-  list.querySelectorAll('.drag-handle').forEach(handle => {
-    handle.removeEventListener('pointerdown', handlePointerDown);
-    handle.addEventListener('pointerdown', handlePointerDown);
-    // Suppress long-press context menu / text-selection callout on the grip
-    handle.addEventListener('contextmenu', (e) => {
-      if (e.target.closest('.drag-handle')) e.preventDefault();
-    });
-  });
 
   updateStreak(now);
   updateWeekly(now);
@@ -4908,16 +6008,6 @@ function renderHabits(now = new Date()) {
   if (rhythmWeatherData) updateRhythmAnchors(rhythmWeatherData, now);
   else renderNextWave(now);
   renderAdaptiveInsights(now);
-}
-
-function setReorderMode(enabled) {
-  reorderMode = Boolean(enabled);
-  const button = document.getElementById('reorderBtn');
-  const hint = document.getElementById('reorderHint');
-  button.setAttribute('aria-pressed', String(reorderMode));
-  button.textContent = reorderMode ? '✓ Done' : '↕ Reorder';
-  hint.classList.toggle('show', reorderMode);
-  renderHabits();
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -5519,7 +6609,6 @@ function spawnConfetti() {
 // ═══════════════════════════════════════════════════════════════════
 // MANAGE HABITS MODAL
 // ═══════════════════════════════════════════════════════════════════
-let modalOpen = false;
 
 function getScheduleSummary(days) {
   if (days.length === 7) return 'Every day';
@@ -5611,17 +6700,12 @@ function removeVisibleManageOverrides(existingOverrides, visibleIds) {
   return overrides;
 }
 
-function renderManageModal() {
-  const body = document.getElementById('modalBody');
-  const { habits, title, scoped } = getManageScope();
-  const modalTitle = document.getElementById('modalTitle');
-  if (modalTitle) modalTitle.textContent = title;
-  const resetButton = document.getElementById('modalReset');
-  if (resetButton) resetButton.textContent = scoped
-    ? `Reset ${CATEGORY_NAMES[manageCategory] || manageCategory} defaults`
-    : 'Reset all defaults';
+function renderHabitEditorForm(habitId) {
+  const body = document.getElementById('habitEditorBody');
+  const habits = HABITS.filter(habit => habit.id === habitId);
+  if (habits.length !== 1) return false;
   const existingOverrides = loadCustomHabits() || {};
-  body.innerHTML = (scoped ? '<button class="manage-all-link" id="manageAllLink" type="button">View all habits</button>' : '') + habits.map(h => {
+  body.innerHTML = habits.map(h => {
     const selectedDays = normalizeHabitDays(h.days);
     const measurement = normalizeMeasurementConfig(h);
     const paramDefs = SYSTEM_HABIT_PARAMETER_DEFS[h.id];
@@ -5633,6 +6717,7 @@ function renderManageModal() {
       <div class="edit-habit" data-id="${escapeHtml(h.id)}" data-grandfathered-title="${hasGrandfatheredTitle}">
         <div class="eh-icon">${escapeHtml(h.icon)}</div>
         <div class="eh-fields">
+          <label class="eh-category-field"><span>Category</span><select class="eh-category">${getActiveCategoryDefinitions(categoryState).map(category => `<option value="${escapeHtml(category.id)}" ${h.cat === category.id ? 'selected' : ''}>${escapeHtml(CATEGORY_ICON_MAP[category.iconKey])} ${escapeHtml(category.name)}</option>`).join('')}</select></label>
           ${isSystem ? `<div class="eh-system-title"><span class="eh-system-name">${escapeHtml(h.text)}</span>${h.targetLabel ? ` <span class="eh-system-target">${escapeHtml(h.targetLabel)}</span>` : '<span class="eh-system-target" hidden></span>'}</div><input type="hidden" class="eh-text" value="${escapeHtml(h.text)}">` : `<input type="text" class="eh-text" maxlength="48" value="${escapeHtml(h.text)}" placeholder="Habit name">`}
           <div class="eh-row eh-note-row">
             <input type="text" class="eh-note" maxlength="${HABIT_CARD_NOTE_MAX}" value="${escapeHtml(h.note)}" placeholder="Card description" aria-label="Card description">
@@ -5691,10 +6776,12 @@ function renderManageModal() {
     `;
   }).join('');
 
-  body.querySelector('#manageAllLink')?.addEventListener('click', () => {
-    manageCategory = 'all';
-    renderManageModal();
-  });
+  body.oninput = event => {
+    if (event.target.matches('input, select, textarea')) habitEditorDirty = true;
+  };
+  body.onchange = event => {
+    if (event.target.matches('input, select, textarea')) habitEditorDirty = true;
+  };
 
   body.querySelectorAll('.eh-note').forEach(input => {
     input.addEventListener('input', () => {
@@ -5706,6 +6793,7 @@ function renderManageModal() {
 
   body.querySelectorAll('.eh-day').forEach(button => {
     button.addEventListener('click', () => {
+      habitEditorDirty = true;
       button.setAttribute('aria-checked', button.getAttribute('aria-checked') === 'true' ? 'false' : 'true');
       updateScheduleRow(button.closest('.edit-habit'));
     });
@@ -5734,27 +6822,18 @@ function renderManageModal() {
   body.querySelectorAll('.eh-rhythm-threshold, .eh-rhythm-note').forEach(input => {
     input.addEventListener('input', () => input.closest('.edit-habit').classList.remove('measurement-error'));
   });
+  return true;
 }
 
-function openManageModal() {
-  manageCategory = currentCat;
-  modalOpen = true;
-  renderManageModal();
-  document.getElementById('modalOverlay').classList.add('open');
-}
 
-function closeManageModal() {
-  modalOpen = false;
-  document.getElementById('modalOverlay').classList.remove('open');
-}
-
-function saveManageModal() {
+function saveHabitEditorForm() {
   const visibleOverrides = {};
   const visibleIds = [];
   const existingOverrides = loadCustomHabits() || {};
   const previousHabits = HABITS.map(habit => ({ ...habit }));
   const allDays = normalizeHabitDays(undefined);
-  for (const row of document.querySelectorAll('.edit-habit')) {
+  let nextCategoryState = categoryState;
+  for (const row of document.querySelectorAll('#habitEditorBody .edit-habit')) {
     const id = row.dataset.id;
     visibleIds.push(id);
     const text = row.querySelector('.eh-text').value.trim();
@@ -5768,6 +6847,8 @@ function saveManageModal() {
       .sort((a, b) => a - b);
     const def = DEFAULT_HABITS.find(h => h.id === id);
     if (!def) continue;
+    const categoryId = row.querySelector('.eh-category').value;
+    nextCategoryState = setHabitCategoryAssignment(nextCategoryState, id, categoryId, DEFAULT_HABITS);
     const originalNote = (previousHabits.find(habit => habit.id === id)?.note || '').trim();
     if (note.length > HABIT_CARD_NOTE_MAX && note !== originalNote) {
       row.classList.add('note-error');
@@ -5899,7 +6980,12 @@ function saveManageModal() {
     if (Object.keys(changes).length > 0) visibleOverrides[id] = changes;
   }
   const overrides = mergeVisibleManageOverrides(existingOverrides, visibleOverrides, visibleIds);
-  saveCustomHabits(overrides);
+  nextCategoryState = normalizeCategoryState(nextCategoryState, DEFAULT_HABITS, true);
+  commitStorageSnapshot(localStorage, {
+    [CUSTOM_HABITS_KEY]:Object.keys(overrides).length ? JSON.stringify(overrides) : null,
+    [CATEGORY_STATE_KEY]:JSON.stringify(nextCategoryState),
+  });
+  categoryState = nextCategoryState;
   reloadHabits();
   state.progress = state.progress || {};
   const editDate = new Date();
@@ -5908,15 +6994,46 @@ function saveManageModal() {
   saveState();
   saveInsightHistory(editDate);
   renderHabits(editDate);
-  closeManageModal();
-  showToast('✓ Habits saved');
+  habitEditorDirty = false;
+  showToast('✓ Habit saved');
+  return true;
+}
+
+function resetHabitEditorDefaults() {
+  if (!editingHabitId) return false;
+  const previousHabits = HABITS.map(habit => ({ ...habit }));
+  const overrides = loadCustomHabits() || {};
+  delete overrides[editingHabitId];
+  saveCustomHabits(overrides);
+  reloadHabits();
+  const resetDate = new Date();
+  state.progress = state.progress || {};
+  reconcileMeasurementTypeChanges(state.done, state.progress, previousHabits, HABITS, resetDate);
+  reconcileMeasuredDay(state.done, state.progress, HABITS, resetDate);
+  saveState();
+  saveInsightHistory(resetDate);
+  renderHabits(resetDate);
+  const habit = HABITS.find(value => value.id === editingHabitId);
+  if (habit) document.getElementById('habitEditorHeading').textContent = habit.text;
+  habitEditorDirty = false;
+  renderHabitEditorForm(editingHabitId);
+  showToast('↻ Habit reset to defaults');
+  return true;
+}
+
+function saveHabitEditorPage() {
+  if (!saveHabitEditorForm()) return false;
+  editingHabitId = null;
+  renderCategoryTabs();
+  renderManageCategoryPage();
+  showManagementView('manageCategoryView');
   return true;
 }
 
 // ═══════════════════════════════════════════════════════════════════
 // OFFLINE AND DATA TRANSFER
 // ═══════════════════════════════════════════════════════════════════
-const BACKUP_VERSION = 5;
+const BACKUP_VERSION = 6;
 
 function setupOfflineStatus() {
   const pill = document.getElementById('offlinePill');
@@ -5943,9 +7060,7 @@ function createBackupPayload() {
     order: userOrder,
     firstName: firstName,
     customHabits: loadCustomHabits() || {},
-    preferenceWindows: Object.fromEntries(
-      HABITS.filter(h => h.preferenceWindow).map(h => [h.id, h.preferenceWindow])
-    ),
+    categoryState:normalizeCategoryState(categoryState, DEFAULT_HABITS, true),
     insightHistory: backupInsightHistory
   };
 }
@@ -5980,39 +7095,44 @@ async function importBackupFile(file) {
   if (!file) return;
   try {
     const payload = JSON.parse(await file.text());
-    if (payload.app !== 'wavelength' || ![1, 2, 3, 4, BACKUP_VERSION].includes(payload.version) || !payload.state || !Array.isArray(payload.order) ||
+    if (payload.app !== 'wavelength' || ![1, 2, 3, 4, 5, BACKUP_VERSION].includes(payload.version) || !payload.state || !Array.isArray(payload.order) ||
         (payload.version >= 2 && !payload.insightHistory) ||
-        (payload.version >= 4 && typeof payload.firstName !== 'string')) {
+        (payload.version >= 4 && typeof payload.firstName !== 'string') ||
+        (payload.version === BACKUP_VERSION && !payload.categoryState)) {
       throw new Error('This is not a compatible Wavelength backup.');
     }
 
     const importedOrder = normalizeImportedHabitOrder(payload.order, DEFAULT_HABITS);
     const importedFirstName = normalizeFirstName(payload.firstName);
+    const importedCategoryState = payload.version >= 6
+      ? normalizeCategoryState(payload.categoryState, DEFAULT_HABITS, true)
+      : createDefaultCategoryState();
     const rawCustomHabits = payload.customHabits || {};
-    if (payload.preferenceWindows && typeof payload.preferenceWindows === 'object' && !Array.isArray(payload.preferenceWindows)) {
+    if (payload.version <= 5 && payload.preferenceWindows && typeof payload.preferenceWindows === 'object' && !Array.isArray(payload.preferenceWindows)) {
       for (const [hid, pw] of Object.entries(payload.preferenceWindows)) {
         if (rawCustomHabits[hid]) rawCustomHabits[hid] = { ...rawCustomHabits[hid], preferenceWindow: pw };
         else rawCustomHabits[hid] = { preferenceWindow: pw };
       }
     }
     const customHabits = normalizeCustomHabitOverrides(rawCustomHabits, DEFAULT_HABITS, true);
-    const importedHabits = DEFAULT_HABITS.map(habit => customHabits[habit.id]
-      ? { ...habit, ...customHabits[habit.id] }
-      : { ...habit });
+    const importedHabits = applyCategoryStateToHabits(buildRuntimeHabits(DEFAULT_HABITS, customHabits), importedCategoryState);
     const importedState = normalizeStoredState(payload.state, importedHabits, true);
+    const importDate = new Date();
+    reconcileMeasuredDay(importedState.done, importedState.progress, importedHabits, importDate);
     const importedInsightHistory = payload.version === 1
       ? normalizeInsightHistory(null, importedHabits)
       : normalizeInsightHistory(payload.insightHistory, importedHabits, true);
     normalizeInsightHistoryAgainstState(importedInsightHistory, importedState, true);
-    const importDate = new Date();
-    reconcileMeasuredDay(importedState.done, importedState.progress, importedHabits, importDate);
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(importedState));
-    localStorage.setItem(ORDER_KEY, JSON.stringify(importedOrder));
-    if (importedFirstName) localStorage.setItem(FIRST_NAME_STORAGE_KEY, importedFirstName);
-    else localStorage.removeItem(FIRST_NAME_STORAGE_KEY);
-    localStorage.setItem(INSIGHT_STORAGE_KEY, JSON.stringify(importedInsightHistory));
-    saveCustomHabits(customHabits);
+    const importedSnapshot = {
+      [STORAGE_KEY]:JSON.stringify(importedState),
+      [ORDER_KEY]:JSON.stringify(importedOrder),
+      [FIRST_NAME_STORAGE_KEY]:importedFirstName || null,
+      [INSIGHT_STORAGE_KEY]:JSON.stringify(importedInsightHistory),
+      [CATEGORY_STATE_KEY]:JSON.stringify(importedCategoryState),
+      [CUSTOM_HABITS_KEY]:Object.keys(customHabits).length ? JSON.stringify(customHabits) : null,
+    };
+    commitStorageSnapshot(localStorage, importedSnapshot);
 
     firstName = importedFirstName;
     const firstNameInput = document.getElementById('firstNameInput');
@@ -6020,10 +7140,12 @@ async function importBackupFile(file) {
     updateGreeting(importDate);
     state = loadState();
     userOrder = loadOrder();
+    categoryState = loadCategoryState(DEFAULT_HABITS);
     reloadHabits();
     insightHistory = loadInsightHistory(HABITS, state);
     renderHabits(importDate);
-    renderManageModal();
+    renderCategoryTabs();
+    if (document.documentElement.dataset.managementOpen === 'true') renderCategoriesPage();
     showToast('✓ Backup imported');
   } catch (err) {
     showToast(`Import failed: ${err.message || 'invalid file'}`);
@@ -6056,7 +7178,6 @@ function setActiveView(view, scroll = true) {
   const viewNow = new Date();
 
   if (activeView === 'insights') {
-    if (reorderMode) setReorderMode(false);
     renderAdaptiveInsights(viewNow);
   } else if (activeView === 'home') {
     renderNextWave(viewNow);
@@ -6088,14 +7209,33 @@ function init() {
   const now = new Date();
   updateDateDisplay(now);
 
-  // Tabs
-  document.getElementById('tabs').addEventListener('click', e => {
-    const btn = e.target.closest('.cat-tab');
-    if (!btn) return;
-    document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    currentCat = btn.dataset.cat;
-    renderHabits();
+  // Dynamic category navigation and full-screen management.
+  renderCategoryTabs();
+  document.getElementById('manageCategoriesBtn').addEventListener('click', openCategoriesPage);
+  document.getElementById('categoriesBack').addEventListener('click', closeManagementFlow);
+  document.getElementById('manageCategoryBack').addEventListener('click', goBackFromManageCategory);
+  document.getElementById('habitEditorBack').addEventListener('click', requestLeaveHabitEditor);
+  document.getElementById('habitEditorSave').addEventListener('click', saveHabitEditorPage);
+  document.getElementById('habitEditorReset').addEventListener('click', resetHabitEditorDefaults);
+  document.getElementById('newCategoryBtn').addEventListener('click', () => openCategoryEditorPage(null, 'categories'));
+  document.getElementById('editCategoryBtn').addEventListener('click', () => openCategoryEditorPage(managedCategoryId, 'manage'));
+  document.getElementById('categoryEditorSave').addEventListener('click', saveCategoryEditor);
+  document.getElementById('categoryEditorBack').addEventListener('click', () => {
+    if (categoryEditorOrigin === 'manage') {
+      renderManageCategoryPage();
+      showManagementView('manageCategoryView');
+    } else {
+      renderCategoriesPage();
+      showManagementView('categoriesView');
+    }
+  });
+  document.getElementById('archivedCategoriesBtn').addEventListener('click', () => {
+    renderArchivedCategoriesPage();
+    showManagementView('archivedCategoriesView');
+  });
+  document.getElementById('archivedCategoriesBack').addEventListener('click', () => {
+    renderCategoriesPage();
+    showManagementView('categoriesView');
   });
 
   document.getElementById('nextWaveAction').addEventListener('click', focusNextWaveHabit);
@@ -6131,36 +7271,8 @@ function init() {
     showToast('↻ Today reset. Fresh start.');
   });
 
-  // Manage and Reorder modes
-  document.getElementById('manageBtn').addEventListener('click', () => {
-    setReorderMode(false);
-    openManageModal();
-  });
-  document.getElementById('reorderBtn').addEventListener('click', () => setReorderMode(!reorderMode));
-  document.getElementById('modalClose').addEventListener('click', closeManageModal);
-  document.getElementById('modalOverlay').addEventListener('click', e => {
-    if (e.target === e.currentTarget) closeManageModal();
-  });
-  document.getElementById('modalSave').addEventListener('click', saveManageModal);
-  document.getElementById('modalReset').addEventListener('click', () => {
-    const previousHabits = HABITS.map(habit => ({ ...habit }));
-    const resetDate = new Date();
-    const resetScope = getManageScope();
-    const resetIds = resetScope.habits.map(habit => habit.id);
-    const remainingOverrides = removeVisibleManageOverrides(loadCustomHabits() || {}, resetIds);
-    saveCustomHabits(remainingOverrides);
-    reloadHabits();
-    state.progress = state.progress || {};
-    reconcileMeasurementTypeChanges(state.done, state.progress, previousHabits, HABITS, resetDate);
-    reconcileMeasuredDay(state.done, state.progress, HABITS, resetDate);
-    saveState();
-    saveInsightHistory(resetDate);
-    renderHabits(resetDate);
-    closeManageModal();
-    showToast(resetScope.scoped
-      ? `↻ ${CATEGORY_NAMES[manageCategory] || manageCategory} reset to defaults`
-      : '↻ All habits reset to defaults');
-  });
+  // Full-screen scoped habit management.
+  document.getElementById('manageBtn').addEventListener('click', () => openManageCategoryPage(currentCat, 'home'));
 
   // Backup and restore across devices
   document.getElementById('exportBtn').addEventListener('click', exportBackup);
@@ -6175,10 +7287,30 @@ function init() {
 
   renderInsights(now);
 
-  // Close on Escape
+  // Back follows the full-screen hierarchy and protects an unsaved editor draft.
+  window.addEventListener('popstate', event => {
+    const route = event.state?.[MANAGEMENT_HISTORY_KEY] || null;
+    if (suppressNextManagementPop) {
+      suppressNextManagementPop = false;
+      return;
+    }
+    if (!document.getElementById('habitEditorView').hidden && habitEditorDirty) {
+      if (!window.confirm('Discard unsaved changes?')) {
+        suppressNextManagementPop = true;
+        history.go(1);
+        return;
+      }
+      habitEditorDirty = false;
+    }
+    restoreManagementRoute(route);
+  });
+
+  // Escape mirrors Back within the management hierarchy.
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && modalOpen) closeManageModal();
-    else if (e.key === 'Escape' && reorderMode) setReorderMode(false);
+    if (e.key !== 'Escape' || document.documentElement.dataset.managementOpen !== 'true') return;
+    if (!document.getElementById('habitEditorView').hidden) requestLeaveHabitEditor();
+    else if (history.state?.[MANAGEMENT_HISTORY_KEY]) history.back();
+    else closeManagementFlow();
   });
 
   renderHabits(now);

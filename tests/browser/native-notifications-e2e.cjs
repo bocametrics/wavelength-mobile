@@ -58,7 +58,7 @@ function collectErrors(page) {
     width:{ document:document.documentElement.scrollWidth, viewport:innerWidth },
   }));
   assert.equal(initial.enabled, false);
-  assert.equal(initial.time, '09:00');
+  assert.equal(initial.time, '11:00');
   assert.equal(initial.calls.requested, 0, 'launch does not prompt for notification permission');
   assert.equal(initial.calls.scheduled.length, 0, 'disabled reminders schedule nothing');
   assert.equal(initial.width.document, initial.width.viewport, JSON.stringify(initial.width));

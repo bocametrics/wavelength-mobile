@@ -77,7 +77,7 @@ function contrastRatio(foreground, background) {
         '.date-display .day', '.date-display .label', '.greeting h1', '.greeting p', '.insights h3',
         '.next-wave-eyebrow', '.next-wave-title', '.next-wave-detail', '.next-wave-action', '.cat-tab',
         '.section-title h2', '.section-title .count', '.habit-text', '.habit-note', '.rhythm-anchor-label',
-        '.reorder-hint', '.manage-btn', '.reset-btn', '.dock-button',
+        '.manage-btn', '.reset-btn', '.dock-button',
       ].map(selector => [selector, style(selector)])),
       documentWidth:document.documentElement.scrollWidth,
       viewportWidth:innerWidth,
@@ -107,7 +107,7 @@ function contrastRatio(foreground, background) {
     '.date-display .day':16, '.date-display .label':12, '.greeting h1':22, '.greeting p':14,
     '.insights h3':14, '.next-wave-eyebrow':12, '.next-wave-title':17, '.next-wave-detail':14,
     '.next-wave-action':13, '.cat-tab':14, '.section-title h2':14, '.section-title .count':13,
-    '.habit-text':16, '.habit-note':14, '.rhythm-anchor-label':13, '.reorder-hint':12,
+    '.habit-text':16, '.habit-note':14, '.rhythm-anchor-label':13,
     '.manage-btn':12.5, '.reset-btn':12.5, '.dock-button':13,
   };
   for (const [selector, expected] of Object.entries(expectedHomeSizes)) {
@@ -133,13 +133,16 @@ function contrastRatio(foreground, background) {
   await page.screenshot({ path:path.join(SHOT_DIR, `wavelength-typography-home-${THEME}.png`), fullPage:false });
 
   await page.click('#manageBtn');
-  await page.waitForSelector('#modalOverlay.open');
+  await page.waitForFunction(() => !document.getElementById('manageCategoryView').hidden);
+  const firstManagedId = await page.$eval('#manageCategoryList .manage-habit-row', row => row.dataset.habitId);
+  await page.click(`#manageCategoryList [data-habit-id="${firstManagedId}"] .manage-habit-row-button`);
+  await page.waitForFunction(() => !document.getElementById('habitEditorView').hidden);
   const manage = await page.evaluate(() => {
-    const inputs = [...document.querySelectorAll('.eh-note')];
+    const inputs = [...document.querySelectorAll('#habitEditorBody .eh-note')];
     const style = selector => getComputedStyle(document.querySelector(selector));
     return {
       sizes:{
-        title:style('.modal-header h3').fontSize,
+        title:style('#habitEditorHeading').fontSize,
         systemTitle:style('.eh-system-title').fontSize,
         note:style('.eh-note').fontSize,
         counter:style('.eh-note-count').fontSize,
@@ -149,10 +152,10 @@ function contrastRatio(foreground, background) {
         button:style('.modal-btn').fontSize,
       },
       maxLengths:[...new Set(inputs.map(input => input.maxLength))],
-      counters:[...document.querySelectorAll('.eh-note-count')].map(item => item.textContent.trim()),
+      counters:[...document.querySelectorAll('#habitEditorBody .eh-note-count')].map(item => item.textContent.trim()),
       notes:inputs.map(input => input.value),
       firstRow:(() => {
-        const row = document.querySelector('.edit-habit .eh-row');
+        const row = document.querySelector('#habitEditorBody .edit-habit .eh-row');
         const note = row.querySelector('.eh-note').getBoundingClientRect();
         const counter = row.querySelector('.eh-note-count').getBoundingClientRect();
         const parameter = row.querySelector('.eh-param-field')?.getBoundingClientRect();
@@ -171,7 +174,7 @@ function contrastRatio(foreground, background) {
   assert.deepEqual(manage.maxLengths, [42]);
   assert.ok(manage.counters.every((counter, index) => counter === `${manage.notes[index].length} / 42`));
   assert.ok(manage.notes.every(note => note.length <= 42));
-  assert.equal(px(manage.sizes.title), 16);
+  assert.equal(px(manage.sizes.title), 17.28);
   assert.equal(px(manage.sizes.systemTitle), 15);
   assert.equal(px(manage.sizes.note), 16);
   assert.equal(px(manage.sizes.counter), 12);
@@ -190,9 +193,9 @@ function contrastRatio(foreground, background) {
     input.value = 'X'.repeat(43);
     input.dispatchEvent(new Event('input', { bubbles:true }));
   });
-  await page.click('#modalSave');
+  await page.click('#habitEditorSave');
   await page.waitForFunction(() => document.getElementById('toast').classList.contains('show'));
-  assert.equal(await page.$eval('#modalOverlay', modal => modal.classList.contains('open')), true, 'edited over-limit description keeps Manage open');
+  assert.equal(await page.$eval('#habitEditorView', view => !view.hidden), true, 'edited over-limit description keeps editor open');
   assert.equal(await page.$eval('.eh-note-count', counter => counter.textContent.trim()), '43 / 42');
   assert.equal(await page.$eval('.eh-note', input => document.activeElement === input), true);
   assert.equal(await page.evaluate(() => localStorage.getItem(CUSTOM_HABITS_KEY)), null, 'rejected description changes nothing');
@@ -210,20 +213,26 @@ function contrastRatio(foreground, background) {
   assert.equal(longToast.textAlign, 'center');
   assert.equal(px(longToast.fontSize), 14);
   await page.screenshot({ path:path.join(SHOT_DIR, `wavelength-typography-manage-error-${THEME}.png`), fullPage:false });
-  await page.click('#modalClose');
-
+  await page.click('#habitEditorBack');
+  await page.waitForFunction(() => !document.getElementById('manageCategoryView').hidden);
+  await page.click('#manageCategoryBack');
+  await page.waitForFunction(() => document.documentElement.dataset.managementOpen !== 'true');
   await page.evaluate(() => {
     localStorage.setItem(CUSTOM_HABITS_KEY, JSON.stringify({ wake:{ note:'L'.repeat(60) } }));
     reloadHabits();
     renderHabits();
   });
   await page.click('#manageBtn');
-  await page.waitForSelector('#modalOverlay.open');
-  assert.equal(await page.$eval('.edit-habit[data-id="wake"] .eh-note', input => input.value.length), 60);
-  await page.click('#modalSave');
-  await page.waitForFunction(() => !document.getElementById('modalOverlay').classList.contains('open'));
+  await page.waitForFunction(() => !document.getElementById('manageCategoryView').hidden);
+  await page.click('#manageCategoryList [data-habit-id="wake"] .manage-habit-row-button');
+  await page.waitForFunction(() => !document.getElementById('habitEditorView').hidden);
+  assert.equal(await page.$eval('#habitEditorBody .eh-note', input => input.value.length), 60);
+  await page.click('#habitEditorSave');
+  await page.waitForFunction(() => !document.getElementById('manageCategoryView').hidden);
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem(CUSTOM_HABITS_KEY)).wake.note.length), 60,
     'unchanged legacy descriptions survive unrelated saves');
+  await page.click('#manageCategoryBack');
+  await page.waitForFunction(() => document.documentElement.dataset.managementOpen !== 'true');
 
   await page.click('#navInsights');
   await page.waitForFunction(() => !document.getElementById('insightsView').hidden);

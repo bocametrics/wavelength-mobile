@@ -103,14 +103,14 @@ for (const [label, htmlPath] of builds) {
     `${label}: category-filtered canonical list is partitioned only after sorting`);
   assert.match(html, /const completedMarkup = grouped\.completed\.length === 0[\s\S]*completed-divider[\s\S]*Completed · \$\{grouped\.completed\.length\}[\s\S]*renderHabitCards\(grouped\.completed\)/,
     `${label}: completed cards receive a counted divider only when the group is non-empty`);
-  assert.match(html, /reorderMode\s*\?\s*renderHabitCards\(sorted\)\s*:\s*`\$\{renderHabitCards\(grouped\.active\)\}\$\{completedMarkup\}`/,
-    `${label}: tracking groups completed cards while Reorder shows canonical order without a divider`);
+  assert.match(html, /list\.innerHTML = sorted\.length === 0[\s\S]*`\$\{renderHabitCards\(grouped\.active\)\}\$\{completedMarkup\}`/,
+    `${label}: Home always keeps completed tracking cards below the divider`);
   assert.match(html, /<h3 class="completed-divider"[^>]*aria-label="\$\{getCompletedHabitsAriaLabel\(grouped\.completed\.length\)\}"/,
     `${label}: completed group has a semantic accessible heading`);
   assert.match(html, /\.completed-divider\s*\{[^}]*color:\s*var\(--text2\)[^}]*text-transform:\s*uppercase/s,
     `${label}: completed divider uses the readable secondary-text token`);
-  assert.match(html, /function setReorderMode\(enabled\)[\s\S]*renderHabits\(\)/,
-    `${label}: entering Reorder rerenders the canonical view`);
+  assert.match(html, /function renderManageCategoryPage\(\)[\s\S]*sort\(\(a, b\) => userOrder\.indexOf\(a\.id\) - userOrder\.indexOf\(b\.id\)\)/,
+    `${label}: full-screen Manage Category exposes canonical order independently of completion grouping`);
 }
 
 console.log('completed grouping regression tests passed for mobile and desktop');

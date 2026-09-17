@@ -37,6 +37,9 @@ for (const [label, htmlPath] of builds) {
   const habits = extractDefaultHabits(html);
   const byId = Object.fromEntries(habits.map(habit => [habit.id, habit]));
 
+  assert.equal(byId.affirm.text, 'Say an affirmation',
+    `${label}: affirmation names the action without embedding a category or time of day`);
+
   for (const [id, expected] of Object.entries(expectedNotes)) {
     assert.equal(byId[id].note, expected, `${label}: ${id} uses the concise reviewed card summary`);
   }

@@ -39,7 +39,7 @@ for (const [label, htmlPath] of builds) {
   const html = fs.readFileSync(htmlPath, 'utf8');
   const settingsStart = html.indexOf('id="settingsView"');
   const dockStart = html.indexOf('class="app-dock"');
-  const modalStart = html.indexOf('<!-- Manage Habits Modal -->');
+  const editorStart = html.indexOf('id="habitEditorView"');
 
   assert.ok(settingsStart > html.indexOf('id="insightsView"'), `${label}: Settings follows Insights`);
   assert.ok(settingsStart < dockStart, `${label}: Settings is a primary view before the dock`);
@@ -57,9 +57,9 @@ for (const [label, htmlPath] of builds) {
     `${label}: Settings owns backup and import controls`);
   assert.doesNotMatch(html, /installCard|install-card|setupInstallTip|INSTALL_DISMISS_KEY|Install Wavelength on your iPhone/,
     `${label}: the retired install prompt has no markup, styling, or runtime setup`);
-  const modalMarkup = html.slice(modalStart, html.indexOf('<script>', modalStart));
-  assert.doesNotMatch(modalMarkup, /appearance-tools|data-tools|exportBtn|importBtn/,
-    `${label}: Manage contains habit editing only`);
+  const editorMarkup = html.slice(editorStart, html.indexOf('<section class="management-view" id="categoryEditorView"', editorStart));
+  assert.doesNotMatch(editorMarkup, /appearance-tools|data-tools|exportBtn|importBtn/,
+    `${label}: focused habit editing excludes Settings tools`);
 
   const context = {};
   vm.createContext(context);
@@ -84,33 +84,25 @@ for (const [label, htmlPath] of builds) {
   assert.equal(greeting.textContent, 'Good morning, Friend ☀️', `${label}: an empty First Name uses the friendly display fallback`);
 
   const backup = extractFunction(html, 'createBackupPayload');
-  assert.match(html, /const BACKUP_VERSION = 5;/,
-    `${label}: First Name backups identify the version-5 schema`);
+  assert.match(html, /const BACKUP_VERSION = 6;/,
+    `${label}: First Name and category backups identify the version-6 schema`);
   assert.match(backup, /firstName\s*:\s*firstName/,
     `${label}: backup payload includes First Name`);
   const importer = extractFunction(html, 'importBackupFile');
-  assert.match(importer, /\[1, 2, 3, 4, BACKUP_VERSION\]\.includes\(payload\.version\)/,
-    `${label}: backup import preserves versions 1 through 4`);
+  assert.match(importer, /\[1, 2, 3, 4, 5, BACKUP_VERSION\]\.includes\(payload\.version\)/,
+    `${label}: backup import preserves versions 1 through 5`);
   assert.match(importer, /const importedFirstName = normalizeFirstName\(payload\.firstName\)/,
     `${label}: import accepts a missing First Name as empty`);
-  assert.match(importer, /if \(importedFirstName\) localStorage\.setItem\(FIRST_NAME_STORAGE_KEY, importedFirstName\);\s*else localStorage\.removeItem\(FIRST_NAME_STORAGE_KEY\)/,
-    `${label}: import persists a name but leaves no empty-name key for legacy backups`);
+  assert.match(importer, /\[FIRST_NAME_STORAGE_KEY\]:importedFirstName \|\| null/,
+    `${label}: atomic import persists a name but leaves no empty-name key for legacy backups`);
 
-  const scopeContext = {
-    manageCategory: 'hygiene',
-    HABITS: [{ id:'wake', cat:'morning' }, { id:'floss', cat:'hygiene' }, { id:'sunscreen', cat:'hygiene' }],
-    CATEGORY_NAMES: { hygiene:'Hygiene' },
-  };
-  vm.createContext(scopeContext);
-  vm.runInContext(`${extractFunction(html, 'getManageScope')}\nglobalThis.scope = getManageScope;`, scopeContext);
-  assert.deepEqual(JSON.parse(JSON.stringify(scopeContext.scope())), {
-    habits:[{ id:'floss', cat:'hygiene' }, { id:'sunscreen', cat:'hygiene' }],
-    title:'Manage Hygiene',
-    scoped:true,
-  }, `${label}: Manage scopes rendered habits and title to the active category`);
-  scopeContext.manageCategory = 'all';
-  assert.equal(scopeContext.scope().title, 'Manage All Habits', `${label}: All scope has the explicit all-habits title`);
-  assert.equal(scopeContext.scope().scoped, false, `${label}: All scope does not offer a redundant view-all action`);
+  const renderManage = extractFunction(html, 'renderManageCategoryPage');
+  assert.match(renderManage, /isAll \? HABITS : HABITS\.filter\(habit => habit\.cat === managedCategoryId\)/,
+    `${label}: Manage Category includes every assigned habit independently of today's schedule`);
+  assert.match(renderManage, /isAll \? 'Manage All Habits' : `Manage \$\{category\.name\}`/,
+    `${label}: Manage titles identify All or the selected real category`);
+  assert.match(extractFunction(html, 'openManageCategoryPage'), /managedCategoryId = categoryId[\s\S]*manageCategory = categoryId/,
+    `${label}: Home and Categories share one scoped full-page Manage implementation`);
 
   const mergeContext = {};
   vm.createContext(mergeContext);
@@ -126,15 +118,12 @@ for (const [label, htmlPath] of builds) {
     { wake:{ note:'Preserve me' }, floss:{ note:'Old floss' } }, {}, ['floss'],
   ))), { wake:{ note:'Preserve me' } },
   `${label}: resetting a visible habit removes only that habit's override`);
-  assert.match(extractFunction(html, 'saveManageModal'), /mergeVisibleManageOverrides\(existingOverrides, visibleOverrides, visibleIds\)/,
-    `${label}: Manage save uses the merge-preserving override helper`);
-  assert.match(extractFunction(html, 'openManageModal'), /manageCategory\s*=\s*currentCat/,
+  assert.match(extractFunction(html, 'saveHabitEditorForm'), /mergeVisibleManageOverrides\(existingOverrides, visibleOverrides, visibleIds\)/,
+    `${label}: focused Manage save preserves unrelated habit overrides`);
+  assert.match(html, /getElementById\('manageBtn'\)\.addEventListener\('click', \(\) => openManageCategoryPage\(currentCat, 'home'\)\)/,
     `${label}: Manage starts from the active Home category without sharing mutable scope`);
-  const renderManage = extractFunction(html, 'renderManageModal');
-  assert.match(renderManage, /manageCategory\s*=\s*'all'/,
-    `${label}: View all changes only the Manage scope`);
   assert.doesNotMatch(renderManage, /currentCat\s*=\s*'all'/,
-    `${label}: View all never changes the Home category`);
+    `${label}: aggregate Manage never changes the Home category`);
 
   const resetContext = {};
   vm.createContext(resetContext);

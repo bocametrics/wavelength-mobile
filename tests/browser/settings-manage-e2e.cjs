@@ -31,49 +31,37 @@ let browser;
   await page.reload({ waitUntil:'networkidle0' });
   await page.waitForSelector('.habit[data-id]');
 
-  // Category-scoped Manage opens only the selected category, with a non-destructive All escape hatch.
+  // Category-scoped Manage opens as a full-screen page and preserves Home scope.
   await page.click('.cat-tab[data-cat="hygiene"]');
   await page.waitForFunction(() => document.querySelector('.cat-tab[data-cat="hygiene"]').classList.contains('active'));
   const expectedHygiene = await page.evaluate(() => HABITS.filter(habit => habit.cat === 'hygiene').map(habit => habit.id));
   assert.ok(expectedHygiene.length > 0, 'test fixture has Hygiene habits');
   await page.click('#manageBtn');
-  await page.waitForSelector('#modalOverlay.open');
-  await page.waitForFunction(() => getComputedStyle(document.getElementById('modalOverlay')).opacity === '1');
+  await page.waitForFunction(() => !document.getElementById('manageCategoryView').hidden);
   let managed = await page.evaluate(() => ({
-    title:document.getElementById('modalTitle')?.textContent.trim(),
-    ids:[...document.querySelectorAll('#modalBody .edit-habit')].map(row => row.dataset.id),
-    allLinkText:document.getElementById('manageAllLink')?.textContent.trim() || null,
-    hasAppearance:!!document.querySelector('#modalOverlay .appearance-tools'),
-    hasDataTools:!!document.querySelector('#modalOverlay .data-tools'),
+    title:document.getElementById('manageCategoryHeading')?.textContent.trim(),
+    ids:[...document.querySelectorAll('#manageCategoryList .manage-habit-row')].map(row => row.dataset.habitId),
+    dock:getComputedStyle(document.querySelector('.app-dock')).display,
+    hasAppearance:!!document.querySelector('#manageCategoryView .appearance-tools'),
+    hasDataTools:!!document.querySelector('#manageCategoryView .data-tools'),
   }));
   assert.equal(managed.title, 'Manage Hygiene');
   assert.deepEqual(managed.ids, expectedHygiene);
-  assert.ok(managed.allLinkText, 'scoped Manage exposes View all habits');
-  assert.equal(managed.allLinkText, 'View all habits');
+  assert.equal(managed.dock, 'none', 'management pages hide the primary dock');
   assert.equal(managed.hasAppearance, false, 'Appearance is not inside Manage');
   assert.equal(managed.hasDataTools, false, 'backup controls are not inside Manage');
   await page.screenshot({ path:MANAGE_SHOT, fullPage:false });
 
-  await page.click('#manageAllLink');
-  await page.waitForFunction(() => document.getElementById('modalTitle')?.textContent.trim() === 'Manage All Habits');
-  managed = await page.evaluate(() => ({
-    ids:[...document.querySelectorAll('#modalBody .edit-habit')].map(row => row.dataset.id),
-    allLink:document.getElementById('manageAllLink'),
-  }));
-  const allIds = await page.evaluate(() => HABITS.map(habit => habit.id));
-  assert.deepEqual(managed.ids, allIds);
-  assert.equal(managed.allLink, null, 'All scope no longer offers an All escape hatch');
-  await page.click('#modalClose');
-  await page.waitForFunction(() => !document.getElementById('modalOverlay').classList.contains('open') &&
-    getComputedStyle(document.getElementById('modalOverlay')).opacity === '0');
+  await page.click('#manageCategoryBack');
+  await page.waitForFunction(() => document.documentElement.dataset.managementOpen !== 'true');
   const preservedHomeCategory = await page.evaluate(() => ({
     currentCat,
     hygieneActive:document.querySelector('.cat-tab[data-cat="hygiene"]').classList.contains('active'),
   }));
   assert.deepEqual(preservedHomeCategory, { currentCat:'hygiene', hygieneActive:true },
-    'View all broadens Manage without changing the Home category');
+    'returning from Manage preserves the Home category');
 
-  // A scoped reset must never clear invisible categories.
+  // A focused reset must never clear other habits or move the edited habit.
   await page.evaluate(() => {
     localStorage.setItem(CUSTOM_HABITS_KEY, JSON.stringify({
       wake:{ note:'Keep morning' },
@@ -83,15 +71,20 @@ let browser;
     renderHabits();
   });
   await page.click('#manageBtn');
-  await page.waitForSelector('#modalOverlay.open');
-  assert.equal(await page.$eval('#modalReset', button => button.textContent.trim()), 'Reset Hygiene defaults');
-  await page.click('#modalReset');
-  await page.waitForFunction(() => !document.getElementById('modalOverlay').classList.contains('open') &&
-    getComputedStyle(document.getElementById('modalOverlay')).opacity === '0');
+  await page.waitForFunction(() => !document.getElementById('manageCategoryView').hidden);
+  await page.click('#manageCategoryList [data-habit-id="floss"] .manage-habit-row-button');
+  await page.waitForFunction(() => !document.getElementById('habitEditorView').hidden);
+  assert.equal(await page.$eval('#habitEditorReset', button => button.textContent.trim()), 'Reset habit defaults');
+  await page.click('#habitEditorReset');
+  await page.waitForFunction(() => !document.getElementById('habitEditorView').hidden);
   const overridesAfterScopedReset = await page.evaluate(() => JSON.parse(localStorage.getItem(CUSTOM_HABITS_KEY) || '{}'));
   assert.deepEqual(overridesAfterScopedReset, { wake:{ note:'Keep morning' } },
-    'scoped reset preserves invisible-category overrides');
+    'focused reset preserves every other habit override');
   await page.waitForFunction(() => !document.getElementById('toast').classList.contains('show'), { timeout:4000 });
+  await page.click('#habitEditorBack');
+  await page.waitForFunction(() => !document.getElementById('manageCategoryView').hidden);
+  await page.click('#manageCategoryBack');
+  await page.waitForFunction(() => document.documentElement.dataset.managementOpen !== 'true');
 
   // With no stored name, Home uses the calm non-personal default.
   const defaultGreeting = await page.$eval('#greeting', element => element.textContent);
@@ -145,7 +138,7 @@ let browser;
       input:document.getElementById('firstNameInput').value,
     };
   });
-  assert.deepEqual(backupTransfer, { version:5, exportedFirstName:firstName, stored:'Ari', input:'Ari' },
+  assert.deepEqual(backupTransfer, { version:6, exportedFirstName:firstName, stored:'Ari', input:'Ari' },
     'backup export/import round-trips First Name through the production import path');
   await page.click('#navHome');
   await page.waitForFunction(() => !document.getElementById('homeView').hidden);
