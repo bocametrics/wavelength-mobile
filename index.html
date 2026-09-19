@@ -1341,25 +1341,46 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   /* ── Full-screen management flow ── */
   .category-nav {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 44px;
-    align-items: stretch;
-    gap: 8px;
     margin-bottom: 20px;
   }
 
   .category-nav .category-tabs { margin-bottom: 0; }
 
-  .manage-categories-btn {
+  .home-habit-tools {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .home-icon-control {
+    display: grid;
+    place-items: center;
     width: 44px;
-    min-height: 42px;
-    border: 1px solid var(--accent-border);
-    border-radius: 999px;
-    background: var(--surface);
-    color: var(--accent);
-    font: 600 1.25rem/1 inherit;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--text2);
     cursor: pointer;
-    box-shadow: -8px 0 18px var(--bg);
+  }
+
+  .home-icon-control:hover,
+  .home-icon-control:focus-visible {
+    background: var(--surface-hover);
+    color: var(--accent);
+  }
+
+  .home-icon-control svg,
+  .management-back svg,
+  .category-options-btn svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
   }
 
   .management-view {
@@ -1392,7 +1413,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     top: 0;
     z-index: 20;
     display: grid;
-    grid-template-columns: minmax(72px, auto) minmax(0, 1fr) minmax(72px, auto);
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
     align-items: center;
     gap: 8px;
     min-height: 58px;
@@ -1415,7 +1436,11 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   .management-back,
   .management-action {
-    min-height: 42px;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
     border: 0;
     background: transparent;
     color: var(--accent);
@@ -1423,8 +1448,20 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     cursor: pointer;
   }
 
-  .management-back { text-align: left; }
-  .management-action { text-align: right; }
+  .management-action { width: auto; min-width: 44px; padding: 0 4px; }
+
+  .category-options-btn {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+  }
 
   .category-list,
   .manage-habit-list,
@@ -1437,9 +1474,9 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   .category-row,
   .manage-habit-row {
     display: grid;
-    grid-template-columns: 28px minmax(0, 1fr);
+    grid-template-columns: 16px minmax(0, 1fr);
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     min-height: 64px;
     padding: 10px 12px;
     border: 1px solid var(--border);
@@ -1447,6 +1484,19 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     background: var(--surface);
     color: var(--text);
   }
+
+  .category-row.dragging,
+  .manage-habit-row.dragging {
+    position: relative;
+    z-index: 10;
+    transform: scale(1.012);
+    border-color: var(--accent-border);
+    box-shadow: var(--shadow-toast);
+  }
+
+  .category-row.dragging .category-grip,
+  .manage-habit-row.dragging .manage-habit-grip { cursor: grabbing; }
+  body.dragging-active { user-select: none; }
 
   .category-row-button,
   .manage-habit-row-button {
@@ -1466,40 +1516,65 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   }
 
   .category-grip,
-  .manage-habit-grip,
-  .category-lock {
+  .manage-habit-grip {
+    position: relative;
     display: grid;
     place-items: center;
-    min-width: 28px;
-    min-height: 42px;
+    width: 44px;
+    height: 44px;
+    margin: 0 -14px;
+    padding: 0;
     border: 0;
     background: transparent;
     color: var(--text3);
-    font: 600 1rem/1 inherit;
     touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: grab;
+  }
+
+  .category-grip-marker {
+    display: grid;
+    grid-template-rows: repeat(3, 3px);
+    gap: 3px;
+    width: 3px;
+  }
+
+  .category-grip-marker::before,
+  .category-grip-marker::after,
+  .category-grip-marker span {
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: currentColor;
+    content: '';
   }
 
   .category-row-icon,
   .manage-habit-row-icon { font-size: 1.22rem; text-align: center; }
 
   .category-row-copy,
-  .manage-habit-row-copy { min-width: 0; }
+  .manage-habit-row-copy {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
 
   .category-row-name,
   .manage-habit-row-name {
     overflow: hidden;
     color: var(--text);
-    font-size: 0.95rem;
+    font-size: 1rem;
     font-weight: 600;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  .category-row-meta,
   .manage-habit-row-meta {
-    margin-top: 3px;
     color: var(--text2);
-    font-size: 0.76rem;
+    font-size: 0.875rem;
+    line-height: 1.35;
   }
 
   .category-chevron,
@@ -1514,6 +1589,37 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     background: var(--accent-soft);
     color: var(--accent);
     font: 600 0.88rem/1.2 inherit;
+    cursor: pointer;
+  }
+
+  .archived-categories-group {
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .archived-categories-heading {
+    margin: 0 0 10px;
+    color: var(--text2);
+    font-size: 0.8125rem;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+  }
+
+  .archived-category-row {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    background: color-mix(in srgb, var(--surface) 72%, var(--bg));
+  }
+
+  .archived-category-row .restore-category-btn {
+    width: auto;
+    min-width: 68px;
+    min-height: 44px;
+    padding: 0 8px;
+    border: 0;
+    background: transparent;
+    color: var(--accent);
+    font: 600 0.84rem/1.2 inherit;
     cursor: pointer;
   }
 
@@ -1589,24 +1695,55 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     box-shadow: 0 0 0 1px var(--accent);
   }
 
-  .category-action-area {
-    margin-top: 28px;
-    padding-top: 18px;
-    border-top: 1px solid var(--border);
+  .management-dialog {
+    width: min(360px, calc(100vw - 28px));
+    margin: auto;
+    padding: 0;
+    border: 1px solid var(--border2);
+    border-radius: 18px;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: var(--shadow-toast);
   }
 
-  .archive-category-btn {
+  .management-dialog::backdrop { background: var(--overlay); }
+
+  .category-options-sheet {
+    margin: auto auto max(12px, env(safe-area-inset-bottom));
+  }
+
+  .category-options-content,
+  .category-removal-content {
+    display: grid;
+    gap: 10px;
+    padding: 18px;
+  }
+
+  .category-options-content h2,
+  .category-removal-content h2 {
+    margin: 0 0 2px;
+    font-size: 1rem;
+  }
+
+  .category-option {
     width: 100%;
-    min-height: 46px;
-    border: 1px solid var(--danger-border);
+    min-height: 48px;
+    padding: 0 14px;
+    border: 1px solid var(--border2);
     border-radius: var(--radius-sm);
-    background: var(--danger-soft);
-    color: var(--rose);
-    font: 600 0.84rem/1.2 inherit;
+    background: var(--surface2);
+    color: var(--text);
+    font: 600 0.9rem/1.2 inherit;
     cursor: pointer;
+    text-align: left;
   }
 
-  .archive-category-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .category-option:disabled { opacity: 0.48; cursor: not-allowed; }
+  .category-option.danger,
+  .category-removal-confirm.danger { color: var(--rose); }
+  .category-options-guidance,
+  .category-removal-message { margin: 0; color: var(--text2); font-size: 0.875rem; line-height: 1.45; }
+  .category-removal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
   /* ── Responsive ── */
   @media (max-width: 480px) {
@@ -2177,30 +2314,6 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     border-color: var(--danger-border);
   }
 
-  .manage-btn {
-    background: none;
-    border: none;
-    color: var(--text3);
-    font-size: 0.75rem;
-    font-family: inherit;
-    cursor: pointer;
-    padding: 3px 8px;
-    border-radius: 6px;
-    transition: all 0.15s ease;
-    margin-left: 8px;
-    vertical-align: middle;
-  }
-
-  .manage-btn:hover {
-    background: var(--surface-hover);
-    color: var(--text2);
-  }
-
-  .manage-btn[aria-pressed="true"] {
-    background: var(--accent-soft);
-    color: var(--accent);
-  }
-
   /* ── iPhone / PWA experience ── */
   html {
     background: var(--bg);
@@ -2248,6 +2361,15 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   .offline-pill.show { display: block; }
 
   @media (max-width: 600px) {
+    html,
+    body {
+      scrollbar-width: none;
+      max-width: 100%;
+      overflow-x: clip;
+      overscroll-behavior-x: none;
+    }
+    html::-webkit-scrollbar,
+    body::-webkit-scrollbar { display: none; }
     header { margin-bottom: 24px; }
     .date-display .day { font-size: 0.96rem; }
     .date-display .label { font-size: 0.62rem; }
@@ -2276,7 +2398,6 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     }
 
     .section-title { align-items: center; }
-    .manage-btn { min-height: 40px; padding: 8px 10px; }
     .reorder-hint { margin-bottom: 12px; }
 
     .habit {
@@ -2320,7 +2441,6 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     .next-wave-detail { font-size: 0.875rem; line-height: 1.45; }
     .next-wave-action { font-size: 0.8125rem; line-height: 1.2; }
     .cat-tab { font-size: 0.875rem; font-weight: 500; line-height: 1.2; }
-    .manage-btn { font-size: 0.78125rem; font-weight: 500; line-height: 1.3; }
     .reset-btn { color: var(--text2); font-size: 0.78125rem; font-weight: 500; line-height: 1.3; }
     .reorder-hint,
     .completed-divider { color: var(--text2); font-size: 0.75rem; line-height: 1.3; opacity: 1; }
@@ -2446,13 +2566,16 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     <!-- Category Tabs -->
     <div class="category-nav">
       <div class="category-tabs" id="categoryTabRail" aria-label="Habit categories"></div>
-      <button class="manage-categories-btn" id="manageCategoriesBtn" type="button" aria-label="Manage categories">+</button>
     </div>
 
     <!-- Habits -->
     <div class="section-title">
-      <h2>Today's habits <button class="manage-btn" id="manageBtn">✎ Manage</button></h2>
-      <span class="count" id="doneCount">0 / 20</span>
+      <h2>Today's habits</h2>
+      <div class="home-habit-tools">
+        <span class="count" id="doneCount">0 / 20</span>
+        <button class="home-icon-control" id="manageBtn" type="button" aria-label="Manage habits"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m4 6 1.4 1.4L7.8 5M4 12l1.4 1.4L7.8 11M4 18l1.4 1.4L7.8 17"/></svg></button>
+        <button class="home-icon-control" id="manageCategoriesBtn" type="button" aria-label="Manage categories"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></button>
+      </div>
     </div>
 
     <div class="habits" id="habitList"></div>
@@ -2595,23 +2718,26 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   <section class="management-view" id="categoriesView" aria-labelledby="categoriesHeading" hidden inert>
     <div class="management-header">
-      <button class="management-back" id="categoriesBack" type="button">‹ Home</button>
+      <button class="management-back" id="categoriesBack" type="button" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
       <h1 id="categoriesHeading">Categories</h1>
       <span aria-hidden="true"></span>
     </div>
     <div class="category-list" id="categoriesList"></div>
-    <button class="start-category-btn" id="newCategoryBtn" type="button">+ Start a New Category</button>
-    <button class="manage-all-link" id="archivedCategoriesBtn" type="button" hidden>Archived Categories</button>
+    <button class="start-category-btn" id="newCategoryBtn" type="button">+ Add a Category</button>
+    <section class="archived-categories-group" id="archivedCategoriesGroup" aria-labelledby="archivedCategoriesHeading" hidden>
+      <h2 class="archived-categories-heading" id="archivedCategoriesHeading">Archived · <span id="archivedCategoriesCount">0</span></h2>
+      <div class="archived-category-list" id="archivedCategoriesList"></div>
+      <template id="archivedCategoryRowTemplate"><div class="archived-category-row category-row"><span class="category-row-icon"></span><span class="category-row-name"></span><button class="restore-category-btn" type="button">Restore</button></div></template>
+    </section>
   </section>
 
   <section class="management-view" id="manageCategoryView" aria-labelledby="manageCategoryHeading" hidden inert>
     <div class="management-header">
-      <button class="management-back" id="manageCategoryBack" type="button">‹ Categories</button>
+      <button class="management-back" id="manageCategoryBack" type="button" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
       <h1 id="manageCategoryHeading">Manage Habits</h1>
-      <button class="management-action" id="editCategoryBtn" type="button">Edit</button>
+      <button class="category-options-btn" id="categoryOptionsBtn" type="button" aria-label="Category options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none"/></svg></button>
     </div>
     <div class="manage-habit-list" id="manageCategoryList"></div>
-    <div id="categoryActions"></div>
   </section>
 
   <section class="management-view" id="habitEditorView" aria-labelledby="habitEditorHeading" hidden inert>
@@ -2639,15 +2765,6 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     </div>
   </section>
 
-  <section class="management-view" id="archivedCategoriesView" aria-labelledby="archivedCategoriesHeading" hidden inert>
-    <div class="management-header">
-      <button class="management-back" id="archivedCategoriesBack" type="button">‹ Categories</button>
-      <h1 id="archivedCategoriesHeading">Archived Categories</h1>
-      <span aria-hidden="true"></span>
-    </div>
-    <div class="archived-category-list" id="archivedCategoriesList"></div>
-  </section>
-
   <nav class="app-dock" aria-label="Primary navigation" role="tablist">
     <button class="dock-button" id="navHome" role="tab" aria-controls="homeView" aria-selected="true" type="button" data-view="home" aria-current="page">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-5.5h5V20"/></svg>
@@ -2663,6 +2780,27 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     </button>
   </nav>
 </div>
+
+<dialog class="management-dialog category-options-sheet" id="categoryOptionsSheet" aria-labelledby="categoryOptionsHeading">
+  <div class="category-options-content">
+    <h2 id="categoryOptionsHeading">Category options</h2>
+    <button class="category-option" id="editCategoryOption" type="button">Edit category</button>
+    <button class="category-option" id="categoryRemovalOption" type="button">Archive category</button>
+    <p class="category-options-guidance" id="categoryOptionsGuidance"></p>
+    <button class="category-option" id="categoryOptionsClose" type="button">Cancel</button>
+  </div>
+</dialog>
+
+<dialog class="management-dialog" id="categoryRemovalDialog" aria-labelledby="categoryRemovalHeading">
+  <div class="category-removal-content">
+    <h2 id="categoryRemovalHeading">Remove category?</h2>
+    <p class="category-removal-message" id="categoryRemovalMessage"></p>
+    <div class="category-removal-actions">
+      <button class="category-option category-removal-confirm" id="categoryRemovalConfirm" type="button">Archive category</button>
+      <button class="category-option" id="categoryRemovalCancel" type="button">Cancel</button>
+    </div>
+  </div>
+</dialog>
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
@@ -3229,6 +3367,22 @@ function updateCategoryDefinition(state, categoryId, name, iconKey, habits) {
     ? { ...category, name, iconKey }
     : { ...category });
   return normalizeCategoryState({ ...safe, definitions }, habits, true);
+}
+
+function deleteCategoryDefinition(state, categoryId, habits) {
+  const safe = normalizeCategoryState(state, habits, true);
+  const shippedIds = new Set(DEFAULT_CATEGORY_DEFINITIONS.map(category => category.id));
+  const category = safe.definitions.find(value => value.id === categoryId);
+  if (!category || shippedIds.has(categoryId)) throw new Error('Choose a custom category.');
+  if ((habits || []).some(habit => getEffectiveCategoryId(habit, safe) === categoryId)) {
+    throw new Error('A category must be empty before it can be deleted.');
+  }
+  return normalizeCategoryState({
+    ...safe,
+    definitions:safe.definitions.filter(value => value.id !== categoryId),
+    order:safe.order.filter(id => id !== categoryId),
+    assignments:safe.assignments.filter(value => value.categoryId !== categoryId),
+  }, habits, true);
 }
 
 function loadCategoryState(habits, storage = localStorage) {
@@ -5436,59 +5590,66 @@ function closeManagementFlow(fromHistory = false) {
   if (!fromHistory && history.state?.[MANAGEMENT_HISTORY_KEY]) history.back();
 }
 
-function makeCategoryRow(category, isAll = false) {
+function makeCategoryRow(category) {
   const row = document.createElement('div');
   row.className = 'category-row';
-  row.dataset.categoryId = isAll ? 'all' : category.id;
+  row.dataset.categoryId = category.id;
 
-  const lead = document.createElement(isAll ? 'span' : 'button');
-  if (!isAll) lead.type = 'button';
-  lead.className = isAll ? 'category-lock' : 'category-grip';
-  if (isAll) {
-    lead.dataset.icon = '🔒';
-    lead.textContent = '🔒';
-  } else {
-    lead.textContent = '⠿';
-    lead.setAttribute('aria-label', `Reorder ${category.name}`);
-  }
-  row.appendChild(lead);
+  const grip = document.createElement('button');
+  grip.type = 'button';
+  grip.className = 'category-grip';
+  grip.setAttribute('aria-label', `Reorder ${category.name}`);
+  const marker = document.createElement('span');
+  marker.className = 'category-grip-marker';
+  marker.setAttribute('aria-hidden', 'true');
+  marker.appendChild(document.createElement('span'));
+  grip.appendChild(marker);
+  row.appendChild(grip);
 
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'category-row-button';
   const icon = document.createElement('span');
   icon.className = 'category-row-icon';
-  icon.textContent = isAll ? '≈' : CATEGORY_ICON_MAP[category.iconKey];
+  icon.textContent = CATEGORY_ICON_MAP[category.iconKey];
   const copy = document.createElement('span');
   copy.className = 'category-row-copy';
   const name = document.createElement('span');
   name.className = 'category-row-name';
-  name.textContent = isAll ? 'All habits' : category.name;
-  const meta = document.createElement('span');
-  meta.className = 'category-row-meta';
-  const count = isAll ? HABITS.length : HABITS.filter(habit => habit.cat === category.id).length;
-  meta.textContent = `${count} ${count === 1 ? 'habit' : 'habits'}`;
-  copy.append(name, meta);
+  name.textContent = category.name;
+  copy.appendChild(name);
   const chevron = document.createElement('span');
   chevron.className = 'category-chevron';
   chevron.textContent = '›';
   button.append(icon, copy, chevron);
-  button.addEventListener('click', () => openManageCategoryPage(isAll ? 'all' : category.id, 'categories'));
+  button.addEventListener('click', () => openManageCategoryPage(category.id, 'categories'));
   row.appendChild(button);
   return row;
 }
 
+const GRIP_LONG_PRESS_MS = 250;
+
 function attachGripReorder(container, rowSelector, gripSelector, onCommit) {
   let active = null;
+  const cancelPending = () => {
+    if (!active) return;
+    clearTimeout(active.timer);
+    active = null;
+  };
   const finish = event => {
     if (!active) return;
-    active.grip.releasePointerCapture?.(active.pointerId);
-    active.row.classList.remove('dragging');
-    document.body.classList.remove('dragging-active');
-    const changed = active.moved;
+    clearTimeout(active.timer);
+    if (active.armed) {
+      if (active.grip.hasPointerCapture?.(active.pointerId)) {
+        active.grip.releasePointerCapture(active.pointerId);
+      }
+      active.row.classList.remove('dragging');
+      document.body.classList.remove('dragging-active');
+    }
+    const changed = active.armed && active.moved;
     active = null;
     if (changed) onCommit([...container.querySelectorAll(rowSelector)]);
-    event?.preventDefault();
+    if (event?.cancelable) event.preventDefault();
   };
   container.querySelectorAll(gripSelector).forEach(grip => {
     grip.addEventListener('pointerdown', event => {
@@ -5496,14 +5657,34 @@ function attachGripReorder(container, rowSelector, gripSelector, onCommit) {
       const row = grip.closest(rowSelector);
       if (!row) return;
       event.preventDefault();
-      grip.setPointerCapture?.(event.pointerId);
-      active = { row, grip, pointerId:event.pointerId, startY:event.clientY, moved:false };
-      row.classList.add('dragging');
-      document.body.classList.add('dragging-active');
+      let armDrag;
+      active = {
+        row,
+        grip,
+        pointerId:event.pointerId,
+        startX:event.clientX,
+        startY:event.clientY,
+        moved:false,
+        armed:false,
+        timer:null,
+      };
+      if (event.pointerType === 'touch') active.timer = setTimeout(() => armDrag(), GRIP_LONG_PRESS_MS);
+      armDrag = () => {
+        if (!active || active.pointerId !== event.pointerId) return;
+        active.armed = true;
+        grip.setPointerCapture?.(event.pointerId);
+        row.classList.add('dragging');
+        document.body.classList.add('dragging-active');
+      };
+      if (event.pointerType !== 'touch') armDrag();
     });
     grip.addEventListener('pointermove', event => {
       if (!active || event.pointerId !== active.pointerId) return;
       event.preventDefault();
+      if (!active.armed) {
+        if (Math.hypot(event.clientX - active.startX, event.clientY - active.startY) > 10) cancelPending();
+        return;
+      }
       if (Math.abs(event.clientY - active.startY) < 8 && !active.moved) return;
       const candidates = [...container.querySelectorAll(rowSelector)].filter(row => row !== active.row && row.querySelector(gripSelector));
       const target = candidates.find(row => event.clientY < row.getBoundingClientRect().top + row.getBoundingClientRect().height / 2);
@@ -5513,6 +5694,9 @@ function attachGripReorder(container, rowSelector, gripSelector, onCommit) {
     });
     grip.addEventListener('pointerup', finish);
     grip.addEventListener('pointercancel', finish);
+    grip.addEventListener('touchend', finish, { passive:false });
+    grip.addEventListener('touchcancel', finish, { passive:false });
+    grip.addEventListener('contextmenu', event => event.preventDefault());
     grip.addEventListener('keydown', event => {
       if (!['ArrowUp','ArrowDown'].includes(event.key)) return;
       event.preventDefault();
@@ -5521,10 +5705,13 @@ function attachGripReorder(container, rowSelector, gripSelector, onCommit) {
       const index = rows.indexOf(row);
       const nextIndex = event.key === 'ArrowUp' ? index - 1 : index + 1;
       if (index < 0 || nextIndex < 0 || nextIndex >= rows.length) return;
+      const rowId = row.dataset.categoryId || row.dataset.habitId;
       if (event.key === 'ArrowUp') container.insertBefore(row, rows[nextIndex]);
       else container.insertBefore(rows[nextIndex], row);
       onCommit([...container.querySelectorAll(rowSelector)]);
-      grip.focus();
+      const replacementRow = [...container.querySelectorAll(rowSelector)]
+        .find(item => (item.dataset.categoryId || item.dataset.habitId) === rowId);
+      replacementRow?.querySelector(gripSelector)?.focus();
     });
   });
 }
@@ -5532,16 +5719,18 @@ function attachGripReorder(container, rowSelector, gripSelector, onCommit) {
 function renderCategoriesPage() {
   const list = document.getElementById('categoriesList');
   list.replaceChildren();
-  const allRow = makeCategoryRow(null, true);
-  allRow.setAttribute('aria-label', '🔒 All habits is protected');
-  list.appendChild(allRow);
   getActiveCategoryDefinitions(categoryState).forEach(category => list.appendChild(makeCategoryRow(category)));
-  const archivedCount = categoryState.definitions.filter(category => category.archived).length;
-  const archivedButton = document.getElementById('archivedCategoriesBtn');
-  archivedButton.hidden = archivedCount === 0;
-  archivedButton.textContent = `Archived Categories · ${archivedCount}`;
+  const archived = categoryState.order
+    .map(id => getCategoryDefinition(id))
+    .filter(category => category?.archived);
+  const archivedGroup = document.getElementById('archivedCategoriesGroup');
+  const archivedCount = document.getElementById('archivedCategoriesCount');
+  const archivedList = document.getElementById('archivedCategoriesList');
+  archivedGroup.hidden = archived.length === 0;
+  archivedCount.textContent = String(archived.length);
+  archivedList.replaceChildren(...archived.map(makeArchivedCategoryRow));
   attachGripReorder(list, '.category-row[data-category-id]', '.category-grip', rows => {
-    const reorderedIds = rows.filter(row => row.querySelector('.category-grip')).map(row => row.dataset.categoryId);
+    const reorderedIds = rows.map(row => row.dataset.categoryId);
     categoryState = reorderActiveCategoryIds(categoryState, reorderedIds, DEFAULT_HABITS);
     categoryState = saveCategoryState(categoryState, DEFAULT_HABITS);
     renderCategoryTabs();
@@ -5563,7 +5752,7 @@ function renderManageCategoryPage() {
     return;
   }
   document.getElementById('manageCategoryHeading').textContent = isAll ? 'Manage All Habits' : `Manage ${category.name}`;
-  document.getElementById('editCategoryBtn').hidden = isAll;
+  document.getElementById('categoryOptionsBtn').hidden = isAll;
   const list = document.getElementById('manageCategoryList');
   list.replaceChildren();
   const habits = (isAll ? HABITS : HABITS.filter(habit => habit.cat === managedCategoryId))
@@ -5580,9 +5769,15 @@ function renderManageCategoryPage() {
     row.dataset.habitId = habit.id;
     const lead = document.createElement(isAll ? 'span' : 'button');
     if (!isAll) lead.type = 'button';
-    lead.className = isAll ? 'category-lock' : 'manage-habit-grip';
-    lead.textContent = isAll ? '' : '⠿';
-    if (!isAll) lead.setAttribute('aria-label', `Reorder ${habit.text}`);
+    lead.className = isAll ? 'manage-habit-spacer' : 'manage-habit-grip';
+    if (!isAll) {
+      lead.setAttribute('aria-label', `Reorder ${habit.text}`);
+      const marker = document.createElement('span');
+      marker.className = 'category-grip-marker';
+      marker.setAttribute('aria-hidden', 'true');
+      marker.appendChild(document.createElement('span'));
+      lead.appendChild(marker);
+    }
     row.appendChild(lead);
     const button = document.createElement('button');
     button.type = 'button';
@@ -5607,7 +5802,6 @@ function renderManageCategoryPage() {
     row.appendChild(button);
     list.appendChild(row);
   });
-  renderCategoryActions(habits);
   if (!isAll) {
     attachGripReorder(list, '.manage-habit-row[data-habit-id]', '.manage-habit-grip', rows => {
       const reorderedIds = rows.map(row => row.dataset.habitId);
@@ -5618,31 +5812,54 @@ function renderManageCategoryPage() {
   }
 }
 
-function renderCategoryActions(habits) {
-  const actions = document.getElementById('categoryActions');
-  actions.replaceChildren();
-  if (managedCategoryId === 'all') return;
-  actions.className = 'category-action-area';
-  const archiveButton = document.createElement('button');
-  archiveButton.type = 'button';
-  archiveButton.className = 'archive-category-btn';
-  archiveButton.textContent = 'Archive category';
-  archiveButton.disabled = habits.length !== 0;
-  archiveButton.addEventListener('click', archiveManagedCategory);
-  const help = document.createElement('p');
-  help.className = 'category-row-meta';
-  help.textContent = habits.length === 0
-    ? 'This empty category can be archived and restored later.'
-    : `Move its ${habits.length} ${habits.length === 1 ? 'habit' : 'habits'} to other categories before archiving.`;
-  actions.append(archiveButton, help);
+function renderCategoryOptions() {
+  const category = getCategoryDefinition(managedCategoryId);
+  if (!category || category.archived) return false;
+  const isShippedCategory = DEFAULT_CATEGORY_DEFINITIONS.some(value => value.id === category.id);
+  const habitCount = HABITS.filter(habit => habit.cat === category.id).length;
+  const removal = document.getElementById('categoryRemovalOption');
+  removal.textContent = isShippedCategory ? 'Archive category' : 'Delete category';
+  removal.classList.toggle('danger', !isShippedCategory);
+  removal.disabled = habitCount !== 0;
+  document.getElementById('categoryOptionsGuidance').textContent = habitCount
+    ? `Move ${habitCount} ${habitCount === 1 ? 'habit' : 'habits'} first`
+    : isShippedCategory
+      ? 'Archive hides this empty category until you restore it.'
+      : 'Delete permanently removes this empty custom category.';
+  return true;
+}
+
+function openCategoryOptions() {
+  if (!renderCategoryOptions()) return false;
+  const sheet = document.getElementById('categoryOptionsSheet');
+  if (!sheet.open) sheet.showModal();
+  return true;
+}
+
+function openCategoryRemovalDialog() {
+  const category = getCategoryDefinition(managedCategoryId);
+  if (!category || HABITS.some(habit => habit.cat === category.id)) return false;
+  const isShippedCategory = DEFAULT_CATEGORY_DEFINITIONS.some(value => value.id === category.id);
+  document.getElementById('categoryRemovalHeading').textContent = isShippedCategory
+    ? `Archive ${category.name}?`
+    : `Delete '${category.name}'?`;
+  document.getElementById('categoryRemovalMessage').textContent = isShippedCategory
+    ? 'This removes it from Home categories. You can restore it from Categories.'
+    : 'This permanently removes the category. Your habits and history will not be deleted.';
+  const confirmButton = document.getElementById('categoryRemovalConfirm');
+  confirmButton.textContent = isShippedCategory ? 'Archive category' : 'Delete category';
+  confirmButton.classList.toggle('danger', !isShippedCategory);
+  const dialog = document.getElementById('categoryRemovalDialog');
+  if (!dialog.open) dialog.showModal();
+  return true;
 }
 
 function archiveManagedCategory() {
   const category = getCategoryDefinition(managedCategoryId);
-  if (!category) return false;
+  const isShippedCategory = DEFAULT_CATEGORY_DEFINITIONS.some(value => value.id === category?.id);
+  if (!category || !isShippedCategory) return false;
   const habits = HABITS.filter(habit => habit.cat === managedCategoryId);
   if (habits.length !== 0) return false;
-  if (!window.confirm(`Archive “${category.name}”?\n\nIt will leave Home categories and can be restored later.`)) return false;
   categoryState = saveCategoryState(setCategoryArchived(categoryState, category.id, true, DEFAULT_HABITS), DEFAULT_HABITS);
   if (currentCat === category.id) currentCat = 'all';
   reloadHabits();
@@ -5651,6 +5868,26 @@ function archiveManagedCategory() {
   showManagementView('categoriesView');
   showToast(`✓ ${category.name} archived`);
   return true;
+}
+
+function deleteManagedCategory() {
+  const category = getCategoryDefinition(managedCategoryId);
+  if (!category) return false;
+  categoryState = deleteCategoryDefinition(categoryState, category.id, DEFAULT_HABITS);
+  categoryState = saveCategoryState(categoryState, DEFAULT_HABITS);
+  if (currentCat === category.id) currentCat = 'all';
+  reloadHabits();
+  renderCategoryTabs();
+  renderCategoriesPage();
+  showManagementView('categoriesView');
+  showToast(`✓ ${category.name} deleted`);
+  return true;
+}
+
+function confirmCategoryRemoval() {
+  const isShippedCategory = DEFAULT_CATEGORY_DEFINITIONS.some(value => value.id === managedCategoryId);
+  document.getElementById('categoryRemovalDialog').close();
+  return isShippedCategory ? archiveManagedCategory() : deleteManagedCategory();
 }
 
 function openManageCategoryPage(categoryId, origin = 'categories') {
@@ -5713,9 +5950,6 @@ function restoreManagementRoute(route) {
     showManagementView('habitEditorView', false);
   } else if (route.viewId === 'categoryEditorView') {
     openCategoryEditorPage(editingCategoryId, categoryEditorOrigin, false);
-  } else if (route.viewId === 'archivedCategoriesView') {
-    renderArchivedCategoriesPage();
-    showManagementView('archivedCategoriesView', false);
   } else {
     closeManagementFlow(true);
   }
@@ -5813,38 +6047,13 @@ function saveCategoryEditor() {
   return true;
 }
 
-function renderArchivedCategoriesPage() {
-  const list = document.getElementById('archivedCategoriesList');
-  list.replaceChildren();
-  const archived = categoryState.order
-    .map(id => getCategoryDefinition(id))
-    .filter(category => category?.archived);
-  if (archived.length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'management-empty';
-    empty.textContent = 'No archived categories.';
-    list.appendChild(empty);
-    return;
-  }
-  archived.forEach(category => {
-    const row = document.createElement('div');
-    row.className = 'category-row';
-    const spacer = document.createElement('span');
-    spacer.className = 'category-lock';
-    const icon = document.createElement('span');
-    icon.className = 'category-row-icon';
-    icon.textContent = CATEGORY_ICON_MAP[category.iconKey];
-    const name = document.createElement('span');
-    name.className = 'category-row-name';
-    name.textContent = category.name;
-    const restore = document.createElement('button');
-    restore.type = 'button';
-    restore.className = 'management-action';
-    restore.textContent = 'Restore';
-    restore.addEventListener('click', () => restoreArchivedCategory(category.id));
-    row.append(spacer, icon, name, restore);
-    list.appendChild(row);
-  });
+function makeArchivedCategoryRow(category) {
+  const row = document.getElementById('archivedCategoryRowTemplate').content.firstElementChild.cloneNode(true);
+  row.dataset.categoryId = category.id;
+  row.querySelector('.category-row-icon').textContent = CATEGORY_ICON_MAP[category.iconKey];
+  row.querySelector('.category-row-name').textContent = category.name;
+  row.querySelector('.restore-category-btn').addEventListener('click', () => restoreArchivedCategory(category.id));
+  return row;
 }
 
 function restoreArchivedCategory(categoryId) {
@@ -5852,7 +6061,7 @@ function restoreArchivedCategory(categoryId) {
   categoryState = saveCategoryState(categoryState, DEFAULT_HABITS);
   reloadHabits();
   renderCategoryTabs();
-  renderArchivedCategoriesPage();
+  renderCategoriesPage();
   showToast(`✓ ${getCategoryDisplayName(categoryId)} restored`);
   return true;
 }
@@ -7218,7 +7427,18 @@ function init() {
   document.getElementById('habitEditorSave').addEventListener('click', saveHabitEditorPage);
   document.getElementById('habitEditorReset').addEventListener('click', resetHabitEditorDefaults);
   document.getElementById('newCategoryBtn').addEventListener('click', () => openCategoryEditorPage(null, 'categories'));
-  document.getElementById('editCategoryBtn').addEventListener('click', () => openCategoryEditorPage(managedCategoryId, 'manage'));
+  document.getElementById('categoryOptionsBtn').addEventListener('click', openCategoryOptions);
+  document.getElementById('editCategoryOption').addEventListener('click', () => {
+    document.getElementById('categoryOptionsSheet').close();
+    openCategoryEditorPage(managedCategoryId, 'manage');
+  });
+  document.getElementById('categoryRemovalOption').addEventListener('click', () => {
+    document.getElementById('categoryOptionsSheet').close();
+    openCategoryRemovalDialog();
+  });
+  document.getElementById('categoryOptionsClose').addEventListener('click', () => document.getElementById('categoryOptionsSheet').close());
+  document.getElementById('categoryRemovalCancel').addEventListener('click', () => document.getElementById('categoryRemovalDialog').close());
+  document.getElementById('categoryRemovalConfirm').addEventListener('click', confirmCategoryRemoval);
   document.getElementById('categoryEditorSave').addEventListener('click', saveCategoryEditor);
   document.getElementById('categoryEditorBack').addEventListener('click', () => {
     if (categoryEditorOrigin === 'manage') {
@@ -7229,15 +7449,6 @@ function init() {
       showManagementView('categoriesView');
     }
   });
-  document.getElementById('archivedCategoriesBtn').addEventListener('click', () => {
-    renderArchivedCategoriesPage();
-    showManagementView('archivedCategoriesView');
-  });
-  document.getElementById('archivedCategoriesBack').addEventListener('click', () => {
-    renderCategoriesPage();
-    showManagementView('categoriesView');
-  });
-
   document.getElementById('nextWaveAction').addEventListener('click', focusNextWaveHabit);
   document.getElementById('navHome').addEventListener('click', () => setActiveView('home'));
   document.getElementById('navInsights').addEventListener('click', () => setActiveView('insights'));

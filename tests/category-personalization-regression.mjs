@@ -61,6 +61,7 @@ function loadCategoryFunctions(html) {
     'setCategoryArchived',
     'addCategoryDefinition',
     'updateCategoryDefinition',
+    'deleteCategoryDefinition',
     'loadCategoryState',
     'saveCategoryState',
     'commitStorageSnapshot',
@@ -93,6 +94,7 @@ for (const [label, htmlPath] of builds) {
     setCategoryArchived,
     addCategoryDefinition,
     updateCategoryDefinition,
+    deleteCategoryDefinition,
     loadCategoryState,
     saveCategoryState,
     commitStorageSnapshot,
@@ -204,6 +206,16 @@ for (const [label, htmlPath] of builds) {
     `${label}: category icons come from the curated cross-platform set`);
   assert.throws(() => updateCategoryDefinition(defaults, 'missing', 'Focus', 'focus', defaultHabitCats), /real category/,
     `${label}: category editing cannot invent or mutate unknown IDs`);
+  assert.throws(() => deleteCategoryDefinition(defaults, 'morning', defaultHabitCats), /custom category/,
+    `${label}: shipped categories can never be permanently deleted`);
+  const customWithHabit = plain(setHabitCategoryAssignment(added, 'affirm', 'cat_12345678', defaultHabitCats));
+  assert.throws(() => deleteCategoryDefinition(customWithHabit, 'cat_12345678', defaultHabitCats), /must be empty/,
+    `${label}: a custom category must be empty before deletion`);
+  const deleted = plain(deleteCategoryDefinition(added, 'cat_12345678', defaultHabitCats));
+  assert.equal(deleted.definitions.some(category => category.id === 'cat_12345678'), false,
+    `${label}: deleting an empty custom category removes its definition`);
+  assert.equal(deleted.order.includes('cat_12345678'), false,
+    `${label}: deleting an empty custom category removes its ordering slot`);
 
   const writes = [];
   const emptyStorage = {
@@ -278,7 +290,8 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /commitStorageSnapshot\(localStorage, importedSnapshot\)/,
     `${label}: backup import uses the journaled storage transaction`);
   assert.match(html, /id="categoryTabRail"/, `${label}: Home has a dynamically rendered category rail`);
-  assert.match(html, /id="manageCategoriesBtn"[^>]*aria-label="Manage categories"/, `${label}: Home has a fixed trailing category-management control`);
+  assert.match(html, /id="manageBtn"[^>]*aria-label="Manage habits"[\s\S]*id="manageCategoriesBtn"[^>]*aria-label="Manage categories"/,
+    `${label}: Home has adjacent accessible habit and category management controls`);
   assert.match(html, /id="categoriesView"[^>]*hidden[^>]*inert/, `${label}: category management is a full-screen app view`);
   assert.match(html, /id="manageCategoryView"[^>]*hidden[^>]*inert/, `${label}: scoped habit management is a full-screen app view`);
   assert.match(html, /id="habitEditorView"[^>]*hidden[^>]*inert/, `${label}: each habit has a focused full-screen editor`);
@@ -286,8 +299,10 @@ for (const [label, htmlPath] of builds) {
   assert.doesNotMatch(html, /id="reorderHint"/, `${label}: Home no longer exposes reorder-mode guidance`);
   assert.match(html, /function renderCategoryTabs\(\)[\s\S]*textContent[\s\S]*CATEGORY_ICON_MAP/,
     `${label}: dynamic category tabs use textContent for user-controlled names and curated icons`);
-  assert.match(html, /function renderCategoriesPage\(\)[\s\S]*allRow[\s\S]*🔒[\s\S]*textContent/,
-    `${label}: Categories renders a protected virtual All row with safe text`);
+  assert.doesNotMatch(extractFunction(html, 'renderCategoriesPage'), /allRow|All habits/,
+    `${label}: Categories omits the virtual All aggregate from its editable cards`);
+  assert.match(extractFunction(html, 'makeCategoryRow'), /name\.textContent = category\.name/,
+    `${label}: category cards render user-controlled names with textContent`);
   assert.match(html, /document\.documentElement\.dataset\.managementOpen = 'true'/,
     `${label}: management views hide primary app chrome through explicit app state`);
   assert.match(html, /class="eh-category"[\s\S]*getActiveCategoryDefinitions\(categoryState\)/,
@@ -299,12 +314,13 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /setHabitCategoryAssignment\(nextCategoryState, id, categoryId, DEFAULT_HABITS\)/,
     `${label}: habit moves are persisted in the isolated category document`);
   assert.match(html, /id="categoryEditorView"[^>]*hidden[^>]*inert/, `${label}: category creation and editing use a focused full-screen page`);
-  assert.match(html, /id="archivedCategoriesView"[^>]*hidden[^>]*inert/, `${label}: archived categories have a dedicated restore page`);
+  assert.match(html, /id="archivedCategoriesGroup"[^>]*hidden[\s\S]*id="archivedCategoriesList"/,
+    `${label}: archived categories remain recoverable from an inline hidden-when-empty partition`);
   assert.match(html, /id="categoryNameInput"[^>]*maxlength="24"/, `${label}: category names enforce the reviewed mobile limit`);
   assert.match(html, /function saveCategoryEditor\(\)[\s\S]*updateCategoryDefinition[\s\S]*addCategoryDefinition[\s\S]*saveCategoryState/,
     `${label}: category create and rename/icon edits use validated category operations`);
-  assert.match(html, /function renderCategoryActions\(habits\)[\s\S]*archiveButton\.disabled = habits\.length !== 0/,
-    `${label}: category archive remains unavailable until every habit has moved out`);
+  assert.match(extractFunction(html, 'renderCategoryOptions'), /removal\.disabled = habitCount !== 0[\s\S]*Move .* first/,
+    `${label}: category archive or deletion remains unavailable until every habit has moved out`);
   assert.match(html, /function restoreArchivedCategory\(categoryId\)[\s\S]*setCategoryArchived[\s\S]*saveCategoryState/,
     `${label}: archived categories restore with their stable IDs`);
   assert.doesNotMatch(html, /Move all habits to:/, `${label}: category archive never offers a misleading bulk move`);

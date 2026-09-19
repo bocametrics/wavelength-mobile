@@ -595,10 +595,10 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /\.habit\s*\{[^}]*height:\s*104px[^}]*min-height:\s*104px/s, `${label}: every habit card uses the same fixed height`);
   assert.doesNotMatch(html, /id=["']reorderBtn["']/, `${label}: Home no longer exposes a separate Reorder action`);
   assert.match(html, /id=["']manageCategoryView["'][^>]*hidden[^>]*inert/, `${label}: habit organization lives in a full-screen category manager`);
-  assert.match(html, /className = isAll \? 'category-lock' : 'manage-habit-grip'/, `${label}: All remains aggregate-only while real categories expose habit grips`);
+  assert.match(html, /className = isAll \? 'manage-habit-spacer' : 'manage-habit-grip'/, `${label}: All remains aggregate-only while real categories expose habit grips`);
   assert.match(html, /function attachGripReorder\(container, rowSelector, gripSelector, onCommit\)/, `${label}: full-screen ordering is grip-scoped`);
   assert.match(html, /reorderHabitIdsWithinCategory\(userOrder, HABITS, managedCategoryId, reorderedIds\)/, `${label}: scoped reorder preserves other categories' canonical slots`);
-  assert.match(html, /\.manage-habit-grip,[\s\S]*?min-width:\s*28px;[\s\S]*?min-height:\s*42px;/, `${label}: category-management grips have deliberate touch targets`);
+  assert.match(html, /\.manage-habit-grip\s*\{[\s\S]*?width:\s*44px;[\s\S]*?height:\s*44px;[\s\S]*?margin:\s*0 -14px;/, `${label}: compact management grips preserve 44px touch targets without consuming text width`);
   assert.match(html, /\.progress-stepper\s*\{[^}]*grid-template-rows:\s*40px 40px/s, `${label}: measured controls use a vertical 40px rail`);
   assert.match(html, /\.progress-step\s*\{[^}]*min-height:\s*40px/s, `${label}: measured card controls need mobile-sized targets`);
   assert.match(html, /\.habit-name\s*\{[^}]*white-space:\s*nowrap;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;/s, `${label}: habit titles stay on one line and ellipsize`);
