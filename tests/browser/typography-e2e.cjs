@@ -76,9 +76,21 @@ function contrastRatio(foreground, background) {
       typography:Object.fromEntries([
         '.date-display .day', '.date-display .label', '.greeting h1', '.greeting p', '.insights h3',
         '.next-wave-eyebrow', '.next-wave-title', '.next-wave-detail', '.next-wave-action', '.cat-tab',
-        '.section-title h2', '.section-title .count', '.habit-text', '.habit-note', '.rhythm-anchor-label',
+        '.section-title h2', '.section-title .count', '.habit-text', '.habit-target', '.habit-note', '.rhythm-anchor-label',
         '.reset-btn', '.dock-button',
       ].map(selector => [selector, style(selector)])),
+      fontFamily:getComputedStyle(document.body).fontFamily,
+      firstHabitGeometry:(() => {
+        const card = cards[0];
+        const icon = card.querySelector('.habit-icon').getBoundingClientRect();
+        const checkbox = card.querySelector('.checkbox').getBoundingClientRect();
+        const name = card.querySelector('.habit-name').getBoundingClientRect();
+        return {
+          iconToCheckbox:checkbox.left - icon.right,
+          checkboxToName:name.left - checkbox.right,
+          nameLeft:name.left,
+        };
+      })(),
       documentWidth:document.documentElement.scrollWidth,
       viewportWidth:innerWidth,
       identityOverflow:cards.filter(card => {
@@ -107,12 +119,34 @@ function contrastRatio(foreground, background) {
     '.date-display .day':16, '.date-display .label':12, '.greeting h1':22, '.greeting p':14,
     '.insights h3':14, '.next-wave-eyebrow':12, '.next-wave-title':17, '.next-wave-detail':14,
     '.next-wave-action':13, '.cat-tab':14, '.section-title h2':14, '.section-title .count':13,
-    '.habit-text':16, '.habit-note':14, '.rhythm-anchor-label':13,
+    '.habit-text':16, '.habit-target':14, '.habit-note':14, '.rhythm-anchor-label':13,
     '.reset-btn':12.5, '.dock-button':13,
   };
   for (const [selector, expected] of Object.entries(expectedHomeSizes)) {
     assert.equal(px(home.typography[selector].fontSize), expected, `${selector} uses the approved mobile size`);
   }
+  assert.equal(home.typography['.habit-target'].fontWeight, '500', 'habit target remains secondary rather than heavier than its identity');
+  assert.match(home.fontFamily, /-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif/, 'the native system stack is explicit');
+  assert.equal(home.firstHabitGeometry.iconToCheckbox, 9, 'first mobile habit keeps a 9px icon-to-checkbox gap');
+  assert.equal(home.firstHabitGeometry.checkboxToName, 9, 'first mobile habit keeps a 9px checkbox-to-name gap');
+  assert.equal(home.firstHabitGeometry.nameLeft, 93, 'aligned mobile tracks preserve the existing habit-name left edge');
+  await page.evaluate(() => document.getElementById('habitList').classList.add('reorder-mode'));
+  await new Promise(resolve => setTimeout(resolve, 250));
+  const reorderGeometry = await page.evaluate(() => {
+    const card = document.querySelector('#habitList .habit');
+    const icon = card.querySelector('.habit-icon').getBoundingClientRect();
+    const checkbox = card.querySelector('.checkbox').getBoundingClientRect();
+    const name = card.querySelector('.habit-name').getBoundingClientRect();
+    return {
+      iconToCheckbox:checkbox.left - icon.right,
+      checkboxToName:name.left - checkbox.right,
+      nameLeft:name.left,
+    };
+  });
+  assert.equal(reorderGeometry.iconToCheckbox, 9, 'mobile Reorder keeps a 9px icon-to-checkbox gap');
+  assert.equal(reorderGeometry.checkboxToName, 9, 'mobile Reorder keeps a 9px checkbox-to-name gap');
+  assert.equal(reorderGeometry.nameLeft, 93, 'mobile Reorder preserves the habit-name left edge');
+  await page.evaluate(() => document.getElementById('habitList').classList.remove('reorder-mode'));
   assert.equal(home.typography['.rhythm-anchor-label'].opacity, '1');
   assert.equal(home.documentWidth, home.viewportWidth, 'Home has no horizontal overflow');
   assert.deepEqual(home.identityOverflow, [], 'shipped habit identities fit without ellipsis');

@@ -257,8 +257,8 @@ for (const [label, htmlPath] of builds) {
     `${label}: the target has a secondary visual treatment that does not rely on title text`);
   assert.match(html, /@media\s*\(max-width:\s*600px\)[\s\S]*?\.next-wave-target\s*\{[^}]*font-size:\s*0\.9375rem;[^}]*font-weight:\s*600;/,
     `${label}: the mobile Next Wave target is 15px semibold neutral metadata`);
-  assert.match(html, /@media\s*\(max-width:\s*600px\)[\s\S]*?\.habit-target\s*\{[^}]*font-size:\s*0\.9375rem;[^}]*font-weight:\s*600;/,
-    `${label}: the mobile Home target is 15px semibold neutral metadata`);
+  assert.match(html, /@media\s*\(max-width:\s*600px\)[\s\S]*?\.habit-target\s*\{[^}]*font-size:\s*0\.875rem;[^}]*font-weight:\s*500;/,
+    `${label}: the mobile Home target is 14px medium neutral metadata, secondary to its identity`);
 }
 
 console.log('habit target qualifier regression tests passed for mobile and desktop');

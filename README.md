@@ -1,6 +1,6 @@
 # Wavelength Mobile — iPhone deployment target
 
-This folder is the iPhone-first, installable version of Wavelength. Shared behavior fixes are mirrored to the desktop HTML file at `../friday_app_2026-07-12.html`.
+This folder is the iPhone-first, installable version of Wavelength and the sole visual-design target. The legacy desktop HTML file at `../friday_app_2026-07-12.html` remains a byte-identical compatibility mirror, not a separately maintained interface.
 
 ## What is ready
 
@@ -18,7 +18,7 @@ This folder is the iPhone-first, installable version of Wavelength. Shared behav
 - Pending-day-aware streaks: an unfinished today does not erase a qualifying streak through yesterday
 - Three appearance modes: **System**, **Day**, and **Night**, shared across iPhone, Android, and desktop
 - A personalized Home greeting with the calm **Friend** fallback, time-consistent icons, and a roomier mobile streak card with the decorative left icon suppressed at widths up to 600px
-- A body-readable mobile type scale: 16px habit titles, 14px card summaries, 13px environmental anchors, and larger supporting text across Home, Insights, Settings, and Manage
+- A native system type stack with 16px habit identities, secondary 14px medium-weight target qualifiers, 14px card summaries, 13px environmental anchors, and larger supporting text across Home, Insights, Settings, and Manage
 
 ## Appearance behavior
 
@@ -49,6 +49,8 @@ Changing a goal recalculates today's completion from the amount already recorded
 ## Card layout and category organization
 
 Every habit card uses the same fixed height (104px on a 390px iPhone viewport), regardless of measurement type. Measured progress appears as a compact chip inline with the habit note, plus a 3px progress bar along the card's bottom edge — not a full-width meter that grows the card. The `−` and `+` controls sit in a vertical 40px rail on the right.
+
+On mobile, the icon and checkbox tracks match their rendered 26px and 24px widths, leaving equal 9px gaps on both sides of the checkbox without moving the habit text column. Wavelength uses the native system font stack directly, so the Capacitor and iPhone PWA experiences use Apple's system typography without an external font request.
 
 The `weight` field (w1/w2) is no longer editable in Manage and is not written to new saves or exports. Older backups containing `weight` remain importable for backward compatibility, but the field is discarded during normalization. Version-4 backups add the optional First Name profile field to the structured parameter and insight schema.
 

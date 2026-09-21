@@ -50,6 +50,14 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /note\.length > HABIT_CARD_NOTE_MAX && note !== originalNote/, `${label}: edited over-limit legacy descriptions fail closed`);
   assert.match(html, /Use 42 characters or fewer for the card description/, `${label}: the description error explains the limit`);
   assert.match(html, /input\.nextElementSibling\.textContent = `\$\{input\.value\.length\} \/ \$\{HABIT_CARD_NOTE_MAX\}`/, `${label}: the counter updates without injecting user content`);
+  assert.match(html, /body\s*\{[\s\S]*?font-family:\s*-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;/,
+    `${label}: the app explicitly uses the native system font stack`);
+  assert.doesNotMatch(html, /@import\s+url\(['"]https:\/\/fonts\.googleapis\.com\//,
+    `${label}: no invalid external font import leaves the app dependent on a fallback`);
+  assert.match(html, /@media\s*\(max-width:\s*600px\)\s*\{[\s\S]*?\.habit\s*\{[\s\S]*?grid-template-columns:\s*26px 24px minmax\(0, 1fr\) auto;/,
+    `${label}: mobile habit tracks match the rendered icon and checkbox sizes`);
+  assert.match(html, /@media\s*\(max-width:\s*600px\)[\s\S]*?\.habit-target\s*\{[^}]*font-size:\s*0\.875rem;[^}]*font-weight:\s*500;/,
+    `${label}: mobile habit targets remain visually secondary to the 16px name`);
 }
 
 console.log('typography content regression tests passed for mobile and desktop');
