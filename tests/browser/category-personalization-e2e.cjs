@@ -49,7 +49,7 @@ const SHOT_DIR = process.env.WAVELENGTH_SHOT_DIR || 'C:\\Temp';
     assert.equal(home.railPlus, false, 'category rail has no trailing plus');
     assert.deepEqual(home.manage, { label:'Manage habits', width:44, height:44, hasIcon:true });
     assert.deepEqual(home.categories, { label:'Manage categories', width:44, height:44, hasIcon:true });
-    assert.match(home.count, /^\d+ \/ \d+$/);
+    assert.match(home.count, /^\d+\/\d+$/, 'Home count uses compact completed/total formatting');
     assert.ok(home.width.document <= home.width.viewport, JSON.stringify(home.width));
     await page.screenshot({ path:path.join(SHOT_DIR, `wavelength-home-controls-${THEME}.png`), fullPage:false });
     const originScroll = await page.evaluate(() => {

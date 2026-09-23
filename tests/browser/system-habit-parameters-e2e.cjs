@@ -85,7 +85,20 @@ let browser;
     wake.dispatchEvent(new Event('change', { bubbles:true }));
   });
   assert.equal(await page.$eval('#habitEditorBody .eh-system-title', element => element.textContent), 'Wake at 8:00 AM');
+  const discardDialog = new Promise((resolve, reject) => {
+    page.once('dialog', async dialog => {
+      try {
+        assert.equal(dialog.message(), 'Discard unsaved changes?');
+        await dialog.accept();
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
   await activate('#habitEditorBack');
+  await discardDialog;
+  await page.waitForFunction(() => !document.getElementById('manageCategoryView').hidden);
 
   await openEditor('sleep');
   await page.evaluate(() => { document.querySelector('#habitEditorBody .eh-param-targetTime').value = '23:30'; });

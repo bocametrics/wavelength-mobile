@@ -91,6 +91,37 @@ function contrastRatio(foreground, background) {
           nameLeft:name.left,
         };
       })(),
+      homeFinalVisual:(() => {
+        const allTab = document.querySelector('.cat-tab[data-cat="all"]').getBoundingClientRect();
+        const nextWaveCard = document.querySelector('.next-wave-card');
+        const nextWaveRect = nextWaveCard.getBoundingClientRect();
+        const sectionTitle = document.querySelector('.section-title');
+        const titleRect = sectionTitle.getBoundingClientRect();
+        const titleCopy = sectionTitle.querySelector('.section-title-copy');
+        const tools = sectionTitle.querySelector('.home-habit-tools');
+        const toolButtons = [...tools.querySelectorAll('.home-icon-control')];
+        const firstTool = toolButtons[0].getBoundingClientRect();
+        const secondTool = toolButtons[1].getBoundingClientRect();
+        const nextWaveStyle = getComputedStyle(nextWaveCard);
+        const reportCardStyle = getComputedStyle(document.querySelector('.report-card'));
+        const nextWaveIconStyle = getComputedStyle(document.querySelector('.next-wave-icon'));
+        const reportCardIconStyle = getComputedStyle(document.querySelector('.report-card-icon'));
+        return {
+          categoryOpticalInset:allTab.left - nextWaveRect.left,
+          titleAligned:titleRect.left - nextWaveRect.left,
+          countText:document.getElementById('doneCount').textContent,
+          countInTitleCopy:titleCopy?.contains(document.getElementById('doneCount')) || false,
+          toolIds:toolButtons.map(button => button.id),
+          toolGap:secondTool.left - firstTool.right,
+          toolWidths:toolButtons.map(button => button.getBoundingClientRect().width),
+          nextWaveGradient:nextWaveStyle.backgroundImage,
+          reportCardGradient:reportCardStyle.backgroundImage,
+          nextWaveBorderColor:nextWaveStyle.borderColor,
+          reportCardBorderColor:reportCardStyle.borderColor,
+          nextWaveIconRadius:nextWaveIconStyle.borderRadius,
+          reportCardIconRadius:reportCardIconStyle.borderRadius,
+        };
+      })(),
       documentWidth:document.documentElement.scrollWidth,
       viewportWidth:innerWidth,
       identityOverflow:cards.filter(card => {
@@ -127,6 +158,32 @@ function contrastRatio(foreground, background) {
   }
   assert.equal(home.typography['.habit-target'].fontWeight, '500', 'habit target remains secondary rather than heavier than its identity');
   assert.match(home.fontFamily, /-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif/, 'the native system stack is explicit');
+  assert.equal(home.homeFinalVisual.categoryOpticalInset, 4, 'the first category pill receives a four-pixel optical inset beyond the card edge');
+  assert.equal(home.homeFinalVisual.titleAligned, 0, 'the Today’s Habits group remains aligned with the feature card');
+  assert.equal(home.homeFinalVisual.countText, '0/22', 'the Home count uses compact completed/total formatting');
+  assert.equal(home.homeFinalVisual.countInTitleCopy, true, 'the Home count is grouped with Today’s Habits');
+  assert.deepEqual(home.homeFinalVisual.toolIds, ['manageBtn', 'manageCategoriesBtn'], 'only the two management actions remain in the right tool group');
+  assert.equal(home.homeFinalVisual.toolGap, 4, 'the two management controls keep an even four-pixel gap');
+  assert.deepEqual(home.homeFinalVisual.toolWidths, [44, 44], 'both management controls retain 44px tap areas');
+  assert.equal(home.homeFinalVisual.nextWaveGradient, home.homeFinalVisual.reportCardGradient,
+    'Next Wave adopts the Insights card gradient direction');
+  assert.notEqual(home.homeFinalVisual.nextWaveBorderColor, home.homeFinalVisual.reportCardBorderColor,
+    'Next Wave retains a distinct blue feature border');
+  assert.equal(home.homeFinalVisual.nextWaveIconRadius, home.homeFinalVisual.reportCardIconRadius,
+    'Next Wave adopts the rounded-square Insights icon tile');
+  const headerFlow = await page.evaluate(async () => {
+    const header = document.querySelector('header');
+    const before = header.getBoundingClientRect().top;
+    const position = getComputedStyle(header).position;
+    window.scrollTo(0, 300);
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    const after = header.getBoundingClientRect().top;
+    window.scrollTo(0, 0);
+    return { before, after, position };
+  });
+  assert.notEqual(headerFlow.position, 'sticky', 'the Home header is not sticky');
+  assert.notEqual(headerFlow.position, 'fixed', 'the Home header is not fixed');
+  assert.ok(headerFlow.after <= headerFlow.before - 250, 'the Home header and divider scroll away with the page');
   assert.equal(home.firstHabitGeometry.iconToCheckbox, 9, 'first mobile habit keeps a 9px icon-to-checkbox gap');
   assert.equal(home.firstHabitGeometry.checkboxToName, 9, 'first mobile habit keeps a 9px checkbox-to-name gap');
   assert.equal(home.firstHabitGeometry.nameLeft, 93, 'aligned mobile tracks preserve the existing habit-name left edge');
