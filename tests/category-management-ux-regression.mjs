@@ -85,13 +85,13 @@ for (const [label, htmlPath] of builds) {
     `${label}: drag activates after the long press and remains vertically driven`);
   assert.match(attachGripReorder, /ArrowUp.*ArrowDown/s,
     `${label}: keyboard reordering remains supported`);
-  assert.match(html, /\.category-grip-marker[\s\S]*grid-template-rows:\s*repeat\(3,\s*3px\)/,
-    `${label}: category and habit grips use a compact vertical three-dot marker`);
-  assert.match(html, /\.category-row\.dragging,[\s\S]*\.manage-habit-row\.dragging[\s\S]*transform:\s*scale\([^)]+\)[\s\S]*box-shadow:/,
-    `${label}: a long press visibly lifts the active card without creating a drifting ghost`);
+  assert.match(html, /\.category-grip-marker[\s\S]*grid-template-columns:\s*repeat\(2,\s*3px\)[\s\S]*grid-template-rows:\s*repeat\(3,\s*3px\)/,
+    `${label}: category and habit grips use a recognizable compact six-dot drag marker`);
+  assert.match(html, /\.category-drag-proxy[\s\S]*position:\s*fixed[\s\S]*pointer-events:\s*none[\s\S]*box-shadow:/,
+    `${label}: a long press lifts a full-card proxy that can track the finger vertically`);
 
-  assert.match(html, /\.category-row-name,[\s\S]*\.manage-habit-row-name[\s\S]*font-size:\s*1rem/,
-    `${label}: management titles match the 16px Home card scale`);
+  assert.match(html, /\.category-row-name,[\s\S]*\.manage-habit-row-name[\s\S]*font-size:\s*1rem[\s\S]*font-weight:\s*500/,
+    `${label}: management titles match the 16px/500 Home habit identity`);
   assert.match(html, /\.manage-habit-row-meta[\s\S]*font-size:\s*0\.875rem/,
     `${label}: management descriptions match the 14px Home summary scale`);
   assert.match(html, /\.category-row-copy,[\s\S]*\.manage-habit-row-copy\s*\{[\s\S]*display:\s*grid[\s\S]*gap:/,

@@ -259,7 +259,7 @@ function collectErrors(page) {
   assert.match(reports.waves.detail, /^9 suggested habits completed in the last 30 days\. Most recently on [A-Z][a-z]{2} \d{1,2}: “Sun protection before outdoor time” and “Drink water”\.$/);
   assert.equal(reports.learningHidden, false);
   assert.match(reports.learningText, /10 of 10 days with conditions met so far$/);
-  assert.equal(reports.backup.version, 6);
+  assert.equal(reports.backup.version, 7);
   assert.equal(reports.backup.insightHistory.version, 1);
   assert.equal(reports.width.document, reports.width.viewport);
   assert.doesNotMatch(JSON.stringify(reports.backup.insightHistory), /latitude|longitude|\blat\b|\blon\b/i);

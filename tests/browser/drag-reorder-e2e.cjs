@@ -22,12 +22,16 @@ async function touchDrag(page, selector, holdMs, deltaY, deltaX = 0) {
     await new Promise(resolve => setTimeout(resolve, holdMs));
     const heldState = await page.$eval(selector, element => {
       const row = element.closest('.category-row, .manage-habit-row');
-      const style = getComputedStyle(row);
+      const proxy = document.querySelector('.category-drag-proxy');
+      const proxyRect = proxy?.getBoundingClientRect();
+      const rowRect = row.getBoundingClientRect();
       return {
-        dragging:row.classList.contains('dragging'),
         bodyDragging:document.body.classList.contains('dragging-active'),
-        transform:style.transform,
-        boxShadow:style.boxShadow,
+        proxy:!!proxy,
+        placeholder:row.classList.contains('category-drag-placeholder'),
+        proxyTop:proxyRect?.top ?? null,
+        proxyLeft:proxyRect?.left ?? null,
+        sourceLeft:rowRect.left,
       };
     });
     await client.send('Input.dispatchTouchEvent', {
@@ -35,9 +39,71 @@ async function touchDrag(page, selector, holdMs, deltaY, deltaX = 0) {
       touchPoints:[{ x:point.x + deltaX, y:point.y + deltaY, radiusX:4, radiusY:4, force:1 }],
     });
     await new Promise(resolve => setTimeout(resolve, 80));
+    const movingState = await page.evaluate(() => {
+      const proxy = document.querySelector('.category-drag-proxy');
+      const proxyRect = proxy?.getBoundingClientRect();
+      const placeholder = document.querySelector('.category-drag-placeholder');
+      const rows = [...document.querySelectorAll('#categoriesList .category-row, #manageCategoryList .manage-habit-row')]
+        .filter(row => row.offsetParent !== null);
+      const animatedSibling = rows.some(row => {
+        if (row === placeholder) return false;
+        const transform = getComputedStyle(row).transform;
+        return transform !== 'none' && transform !== 'matrix(1, 0, 0, 1, 0, 0)';
+      });
+      return {
+        proxy:!!proxy,
+        proxyTop:proxyRect?.top ?? null,
+        proxyLeft:proxyRect?.left ?? null,
+        placeholder:!!placeholder,
+        animatedSibling,
+      };
+    });
     await client.send('Input.dispatchTouchEvent', { type:'touchEnd', touchPoints:[] });
-    await new Promise(resolve => setTimeout(resolve, 120));
-    return heldState;
+    const releaseState = await page.evaluate(() => ({
+      proxy:!!document.querySelector('.category-drag-proxy'),
+      placeholder:!!document.querySelector('.category-drag-placeholder'),
+      bodyDragging:document.body.classList.contains('dragging-active'),
+    }));
+    await new Promise(resolve => setTimeout(resolve, 260));
+    const cleanupState = await page.evaluate(() => ({
+      proxy:!!document.querySelector('.category-drag-proxy'),
+      placeholder:!!document.querySelector('.category-drag-placeholder'),
+      bodyDragging:document.body.classList.contains('dragging-active'),
+      inlineMotion:[...document.querySelectorAll('#categoriesList .category-row, #manageCategoryList .manage-habit-row')]
+        .some(row => row.style.transform || row.style.transition),
+    }));
+    return { heldState, movingState, releaseState, cleanupState };
+  } finally {
+    await client.detach();
+  }
+}
+
+async function cancelTouchDrag(page, selector, holdMs, deltaY) {
+  const point = await page.$eval(selector, element => {
+    const rect = element.getBoundingClientRect();
+    return { x:rect.left + rect.width / 2, y:rect.top + rect.height / 2 };
+  });
+  const client = await page.target().createCDPSession();
+  try {
+    await client.send('Input.dispatchTouchEvent', {
+      type:'touchStart',
+      touchPoints:[{ x:point.x, y:point.y, radiusX:4, radiusY:4, force:1 }],
+    });
+    await new Promise(resolve => setTimeout(resolve, holdMs));
+    await client.send('Input.dispatchTouchEvent', {
+      type:'touchMove',
+      touchPoints:[{ x:point.x, y:point.y + deltaY, radiusX:4, radiusY:4, force:1 }],
+    });
+    await new Promise(resolve => setTimeout(resolve, 80));
+    await client.send('Input.dispatchTouchEvent', { type:'touchCancel', touchPoints:[] });
+    return await page.evaluate(() => ({
+      proxy:!!document.querySelector('.category-drag-proxy'),
+      placeholder:!!document.querySelector('.category-drag-placeholder'),
+      bodyDragging:document.body.classList.contains('dragging-active'),
+      inlineMotion:[...document.querySelectorAll('#categoriesList .category-row')]
+        .some(row => row.style.transform || row.style.transition),
+      order:categoryState.order.slice(),
+    }));
   } finally {
     await client.detach();
   }
@@ -68,19 +134,99 @@ function maxSpread(values) {
   assert.equal(await page.$('#categoriesList [data-category-id="all"]'), null, 'Categories has no All management card');
   const categoryOrderBefore = await page.evaluate(() => categoryState.order.slice());
   if (IS_MOBILE) {
-    const earlyState = await touchDrag(page, '#categoriesList [data-category-id="morning"] .category-grip', 100, 80, 100);
-    assert.deepEqual(earlyState, { dragging:false, bodyDragging:false, transform:'none', boxShadow:'none' },
+    const earlyTrace = await touchDrag(page, '#categoriesList [data-category-id="morning"] .category-grip', 100, 80, 100);
+    assert.deepEqual(earlyTrace.heldState, {
+      bodyDragging:false,
+      proxy:false,
+      placeholder:false,
+      proxyTop:null,
+      proxyLeft:null,
+      sourceLeft:earlyTrace.heldState.sourceLeft,
+    },
       'a short touch does not visually lift or arm the category card');
     assert.deepEqual(
       await page.evaluate(() => categoryState.order.slice()),
       categoryOrderBefore,
       'moving before the 250ms hold threshold does not reorder categories',
     );
-    const heldState = await touchDrag(page, '#categoriesList [data-category-id="morning"] .category-grip', 320, 80, 100);
-    assert.equal(heldState.dragging, true, 'the long press visibly lifts the category card');
-    assert.equal(heldState.bodyDragging, true, 'the long press enters drag interaction state');
-    assert.notEqual(heldState.transform, 'none', 'the lifted category card receives native-like elevation feedback');
-    assert.notEqual(heldState.boxShadow, 'none', 'the lifted category card receives a visible shadow');
+    const sameSlotTrace = await touchDrag(page, '#categoriesList [data-category-id="morning"] .category-grip', 320, 4, 100);
+    assert.deepEqual(sameSlotTrace.releaseState, {
+      proxy:true,
+      placeholder:true,
+      bodyDragging:true,
+    }, 'an armed same-slot release visibly settles back before cleanup');
+    assert.deepEqual(sameSlotTrace.cleanupState, {
+      proxy:false,
+      placeholder:false,
+      bodyDragging:false,
+      inlineMotion:false,
+    }, 'same-slot settling removes all transient drag state');
+    assert.deepEqual(
+      await page.evaluate(() => categoryState.order.slice()),
+      categoryOrderBefore,
+      'same-slot settling does not persist a reorder',
+    );
+
+    const cancelledState = await cancelTouchDrag(
+      page,
+      '#categoriesList [data-category-id="morning"] .category-grip',
+      320,
+      80,
+    );
+    assert.deepEqual(cancelledState, {
+      proxy:false,
+      placeholder:false,
+      bodyDragging:false,
+      inlineMotion:false,
+      order:categoryOrderBefore,
+    }, 'touch cancellation restores the original order and clears all drag state');
+
+    const dragTrace = await touchDrag(page, '#categoriesList [data-category-id="morning"] .category-grip', 320, 80, 100);
+    assert.equal(dragTrace.heldState.bodyDragging, true, 'the long press enters drag interaction state');
+    assert.equal(dragTrace.heldState.proxy, true, 'the long press lifts a full-card drag proxy');
+    assert.equal(dragTrace.heldState.placeholder, true, 'the source slot remains represented while dragging');
+    assert.equal(dragTrace.movingState.proxy, true, 'the full-card proxy remains visible during pointer movement');
+    assert.ok(Math.abs((dragTrace.movingState.proxyTop - dragTrace.heldState.proxyTop) - 80) <= 3,
+      JSON.stringify(dragTrace), 'the lifted card follows the finger vertically');
+    assert.ok(Math.abs(dragTrace.movingState.proxyLeft - dragTrace.heldState.sourceLeft) <= 1,
+      JSON.stringify(dragTrace), 'the lifted card stays horizontally locked despite finger drift');
+    assert.equal(dragTrace.movingState.placeholder, true, 'the list keeps a same-height destination placeholder');
+    assert.equal(dragTrace.movingState.animatedSibling, true, 'a neighboring card has a real transient displacement transform');
+    assert.deepEqual(dragTrace.releaseState, {
+      proxy:true,
+      placeholder:true,
+      bodyDragging:true,
+    }, 'a reordered card remains visible while settling to its destination');
+    assert.deepEqual(dragTrace.cleanupState, {
+      proxy:false,
+      placeholder:false,
+      bodyDragging:false,
+      inlineMotion:false,
+    }, 'release cleanup removes the proxy, placeholder, body state, and inline motion styles');
+    const animatedOrder = await page.evaluate(() => categoryState.order.slice());
+    assert.notDeepEqual(animatedOrder, categoryOrderBefore, 'animated category reorder persists');
+    assert.equal(animatedOrder[0], 'movement');
+
+    await page.emulateMediaFeatures([{ name:'prefers-reduced-motion', value:'reduce' }]);
+    const reducedOrderBefore = await page.evaluate(() => categoryState.order.slice());
+    const reducedTrace = await touchDrag(page, '#categoriesList [data-category-id="morning"] .category-grip', 320, 80, 100);
+    assert.deepEqual(reducedTrace.releaseState, {
+      proxy:false,
+      placeholder:false,
+      bodyDragging:false,
+    }, 'reduced motion commits immediately without a settle animation');
+    assert.deepEqual(reducedTrace.cleanupState, {
+      proxy:false,
+      placeholder:false,
+      bodyDragging:false,
+      inlineMotion:false,
+    }, 'reduced-motion reordering leaves no transient drag state');
+    assert.notDeepEqual(
+      await page.evaluate(() => categoryState.order.slice()),
+      reducedOrderBefore,
+      'reduced motion preserves reorder behavior',
+    );
+    await page.emulateMediaFeatures([{ name:'prefers-reduced-motion', value:'no-preference' }]);
   } else {
     await page.focus('#categoriesList [data-category-id="morning"] .category-grip');
     await page.keyboard.press('ArrowDown');
@@ -90,10 +236,11 @@ function maxSpread(values) {
   assert.equal(categoryOrderAfter[0], 'movement');
   await page.focus('#categoriesList [data-category-id="morning"] .category-grip');
   await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
   assert.equal(
     (await page.evaluate(() => JSON.parse(localStorage.getItem(CATEGORY_STATE_KEY)).order))[0],
     'morning',
-    'keyboard arrow reordering remains available',
+    'keyboard arrow reordering remains available after animated and reduced-motion drags',
   );
   await page.focus('#categoriesList [data-category-id="morning"] .category-grip');
   await page.keyboard.press('ArrowDown');
@@ -164,7 +311,7 @@ function maxSpread(values) {
   assert.equal(after.bodyPoint, before.bodyPoint, 'grip use does not shift the row navigation target');
   assert.equal(after.rowLeft, before.rowLeft, 'large horizontal pointer movement cannot drift the row');
   assert.equal(after.gripWidth, 44, 'compact grip retains its full touch target');
-  assert.equal(after.markerWidth, 3, 'visible grip stays compact');
+  assert.equal(after.markerWidth, 9, 'visible six-dot grip stays compact');
   assert.equal(after.ghost, false, 'management drag introduces no horizontally drifting ghost');
   for (const [name, values] of Object.entries(after.columns)) {
     assert.ok(maxSpread(values) <= 1, `${name} columns stay aligned: ${JSON.stringify(values)}`);

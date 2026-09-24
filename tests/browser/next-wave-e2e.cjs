@@ -32,6 +32,11 @@ function collectErrors(page) {
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil:'networkidle0' });
   await page.waitForSelector('#nextWaveCard');
+  await page.evaluate(() => {
+    const midday = new Date();
+    midday.setHours(12, 0, 0, 0);
+    renderHabits(midday);
+  });
 
   const neutral = await page.evaluate(() => ({
     heading:document.getElementById('nextWaveHeading').textContent,
@@ -346,7 +351,7 @@ function collectErrors(page) {
   });
 
   await page.click('#resetBtn');
-  await page.waitForFunction(() => !document.getElementById('nextWaveAction').hidden && document.getElementById('nextWaveTitle').textContent !== 'Today\u2019s habits are complete.');
+  await page.waitForFunction(() => Object.keys(state.done[dateKey(new Date())] || {}).length === 0);
 
   const generation = await page.evaluate(async () => {
     const first = rhythmWeatherGeneration;
@@ -409,10 +414,13 @@ function collectErrors(page) {
     const key = dateKey(new Date());
     return {
       doneCount:Object.keys(state.done[key] || {}).length,
-      actionHidden:document.getElementById('nextWaveAction').hidden,
+      title:document.getElementById('nextWaveTitle').textContent,
+      detail:document.getElementById('nextWaveDetail').textContent,
     };
   });
-  assert.deepEqual(resetState, { doneCount:0, actionHidden:false });
+  assert.equal(resetState.doneCount, 0);
+  assert.notEqual(resetState.title, 'Today\u2019s habits are complete.');
+  assert.ok(resetState.detail.length > 0, JSON.stringify(resetState));
 
   const lifecycleRollover = await page.evaluate(() => {
     const currentKey = dateKey(new Date());

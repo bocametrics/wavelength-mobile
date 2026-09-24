@@ -138,7 +138,7 @@ let browser;
       input:document.getElementById('firstNameInput').value,
     };
   });
-  assert.deepEqual(backupTransfer, { version:6, exportedFirstName:firstName, stored:'Ari', input:'Ari' },
+  assert.deepEqual(backupTransfer, { version:7, exportedFirstName:firstName, stored:'Ari', input:'Ari' },
     'backup export/import round-trips First Name through the production import path');
   await page.click('#navHome');
   await page.waitForFunction(() => !document.getElementById('homeView').hidden);

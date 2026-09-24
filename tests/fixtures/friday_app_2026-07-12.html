@@ -1401,12 +1401,19 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   .management-view[hidden] { display: none !important; }
 
   @keyframes managementEnter {
-    from { opacity: 0; transform: translateX(14px); }
-    to { opacity: 1; transform: translateX(0); }
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .management-view { animation: none; }
+    .category-drag-proxy,
+    .category-row,
+    .manage-habit-row { transition: none !important; }
+  }
+
+  html[data-management-open="true"] body {
+    padding-top: 0;
   }
 
   html[data-management-open="true"] #app > header,
@@ -1436,8 +1443,9 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   .management-header h1 {
     overflow: hidden;
     color: var(--text);
-    font-size: 1.08rem;
-    font-weight: 650;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.2;
     text-align: center;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1486,25 +1494,35 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     grid-template-columns: 16px minmax(0, 1fr);
     align-items: center;
     gap: 8px;
+    width: 100%;
     min-height: 64px;
     padding: 10px 12px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     background: var(--surface);
     color: var(--text);
+    transition: transform 0.18s ease;
   }
 
-  .category-row.dragging,
-  .manage-habit-row.dragging {
-    position: relative;
-    z-index: 10;
-    transform: scale(1.012);
+  .category-drag-placeholder {
+    border-color: var(--accent-border);
+    background: var(--surface-muted);
+  }
+
+  .category-drag-placeholder > * { visibility: hidden; }
+
+  .category-drag-proxy {
+    position: fixed;
+    z-index: 1000;
+    pointer-events: none;
     border-color: var(--accent-border);
     box-shadow: var(--shadow-toast);
+    transform: translate3d(0, 0, 0);
+    transition: none;
   }
 
-  .category-row.dragging .category-grip,
-  .manage-habit-row.dragging .manage-habit-grip { cursor: grabbing; }
+  .category-drag-proxy .category-grip,
+  .category-drag-proxy .manage-habit-grip { cursor: grabbing; }
   body.dragging-active { user-select: none; }
 
   .category-row-button,
@@ -1545,19 +1563,18 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   .category-grip-marker {
     display: grid;
+    grid-template-columns: repeat(2, 3px);
     grid-template-rows: repeat(3, 3px);
     gap: 3px;
-    width: 3px;
+    width: 9px;
   }
 
-  .category-grip-marker::before,
-  .category-grip-marker::after,
-  .category-grip-marker span {
+  .category-grip-marker i {
+    display: block;
     width: 3px;
     height: 3px;
     border-radius: 50%;
     background: currentColor;
-    content: '';
   }
 
   .category-row-icon,
@@ -1575,7 +1592,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     overflow: hidden;
     color: var(--text);
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 500;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -1597,8 +1614,20 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     border-radius: var(--radius-sm);
     background: var(--accent-soft);
     color: var(--accent);
-    font: 600 0.88rem/1.2 inherit;
+    font: 600 1rem/1.2 inherit;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.2;
     cursor: pointer;
+    transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+  }
+
+  .start-category-btn:active { transform: scale(0.985); }
+  .start-category-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  @media (hover: hover) {
+    .start-category-btn:hover { background: var(--accent-medium); border-color: var(--accent); }
   }
 
   .archived-categories-group {
@@ -1643,6 +1672,8 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   }
 
   .category-editor-card {
+    display: grid;
+    gap: 18px;
     padding: 18px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -1667,7 +1698,19 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     border-radius: 9px;
     background: var(--surface2);
     color: var(--text);
-    font: 500 0.9rem/1.2 inherit;
+    font: 500 1rem/1.25 inherit;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.25;
+  }
+
+  .category-icon-heading {
+    margin: 0;
+    color: var(--text);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.3;
   }
 
   .eh-category-field {
@@ -1684,7 +1727,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 8px;
-    margin-top: 18px;
+    margin-top: -8px;
   }
 
   .category-icon-choice {
@@ -1703,6 +1746,57 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     background: var(--accent-soft);
     box-shadow: 0 0 0 1px var(--accent);
   }
+
+  .category-emoji-field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 52px;
+    gap: 8px;
+    align-items: end;
+  }
+
+  .category-emoji-field .category-editor-field { min-width: 0; }
+
+  .category-emoji-preview {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    background: var(--surface2);
+    font-size: 1.5rem;
+  }
+
+  .category-emoji-help {
+    grid-column: 1 / -1;
+    margin: -2px 0 0;
+    color: var(--text2);
+    font-size: 0.8125rem;
+    font-weight: 400;
+    line-height: 1.4;
+  }
+
+  .category-editor-field input[aria-invalid="true"] { border-color: var(--rose); }
+
+  .category-editor-primary {
+    width: 100%;
+    min-height: 52px;
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    background: var(--accent);
+    color: var(--bg);
+    font: 600 1rem/1.2 inherit;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: opacity 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+  }
+
+  .category-editor-primary:disabled { cursor: not-allowed; opacity: 0.45; }
+  .category-editor-primary:active:not(:disabled) { transform: scale(0.985); }
+  .category-editor-primary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   .management-dialog {
     width: min(360px, calc(100vw - 28px));
@@ -2767,16 +2861,26 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   <section class="management-view" id="categoryEditorView" aria-labelledby="categoryEditorHeading" hidden inert>
     <div class="management-header">
-      <button class="management-back" id="categoryEditorBack" type="button">‹ Categories</button>
+      <button class="management-back" id="categoryEditorBack" type="button" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
       <h1 id="categoryEditorHeading">New Category</h1>
-      <button class="management-action" id="categoryEditorSave" type="button">Save</button>
+      <span aria-hidden="true"></span>
     </div>
     <div class="category-editor-card">
       <label class="category-editor-field" for="categoryNameInput">
         <span>Category name</span>
         <input id="categoryNameInput" type="text" maxlength="24" autocomplete="off" placeholder="e.g. Recovery">
       </label>
-      <div class="category-icon-choices" id="categoryIconChoices" role="radiogroup" aria-label="Category icon"></div>
+      <h2 class="category-icon-heading" id="categoryIconHeading">Category icon</h2>
+      <div class="category-icon-choices" id="categoryIconChoices" role="radiogroup" aria-labelledby="categoryIconHeading"></div>
+      <div class="category-emoji-field">
+        <label class="category-editor-field" for="categoryEmojiInput">
+          <span>Choose another emoji</span>
+          <input id="categoryEmojiInput" type="text" maxlength="32" autocomplete="off" aria-describedby="categoryEmojiHelp" aria-invalid="false" placeholder="Use emoji keyboard">
+        </label>
+        <span class="category-emoji-preview" id="categoryEmojiPreview" aria-hidden="true">⭐</span>
+        <p class="category-emoji-help" id="categoryEmojiHelp">Use your emoji keyboard to enter one emoji, or choose a quick pick above.</p>
+      </div>
+      <button class="category-editor-primary" id="categoryEditorSave" type="button" disabled>Add Category</button>
     </div>
   </section>
 
@@ -3118,7 +3222,7 @@ function reloadHabits() {
 
 let HABITS = [];
 
-const CATEGORY_SCHEMA_VERSION = 1;
+const CATEGORY_SCHEMA_VERSION = 2;
 const CATEGORY_CATALOG_VERSION = 1;
 const CATEGORY_STATE_KEY = 'wavelength_categories_v1';
 const IMPORT_JOURNAL_KEY = 'wavelength_import_journal_v1';
@@ -3136,6 +3240,23 @@ const DEFAULT_CATEGORY_DEFINITIONS = [
   { id:'hygiene', name:'Hygiene', iconKey:'hygiene', archived:false },
   { id:'evening', name:'Evening', iconKey:'evening', archived:false },
 ];
+
+function normalizeCategoryEmoji(value) {
+  if (typeof value !== 'string') return '';
+  const candidate = value.trim();
+  if (!candidate) return '';
+  const segmenter = new Intl.Segmenter(undefined, { granularity:'grapheme' });
+  const graphemes = [...segmenter.segment(candidate)].map(part => part.segment);
+  if (graphemes.length !== 1 || graphemes[0] !== candidate) return '';
+  const isExtendedPictographic = /\p{Extended_Pictographic}/u.test(candidate);
+  const isRegionalIndicatorFlag = /^\p{Regional_Indicator}{2}$/u.test(candidate);
+  const isKeycapEmoji = /^[#*0-9]\uFE0F?\u20E3$/u.test(candidate);
+  return isExtendedPictographic || isRegionalIndicatorFlag || isKeycapEmoji ? candidate : '';
+}
+
+function getCategoryIcon(category) {
+  return normalizeCategoryEmoji(category?.emoji) || CATEGORY_ICON_MAP[category?.iconKey] || CATEGORY_ICON_MAP.star;
+}
 
 function createDefaultCategoryState() {
   return {
@@ -3161,7 +3282,7 @@ function normalizeCategoryState(raw, habits, strict = false) {
   if (strict && Object.keys(raw).some(key => !allowedRoot.has(key))) {
     throw new Error('Category settings contain unsupported fields.');
   }
-  if (raw.schemaVersion !== CATEGORY_SCHEMA_VERSION || raw.catalogVersion !== CATEGORY_CATALOG_VERSION ||
+  if (![1, CATEGORY_SCHEMA_VERSION].includes(raw.schemaVersion) || raw.catalogVersion !== CATEGORY_CATALOG_VERSION ||
       !Array.isArray(raw.definitions) || !Array.isArray(raw.order) || !Array.isArray(raw.assignments)) {
     invalid('Category settings are not compatible with this version.');
     return fallback();
@@ -3179,7 +3300,7 @@ function normalizeCategoryState(raw, habits, strict = false) {
       invalid('Each category must be an object.');
       return fallback();
     }
-    const allowedDefinition = new Set(['id','name','iconKey','archived']);
+    const allowedDefinition = new Set(['id','name','iconKey','emoji','archived']);
     if (strict && Object.keys(value).some(key => !allowedDefinition.has(key))) {
       throw new Error('A category contains unsupported fields.');
     }
@@ -3207,9 +3328,15 @@ function normalizeCategoryState(raw, habits, strict = false) {
       invalid('Category icon or archive state is invalid.');
       return fallback();
     }
+    const hasEmoji = Object.hasOwn(value, 'emoji');
+    const emoji = hasEmoji ? normalizeCategoryEmoji(value.emoji) : '';
+    if (hasEmoji && (!emoji || value.emoji !== emoji)) {
+      invalid('A custom category icon must be exactly one emoji.');
+      return fallback();
+    }
     ids.add(id);
     names.add(nameKey);
-    definitions.push({ id, name, iconKey:value.iconKey, archived:value.archived });
+    definitions.push({ id, name, iconKey:value.iconKey, ...(emoji ? { emoji } : {}), archived:value.archived });
   }
   if ([...shippedIds].some(id => !ids.has(id))) {
     invalid('Shipped categories cannot be removed.');
@@ -3358,12 +3485,15 @@ function setCategoryArchived(state, categoryId, archived, habits) {
   return normalizeCategoryState({ ...safe, definitions }, habits, true);
 }
 
-function addCategoryDefinition(state, categoryId, name, iconKey, habits) {
+function addCategoryDefinition(state, categoryId, name, iconKey, habits, emoji = '') {
   const safe = normalizeCategoryState(state, habits, true);
+  const normalizedEmoji = normalizeCategoryEmoji(emoji);
+  if (emoji && !normalizedEmoji) throw new Error('Choose exactly one emoji for a custom icon.');
   const candidate = {
     id:categoryId,
     name,
     iconKey,
+    ...(normalizedEmoji ? { emoji:normalizedEmoji } : {}),
     archived:false,
   };
   return normalizeCategoryState({
@@ -3373,15 +3503,24 @@ function addCategoryDefinition(state, categoryId, name, iconKey, habits) {
   }, habits, true);
 }
 
-function updateCategoryDefinition(state, categoryId, name, iconKey, habits) {
+function updateCategoryDefinition(state, categoryId, name, iconKey, habits, emoji = '') {
   const safe = normalizeCategoryState(state, habits, true);
   if (!safe.definitions.some(category => category.id === categoryId) || categoryId === 'all') {
     throw new Error('Choose a real category.');
   }
+  const normalizedEmoji = normalizeCategoryEmoji(emoji);
+  if (emoji && !normalizedEmoji) throw new Error('Choose exactly one emoji for a custom icon.');
   const definitions = safe.definitions.map(category => category.id === categoryId
-    ? { ...category, name, iconKey }
+    ? { ...category, name, iconKey, ...(normalizedEmoji ? { emoji:normalizedEmoji } : { emoji:undefined }) }
     : { ...category });
-  return normalizeCategoryState({ ...safe, definitions }, habits, true);
+  return normalizeCategoryState({
+    ...safe,
+    definitions:definitions.map(category => {
+      if (category.emoji !== undefined) return category;
+      const { emoji:removedEmoji, ...withoutEmoji } = category;
+      return withoutEmoji;
+    }),
+  }, habits, true);
 }
 
 function deleteCategoryDefinition(state, categoryId, habits) {
@@ -5523,7 +5662,9 @@ let editingHabitId = null;
 let habitEditorDirty = false;
 let editingCategoryId = null;
 let categoryEditorOrigin = 'categories';
+let categoryEditorDirty = false;
 let selectedCategoryIconKey = 'star';
+let selectedCategoryEmoji = '';
 const MANAGEMENT_HISTORY_KEY = 'wavelengthManagementRoute';
 let suppressNextManagementPop = false;
 
@@ -5549,7 +5690,7 @@ function renderCategoryTabs() {
     button.dataset.cat = category?.id || 'all';
     button.classList.toggle('active', button.dataset.cat === currentCat);
     button.textContent = category
-      ? `${CATEGORY_ICON_MAP[category.iconKey]} ${category.name}`
+      ? `${getCategoryIcon(category) || CATEGORY_ICON_MAP[category.iconKey]} ${category.name}`
       : 'All';
     button.addEventListener('click', () => {
       currentCat = button.dataset.cat;
@@ -5599,6 +5740,8 @@ function closeManagementFlow(fromHistory = false) {
   });
   editingHabitId = null;
   habitEditorDirty = false;
+  editingCategoryId = null;
+  categoryEditorDirty = false;
   renderCategoryTabs();
   renderHabits();
   setActiveView(currentActiveView, false);
@@ -5617,7 +5760,7 @@ function makeCategoryRow(category) {
   const marker = document.createElement('span');
   marker.className = 'category-grip-marker';
   marker.setAttribute('aria-hidden', 'true');
-  marker.appendChild(document.createElement('span'));
+  for (let index = 0; index < 6; index += 1) marker.appendChild(document.createElement('i'));
   grip.appendChild(marker);
   row.appendChild(grip);
 
@@ -5626,7 +5769,7 @@ function makeCategoryRow(category) {
   button.className = 'category-row-button';
   const icon = document.createElement('span');
   icon.className = 'category-row-icon';
-  icon.textContent = CATEGORY_ICON_MAP[category.iconKey];
+  icon.textContent = getCategoryIcon(category);
   const copy = document.createElement('span');
   copy.className = 'category-row-copy';
   const name = document.createElement('span');
@@ -5646,26 +5789,68 @@ const GRIP_LONG_PRESS_MS = 250;
 
 function attachGripReorder(container, rowSelector, gripSelector, onCommit) {
   let active = null;
+
+  const clearSiblingMotion = row => {
+    row.style.removeProperty('transition');
+    row.style.removeProperty('transform');
+  };
+
+  const cleanup = (state, commit) => {
+    if (state.grip.hasPointerCapture?.(state.pointerId)) state.grip.releasePointerCapture(state.pointerId);
+    state.proxy?.remove();
+    state.row.classList.remove('category-drag-placeholder');
+    [...container.querySelectorAll(rowSelector)].forEach(clearSiblingMotion);
+    document.body.classList.remove('dragging-active');
+    active = null;
+    if (commit) onCommit([...container.querySelectorAll(rowSelector)]);
+  };
+
   const cancelPending = () => {
     if (!active) return;
     clearTimeout(active.timer);
-    active = null;
+    const state = active;
+    if (state.armed) state.initialRows.forEach(row => container.appendChild(row));
+    cleanup(state, false);
   };
+
+  const animateNeighbors = beforeRects => {
+    [...container.querySelectorAll(rowSelector)].forEach(row => {
+      if (row === active?.row) return;
+      const before = beforeRects.get(row);
+      const after = row.getBoundingClientRect();
+      const offset = before ? before.top - after.top : 0;
+      if (Math.abs(offset) < 1) return;
+      row.style.transition = 'none';
+      row.style.transform = `translate3d(0, ${offset}px, 0)`;
+      requestAnimationFrame(() => {
+        row.style.transition = 'transform 180ms ease';
+        row.style.transform = 'translate3d(0, 0, 0)';
+      });
+    });
+  };
+
   const finish = event => {
     if (!active) return;
     clearTimeout(active.timer);
-    if (active.armed) {
-      if (active.grip.hasPointerCapture?.(active.pointerId)) {
-        active.grip.releasePointerCapture(active.pointerId);
-      }
-      active.row.classList.remove('dragging');
-      document.body.classList.remove('dragging-active');
+    const state = active;
+    const cancelled = event?.type === 'pointercancel' || event?.type === 'touchcancel';
+    if (cancelled && state.armed) state.initialRows.forEach(row => container.appendChild(row));
+    if (!state.armed || cancelled) {
+      cleanup(state, false);
+    } else if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      cleanup(state, state.moved);
+    } else {
+      const destination = state.row.getBoundingClientRect();
+      state.proxy.style.transition = 'transform 160ms ease, box-shadow 160ms ease';
+      state.proxy.style.transform = `translate3d(0, ${destination.top - state.sourceRect.top}px, 0)`;
+      state.proxy.style.boxShadow = 'none';
+      setTimeout(() => {
+        if (active === state) cleanup(state, state.moved);
+      }, 170);
     }
-    const changed = active.armed && active.moved;
-    active = null;
-    if (changed) onCommit([...container.querySelectorAll(rowSelector)]);
     if (event?.cancelable) event.preventDefault();
   };
+
   container.querySelectorAll(gripSelector).forEach(grip => {
     grip.addEventListener('pointerdown', event => {
       if (active) return;
@@ -5682,17 +5867,37 @@ function attachGripReorder(container, rowSelector, gripSelector, onCommit) {
         moved:false,
         armed:false,
         timer:null,
+        proxy:null,
+        sourceRect:null,
+        initialRows:[...container.querySelectorAll(rowSelector)],
       };
       if (event.pointerType === 'touch') active.timer = setTimeout(() => armDrag(), GRIP_LONG_PRESS_MS);
       armDrag = () => {
         if (!active || active.pointerId !== event.pointerId) return;
+        const sourceRect = row.getBoundingClientRect();
+        const proxy = row.cloneNode(true);
+        proxy.classList.remove('category-drag-placeholder');
+        proxy.classList.add('category-drag-proxy');
+        proxy.setAttribute('aria-hidden', 'true');
+        proxy.querySelectorAll('button, input, select, textarea, a').forEach(control => control.tabIndex = -1);
+        Object.assign(proxy.style, {
+          top:`${sourceRect.top}px`,
+          left:`${sourceRect.left}px`,
+          width:`${sourceRect.width}px`,
+          height:`${sourceRect.height}px`,
+          margin:'0',
+        });
+        document.body.appendChild(proxy);
         active.armed = true;
+        active.proxy = proxy;
+        active.sourceRect = sourceRect;
         grip.setPointerCapture?.(event.pointerId);
-        row.classList.add('dragging');
+        row.classList.add('category-drag-placeholder');
         document.body.classList.add('dragging-active');
       };
       if (event.pointerType !== 'touch') armDrag();
     });
+
     grip.addEventListener('pointermove', event => {
       if (!active || event.pointerId !== active.pointerId) return;
       event.preventDefault();
@@ -5700,13 +5905,23 @@ function attachGripReorder(container, rowSelector, gripSelector, onCommit) {
         if (Math.hypot(event.clientX - active.startX, event.clientY - active.startY) > 10) cancelPending();
         return;
       }
-      if (Math.abs(event.clientY - active.startY) < 8 && !active.moved) return;
-      const candidates = [...container.querySelectorAll(rowSelector)].filter(row => row !== active.row && row.querySelector(gripSelector));
+      const deltaY = event.clientY - active.startY;
+      active.proxy.style.transform = `translate3d(0, ${deltaY}px, 0)`;
+      if (Math.abs(deltaY) < 8 && !active.moved) return;
+
+      const rows = [...container.querySelectorAll(rowSelector)];
+      const beforeRects = new Map(rows.map(row => [row, row.getBoundingClientRect()]));
+      const candidates = rows.filter(row => row !== active.row && row.querySelector(gripSelector));
       const target = candidates.find(row => event.clientY < row.getBoundingClientRect().top + row.getBoundingClientRect().height / 2);
       if (target) container.insertBefore(active.row, target);
       else if (candidates.length) container.appendChild(active.row);
-      active.moved = true;
+      const nextRows = [...container.querySelectorAll(rowSelector)];
+      if (rows.some((row, index) => row !== nextRows[index])) {
+        active.moved = true;
+        animateNeighbors(beforeRects);
+      }
     });
+
     grip.addEventListener('pointerup', finish);
     grip.addEventListener('pointercancel', finish);
     grip.addEventListener('touchend', finish, { passive:false });
@@ -5790,7 +6005,7 @@ function renderManageCategoryPage() {
       const marker = document.createElement('span');
       marker.className = 'category-grip-marker';
       marker.setAttribute('aria-hidden', 'true');
-      marker.appendChild(document.createElement('span'));
+      for (let index = 0; index < 6; index += 1) marker.appendChild(document.createElement('i'));
       lead.appendChild(marker);
     }
     row.appendChild(lead);
@@ -5990,6 +6205,31 @@ function createCustomCategoryId() {
   return id;
 }
 
+function updateCategoryEditorValidity() {
+  const nameInput = document.getElementById('categoryNameInput');
+  const emojiInput = document.getElementById('categoryEmojiInput');
+  const submit = document.getElementById('categoryEditorSave');
+  const rawName = nameInput.value;
+  const name = rawName.normalize('NFKC').trim().replace(/\s+/g, ' ');
+  const nameKey = name.toLocaleLowerCase('en-US');
+  const unsafeName = /[\u0000-\u001f\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]/.test(name);
+  const duplicateName = categoryState.definitions.some(category =>
+    category.id !== editingCategoryId && category.name.toLocaleLowerCase('en-US') === nameKey);
+  const validName = !!name && name.length <= CATEGORY_NAME_MAX && !unsafeName &&
+    /^[\p{L}\p{N}][\p{L}\p{N} &'’.\-]*$/u.test(name) && nameKey !== 'all' && !duplicateName;
+  const rawEmoji = emojiInput.value.trim();
+  const emoji = normalizeCategoryEmoji(rawEmoji);
+  const validEmoji = !rawEmoji || !!emoji;
+  selectedCategoryEmoji = emoji;
+  emojiInput.setAttribute('aria-invalid', String(!validEmoji));
+  nameInput.setAttribute('aria-invalid', String(!validName && rawName.length > 0));
+  document.getElementById('categoryEmojiPreview').textContent = emoji || (rawEmoji ? '—' : CATEGORY_ICON_MAP[selectedCategoryIconKey]);
+  document.querySelectorAll('#categoryIconChoices .category-icon-choice').forEach(choice =>
+    choice.setAttribute('aria-checked', String(!emoji && choice.dataset.iconKey === selectedCategoryIconKey)));
+  submit.disabled = !(validName && validEmoji);
+  return !submit.disabled;
+}
+
 function renderCategoryIconChoices() {
   const container = document.getElementById('categoryIconChoices');
   container.replaceChildren();
@@ -5999,13 +6239,17 @@ function renderCategoryIconChoices() {
     button.className = 'category-icon-choice';
     button.dataset.iconKey = iconKey;
     button.setAttribute('role', 'radio');
-    button.setAttribute('aria-checked', String(iconKey === selectedCategoryIconKey));
+    button.setAttribute('aria-checked', String(!selectedCategoryEmoji && iconKey === selectedCategoryIconKey));
     button.setAttribute('aria-label', `${iconKey} icon`);
     button.textContent = icon;
     button.addEventListener('click', () => {
       selectedCategoryIconKey = iconKey;
-      container.querySelectorAll('.category-icon-choice').forEach(choice =>
-        choice.setAttribute('aria-checked', String(choice === button)));
+      selectedCategoryEmoji = '';
+      const emojiInput = document.getElementById('categoryEmojiInput');
+      emojiInput.value = '';
+      emojiInput.setAttribute('aria-invalid', 'false');
+      categoryEditorDirty = true;
+      updateCategoryEditorValidity();
     });
     container.appendChild(button);
   });
@@ -6017,23 +6261,48 @@ function openCategoryEditorPage(categoryId = null, origin = 'categories', pushHi
   editingCategoryId = categoryId;
   categoryEditorOrigin = origin;
   selectedCategoryIconKey = category?.iconKey || 'star';
+  selectedCategoryEmoji = normalizeCategoryEmoji(category?.emoji);
   document.getElementById('categoryEditorHeading').textContent = category ? 'Edit Category' : 'New Category';
+  document.getElementById('categoryEditorSave').textContent = category ? 'Save Changes' : 'Add Category';
   document.getElementById('categoryNameInput').value = category?.name || '';
+  document.getElementById('categoryEmojiInput').value = selectedCategoryEmoji;
   renderCategoryIconChoices();
+  updateCategoryEditorValidity();
+  categoryEditorDirty = false;
   showManagementView('categoryEditorView', pushHistory);
-  requestAnimationFrame(() => document.getElementById('categoryNameInput').focus());
+  return true;
+}
+
+function requestLeaveCategoryEditor() {
+  if (categoryEditorDirty && !window.confirm('Discard unsaved changes?')) return false;
+  categoryEditorDirty = false;
+  if (history.state?.[MANAGEMENT_HISTORY_KEY]?.viewId === 'categoryEditorView') {
+    history.back();
+  } else if (categoryEditorOrigin === 'manage') {
+    renderManageCategoryPage();
+    showManagementView('manageCategoryView');
+  } else {
+    renderCategoriesPage();
+    showManagementView('categoriesView');
+  }
   return true;
 }
 
 function saveCategoryEditor() {
   const input = document.getElementById('categoryNameInput');
+  const emojiInput = document.getElementById('categoryEmojiInput');
+  if (!updateCategoryEditorValidity()) {
+    (emojiInput.getAttribute('aria-invalid') === 'true' ? emojiInput : input).focus();
+    return false;
+  }
   const name = input.value.normalize('NFKC').trim().replace(/\s+/g, ' ');
+  const emoji = normalizeCategoryEmoji(emojiInput.value);
   try {
     if (editingCategoryId) {
-      categoryState = updateCategoryDefinition(categoryState, editingCategoryId, name, selectedCategoryIconKey, DEFAULT_HABITS);
+      categoryState = updateCategoryDefinition(categoryState, editingCategoryId, name, selectedCategoryIconKey, DEFAULT_HABITS, emoji);
     } else {
       const categoryId = createCustomCategoryId();
-      categoryState = addCategoryDefinition(categoryState, categoryId, name, selectedCategoryIconKey, DEFAULT_HABITS);
+      categoryState = addCategoryDefinition(categoryState, categoryId, name, selectedCategoryIconKey, DEFAULT_HABITS, emoji);
       editingCategoryId = categoryId;
       managedCategoryId = categoryId;
     }
@@ -6043,6 +6312,7 @@ function saveCategoryEditor() {
     showToast(error.message || 'Choose a different category name');
     return false;
   }
+  categoryEditorDirty = false;
   reloadHabits();
   renderCategoryTabs();
   if (categoryEditorOrigin === 'manage') {
@@ -6065,7 +6335,7 @@ function saveCategoryEditor() {
 function makeArchivedCategoryRow(category) {
   const row = document.getElementById('archivedCategoryRowTemplate').content.firstElementChild.cloneNode(true);
   row.dataset.categoryId = category.id;
-  row.querySelector('.category-row-icon').textContent = CATEGORY_ICON_MAP[category.iconKey];
+  row.querySelector('.category-row-icon').textContent = getCategoryIcon(category);
   row.querySelector('.category-row-name').textContent = category.name;
   row.querySelector('.restore-category-btn').addEventListener('click', () => restoreArchivedCategory(category.id));
   return row;
@@ -6941,7 +7211,7 @@ function renderHabitEditorForm(habitId) {
       <div class="edit-habit" data-id="${escapeHtml(h.id)}" data-grandfathered-title="${hasGrandfatheredTitle}">
         <div class="eh-icon">${escapeHtml(h.icon)}</div>
         <div class="eh-fields">
-          <label class="eh-category-field"><span>Category</span><select class="eh-category">${getActiveCategoryDefinitions(categoryState).map(category => `<option value="${escapeHtml(category.id)}" ${h.cat === category.id ? 'selected' : ''}>${escapeHtml(CATEGORY_ICON_MAP[category.iconKey])} ${escapeHtml(category.name)}</option>`).join('')}</select></label>
+          <label class="eh-category-field"><span>Category</span><select class="eh-category">${getActiveCategoryDefinitions(categoryState).map(category => `<option value="${escapeHtml(category.id)}" ${h.cat === category.id ? 'selected' : ''}>${escapeHtml(getCategoryIcon(category))} ${escapeHtml(category.name)}</option>`).join('')}</select></label>
           ${isSystem ? `<div class="eh-system-title"><span class="eh-system-name">${escapeHtml(h.text)}</span>${h.targetLabel ? ` <span class="eh-system-target">${escapeHtml(h.targetLabel)}</span>` : '<span class="eh-system-target" hidden></span>'}</div><input type="hidden" class="eh-text" value="${escapeHtml(h.text)}">` : `<input type="text" class="eh-text" maxlength="48" value="${escapeHtml(h.text)}" placeholder="Habit name">`}
           <div class="eh-row eh-note-row">
             <input type="text" class="eh-note" maxlength="${HABIT_CARD_NOTE_MAX}" value="${escapeHtml(h.note)}" placeholder="Card description" aria-label="Card description">
@@ -7257,7 +7527,7 @@ function saveHabitEditorPage() {
 // ═══════════════════════════════════════════════════════════════════
 // OFFLINE AND DATA TRANSFER
 // ═══════════════════════════════════════════════════════════════════
-const BACKUP_VERSION = 6;
+const BACKUP_VERSION = 7;
 
 function setupOfflineStatus() {
   const pill = document.getElementById('offlinePill');
@@ -7319,10 +7589,10 @@ async function importBackupFile(file) {
   if (!file) return;
   try {
     const payload = JSON.parse(await file.text());
-    if (payload.app !== 'wavelength' || ![1, 2, 3, 4, 5, BACKUP_VERSION].includes(payload.version) || !payload.state || !Array.isArray(payload.order) ||
+    if (payload.app !== 'wavelength' || ![1, 2, 3, 4, 5, 6, BACKUP_VERSION].includes(payload.version) || !payload.state || !Array.isArray(payload.order) ||
         (payload.version >= 2 && !payload.insightHistory) ||
         (payload.version >= 4 && typeof payload.firstName !== 'string') ||
-        (payload.version === BACKUP_VERSION && !payload.categoryState)) {
+        (payload.version >= 6 && !payload.categoryState)) {
       throw new Error('This is not a compatible Wavelength backup.');
     }
 
@@ -7455,15 +7725,17 @@ function init() {
   document.getElementById('categoryRemovalCancel').addEventListener('click', () => document.getElementById('categoryRemovalDialog').close());
   document.getElementById('categoryRemovalConfirm').addEventListener('click', confirmCategoryRemoval);
   document.getElementById('categoryEditorSave').addEventListener('click', saveCategoryEditor);
-  document.getElementById('categoryEditorBack').addEventListener('click', () => {
-    if (categoryEditorOrigin === 'manage') {
-      renderManageCategoryPage();
-      showManagementView('manageCategoryView');
-    } else {
-      renderCategoriesPage();
-      showManagementView('categoriesView');
-    }
+  const categoryNameInput = document.getElementById('categoryNameInput');
+  categoryNameInput.addEventListener('input', () => {
+    categoryEditorDirty = true;
+    updateCategoryEditorValidity();
   });
+  const categoryEmojiInput = document.getElementById('categoryEmojiInput');
+  categoryEmojiInput.addEventListener('input', () => {
+    categoryEditorDirty = true;
+    updateCategoryEditorValidity();
+  });
+  document.getElementById('categoryEditorBack').addEventListener('click', requestLeaveCategoryEditor);
   document.getElementById('nextWaveAction').addEventListener('click', focusNextWaveHabit);
   document.getElementById('navHome').addEventListener('click', () => setActiveView('home'));
   document.getElementById('navInsights').addEventListener('click', () => setActiveView('insights'));
@@ -7528,6 +7800,14 @@ function init() {
       }
       habitEditorDirty = false;
     }
+    if (!document.getElementById('categoryEditorView').hidden && categoryEditorDirty) {
+      if (!window.confirm('Discard unsaved changes?')) {
+        suppressNextManagementPop = true;
+        history.go(1);
+        return;
+      }
+      categoryEditorDirty = false;
+    }
     restoreManagementRoute(route);
   });
 
@@ -7535,6 +7815,7 @@ function init() {
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape' || document.documentElement.dataset.managementOpen !== 'true') return;
     if (!document.getElementById('habitEditorView').hidden) requestLeaveHabitEditor();
+    else if (!document.getElementById('categoryEditorView').hidden) requestLeaveCategoryEditor();
     else if (history.state?.[MANAGEMENT_HISTORY_KEY]) history.back();
     else closeManagementFlow();
   });

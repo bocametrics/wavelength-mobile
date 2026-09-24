@@ -155,7 +155,7 @@ const SHOT_DIR = process.env.WAVELENGTH_SHOT_DIR || 'C:\\Temp';
       };
     });
     assert.equal(manageLayout.gripWidth, 44, 'compact grip keeps a 44px interaction target');
-    assert.equal(manageLayout.markerWidth, 3, 'visible grip is only three vertical dots wide');
+    assert.equal(manageLayout.markerWidth, 9, 'visible grip uses a compact six-dot drag affordance');
     assert.equal(manageLayout.titleSize, '16px');
     assert.equal(manageLayout.descriptionSize, '14px');
     assert.ok(manageLayout.rowGap >= 3, JSON.stringify(manageLayout));
@@ -382,6 +382,65 @@ const SHOT_DIR = process.env.WAVELENGTH_SHOT_DIR || 'C:\\Temp';
     const afterOrder = await page.evaluate(() => JSON.parse(localStorage.getItem('wavelength_categories_v1')).order);
     assert.notDeepEqual(afterOrder, beforeOrder);
     assert.equal(afterOrder[0], 'movement');
+
+    const migrationExpected = await page.evaluate(async () => {
+      const payload = createBackupPayload();
+      const activeId = 'cat_11111111';
+      const archivedId = 'cat_22222222';
+      payload.version = 6;
+      payload.firstName = 'Migration Check';
+      payload.categoryState = {
+        schemaVersion:1,
+        catalogVersion:1,
+        definitions:[
+          ...DEFAULT_CATEGORY_DEFINITIONS.map(category => ({ ...category })),
+          { id:activeId, name:'Reading', iconKey:'recovery', archived:false },
+          { id:archivedId, name:'Old Focus', iconKey:'heart', archived:true },
+        ],
+        order:[activeId, 'morning', 'movement', 'mind', 'fuel', 'hygiene', 'evening', archivedId],
+        assignments:[{ habitId:'affirm', categoryId:activeId }],
+      };
+      await importBackupFile(new File([JSON.stringify(payload)], 'wavelength-v6.json', { type:'application/json' }));
+      return {
+        activeId,
+        archivedId,
+        state:JSON.stringify(payload.state),
+        habitOrder:JSON.stringify(payload.order),
+      };
+    });
+    await page.reload({ waitUntil:'networkidle0' });
+    const migratedV6 = await page.evaluate(({ activeId, archivedId }) => {
+      const stored = JSON.parse(localStorage.getItem(CATEGORY_STATE_KEY));
+      const active = stored.definitions.find(category => category.id === activeId);
+      const archived = stored.definitions.find(category => category.id === archivedId);
+      return {
+        schemaVersion:stored.schemaVersion,
+        order:stored.order,
+        assignments:stored.assignments,
+        active,
+        activeIcon:getCategoryIcon(active),
+        archived,
+        archivedIcon:getCategoryIcon(archived),
+        runtimeCategory:HABITS.find(habit => habit.id === 'affirm')?.cat,
+        firstName:localStorage.getItem(FIRST_NAME_STORAGE_KEY),
+        state:localStorage.getItem(STORAGE_KEY),
+        habitOrder:localStorage.getItem(ORDER_KEY),
+      };
+    }, migrationExpected);
+    assert.equal(migratedV6.schemaVersion, 2, 'a version-6 schema-v1 category document migrates to schema 2');
+    assert.deepEqual(migratedV6.order,
+      [migrationExpected.activeId, 'morning', 'movement', 'mind', 'fuel', 'hygiene', 'evening', migrationExpected.archivedId]);
+    assert.deepEqual(migratedV6.assignments, [{ habitId:'affirm', categoryId:migrationExpected.activeId }]);
+    assert.deepEqual(migratedV6.active,
+      { id:migrationExpected.activeId, name:'Reading', iconKey:'recovery', archived:false });
+    assert.equal(migratedV6.activeIcon, '🌿');
+    assert.deepEqual(migratedV6.archived,
+      { id:migrationExpected.archivedId, name:'Old Focus', iconKey:'heart', archived:true });
+    assert.equal(migratedV6.archivedIcon, '❤️');
+    assert.equal(migratedV6.runtimeCategory, migrationExpected.activeId);
+    assert.equal(migratedV6.firstName, 'Migration Check');
+    assert.equal(migratedV6.state, migrationExpected.state, 'version-6 import preserves completion/history state');
+    assert.equal(migratedV6.habitOrder, migrationExpected.habitOrder, 'version-6 import preserves canonical habit order');
 
     await page.screenshot({ path:path.join(SHOT_DIR, `wavelength-categories-${THEME}.png`), fullPage:false });
     assert.deepEqual(errors, [], errors.join('\n'));

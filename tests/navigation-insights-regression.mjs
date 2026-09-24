@@ -339,11 +339,11 @@ for (const [label, htmlPath] of builds) {
   if (label === 'mobile') {
     assert.match(html, /function createBackupPayload\(\)[\s\S]*normalizeInsightHistoryAgainstState\([\s\S]*state, false\)/,
       `${label}: backup export repairs contradictory local evidence before serializing it`);
-    assert.match(html, /const BACKUP_VERSION = 6;/, `${label}: personalized backups identify the version-6 category schema`);
+    assert.match(html, /const BACKUP_VERSION = 7;/, `${label}: personalized backups identify the version-7 category emoji schema`);
     assert.match(html, /const backupInsightHistory = normalizeInsightHistory\(insightHistory, HABITS, false\)[\s\S]*insightHistory:\s*backupInsightHistory/,
-      `${label}: version-6 backups carry validated prospective evidence`);
-    assert.match(html, /!\[1, 2, 3, 4, 5, BACKUP_VERSION\]\.includes\(payload\.version\)/,
-      `${label}: version-1 through version-5 backups remain importable`);
+      `${label}: version-7 backups carry validated prospective evidence`);
+    assert.match(html, /!\[1, 2, 3, 4, 5, 6, BACKUP_VERSION\]\.includes\(payload\.version\)/,
+      `${label}: version-1 through version-6 backups remain importable`);
     assert.match(html, /payload\.version === 1\s*\?\s*normalizeInsightHistory\(null, importedHabits\)\s*:\s*normalizeInsightHistory\(payload\.insightHistory, importedHabits, true\)/,
       `${label}: legacy imports start with no fabricated insight history`);
     assert.match(html, /normalizeInsightHistoryAgainstState\(importedInsightHistory, importedState, true\)/,

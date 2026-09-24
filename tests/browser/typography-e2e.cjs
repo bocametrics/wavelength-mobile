@@ -265,7 +265,7 @@ function contrastRatio(foreground, background) {
   assert.deepEqual(manage.maxLengths, [42]);
   assert.ok(manage.counters.every((counter, index) => counter === `${manage.notes[index].length} / 42`));
   assert.ok(manage.notes.every(note => note.length <= 42));
-  assert.equal(px(manage.sizes.title), 17.28);
+  assert.equal(px(manage.sizes.title), 17);
   assert.equal(px(manage.sizes.systemTitle), 15);
   assert.equal(px(manage.sizes.note), 16);
   assert.equal(px(manage.sizes.counter), 12);

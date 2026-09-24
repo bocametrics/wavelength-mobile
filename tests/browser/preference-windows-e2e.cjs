@@ -64,7 +64,7 @@ let browser;
     };
   });
   assert.deepEqual(stored, {
-    override:{ idealStart:435, idealEnd:465 }, backupVersion:6,
+    override:{ idealStart:435, idealEnd:465 }, backupVersion:7,
     payloadOverride:{ idealStart:435, idealEnd:465 }, runtimeStretch:{ idealStart:435, idealEnd:465 },
   });
 

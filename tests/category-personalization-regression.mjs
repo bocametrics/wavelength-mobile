@@ -50,6 +50,8 @@ function loadCategoryFunctions(html) {
   assert.notEqual(end, -1, 'category model end is missing');
   const names = [
     'createDefaultCategoryState',
+    'normalizeCategoryEmoji',
+    'getCategoryIcon',
     'normalizeCategoryState',
     'getActiveCategoryDefinitions',
     'getEffectiveCategoryId',
@@ -83,6 +85,8 @@ for (const [label, htmlPath] of builds) {
   const html = fs.readFileSync(htmlPath, 'utf8');
   const {
     createDefaultCategoryState,
+    normalizeCategoryEmoji,
+    getCategoryIcon,
     normalizeCategoryState,
     getActiveCategoryDefinitions,
     getEffectiveCategoryId,
@@ -112,7 +116,7 @@ for (const [label, htmlPath] of builds) {
 
   const defaults = plain(createDefaultCategoryState());
   assert.deepEqual(defaults, {
-    schemaVersion:1,
+    schemaVersion:2,
     catalogVersion:1,
     definitions:[
       { id:'morning', name:'Morning', iconKey:'sunrise', archived:false },
@@ -131,6 +135,17 @@ for (const [label, htmlPath] of builds) {
     defaults,
     `${label}: strict category normalization round-trips the default document`,
   );
+  const legacyV1Categories = { ...defaults, schemaVersion:1 };
+  assert.deepEqual(
+    plain(normalizeCategoryState(legacyV1Categories, defaultHabitCats, true)),
+    defaults,
+    `${label}: schema-v1 category documents migrate in place without losing identity or order`,
+  );
+  assert.equal(normalizeCategoryEmoji('👨‍👩‍👧‍👦'), '👨‍👩‍👧‍👦', `${label}: compound family emoji remains one grapheme`);
+  assert.equal(normalizeCategoryEmoji('👍🏽'), '👍🏽', `${label}: skin-tone modifiers remain attached to one emoji grapheme`);
+  assert.equal(normalizeCategoryEmoji('🇦🇷'), '🇦🇷', `${label}: regional-indicator flags are accepted`);
+  assert.equal(normalizeCategoryEmoji('1️⃣'), '1️⃣', `${label}: keycap emoji are accepted as one grapheme`);
+  assert.equal(normalizeCategoryEmoji('two emojis ⭐🌿'), '', `${label}: text and multiple emoji are rejected`);
   assert.deepEqual(
     getActiveCategoryDefinitions(defaults).map(category => category.id),
     defaults.order,
@@ -192,6 +207,27 @@ for (const [label, htmlPath] of builds) {
     { id:'cat_12345678', name:'Recovery', iconKey:'recovery', archived:false },
     `${label}: custom categories append with an immutable opaque ID and curated icon`);
   assert.equal(added.order.at(-1), 'cat_12345678', `${label}: a new category appends to navigation order`);
+  const emojiCategoryState = plain(addCategoryDefinition(
+    defaults,
+    'cat_87654321',
+    'Family',
+    'star',
+    defaultHabitCats,
+    '👨‍👩‍👧‍👦',
+  ));
+  const emojiCategory = emojiCategoryState.definitions.at(-1);
+  assert.deepEqual(
+    emojiCategory,
+    { id:'cat_87654321', name:'Family', iconKey:'star', emoji:'👨‍👩‍👧‍👦', archived:false },
+    `${label}: a custom category persists one complete native-keyboard emoji without changing its stable ID`,
+  );
+  assert.equal(getCategoryIcon(emojiCategory), '👨‍👩‍👧‍👦', `${label}: custom emoji wins over the curated fallback`);
+  assert.equal(getCategoryIcon(added.definitions.at(-1)), '🌿', `${label}: curated icon keys retain their existing rendering`);
+  assert.throws(
+    () => addCategoryDefinition(defaults, 'cat_87654321', 'Family', 'star', defaultHabitCats, '⭐🌿'),
+    /one emoji/,
+    `${label}: multiple custom emoji fail closed`,
+  );
   const renamed = plain(updateCategoryDefinition(added, 'cat_12345678', 'Rest & Restore', 'heart', defaultHabitCats));
   assert.deepEqual(renamed.definitions.find(category => category.id === 'cat_12345678'),
     { id:'cat_12345678', name:'Rest & Restore', iconKey:'heart', archived:false },
@@ -245,12 +281,12 @@ for (const [label, htmlPath] of builds) {
     `${label}: runtime category state loads independently of habit overrides`);
   assert.match(html, /HABITS = applyCategoryStateToHabits\(buildRuntimeHabits\(DEFAULT_HABITS, overrides \|\| \{\}\), categoryState\);/,
     `${label}: runtime habits receive navigation assignments after habit/context construction`);
-  assert.match(html, /const BACKUP_VERSION = 6;/,
-    `${label}: portable backups advance to schema v6 for category state`);
+  assert.match(html, /const BACKUP_VERSION = 7;/,
+    `${label}: portable backups advance to schema v7 for arbitrary category emoji`);
   assert.match(html, /categoryState:normalizeCategoryState\(categoryState, DEFAULT_HABITS, true\)/,
-    `${label}: v6 backups contain one normalized category document`);
-  assert.match(html, /payload\.version === BACKUP_VERSION && !payload\.categoryState/,
-    `${label}: v6 imports require category state while legacy backups migrate defaults`);
+    `${label}: v7 backups contain one normalized category document`);
+  assert.match(html, /payload\.version >= 6 && !payload\.categoryState/,
+    `${label}: v6+ imports require category state while older backups migrate defaults`);
   assert.match(html, /const importedCategoryState = payload\.version >= 6[\s\S]*normalizeCategoryState\(payload\.categoryState, DEFAULT_HABITS, true\)[\s\S]*createDefaultCategoryState\(\)/,
     `${label}: legacy v1-v5 backups receive deterministic shipped categories`);
 
