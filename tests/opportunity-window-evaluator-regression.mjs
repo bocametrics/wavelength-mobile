@@ -313,10 +313,12 @@ for (const [label, htmlPath] of builds) {
     timezone:null, candidates:[], windows:[], betterWindow:null,
   }, `${label}: missing forecast data produces a calm empty evaluation`);
 
-  assert.doesNotMatch(extractFunction(html, 'getNextWaveSuggestion'), /hourlyForecast|evaluateOpportunityWindows/,
-    `${label}: Phase 3 builds the evaluator without changing Next Wave selection yet`);
-  assert.doesNotMatch(html, /Better window ahead|Rain chance \d|precip-adapt/,
-    `${label}: Phase 3 does not publish forecast or rain copy before the separate copy milestone`);
+  assert.match(extractFunction(html, 'getNextWaveSuggestion'), /getForecastAwareOutdoorSuggestion/,
+    `${label}: Phase 4 connects the verified evaluator to outdoor Next Wave copy`);
+  assert.match(html, /Better window ahead[\s\S]*Rain chance/,
+    `${label}: Phase 4 publishes bounded, probability-aware forecast copy`);
+  assert.doesNotMatch(html, /precip-adapt|best time|it(?:'|’)s raining/i,
+    `${label}: rain remains a secondary modifier without observed-weather or best-time claims`);
   assert.doesNotMatch(html, /localStorage[^\n]*(hourlyForecast|opportunityWindow)|(hourlyForecast|opportunityWindow)[^\n]*localStorage/,
     `${label}: evaluator output and the full forecast remain runtime-only`);
 }

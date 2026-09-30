@@ -66,6 +66,11 @@ function collectErrors(page) {
   await page.evaluate(() => {
     const now = new Date();
     now.setHours(12, 0, 0, 0);
+    rhythmWeatherData = {
+      ...rhythmWeatherData,
+      weatherObservedAt:now.getTime(),
+      aqiObservedAt:now.getTime(),
+    };
     clearInsightDate(insightHistory, now);
     saveInsightHistory(now);
     renderHabits(now);

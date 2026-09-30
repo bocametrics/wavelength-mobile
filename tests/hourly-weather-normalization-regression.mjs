@@ -224,10 +224,12 @@ for (const [label, htmlPath] of builds) {
   assert.match(html,
     /Promise\.allSettled\(\[forecastRequest, aqiRequest\]\)[\s\S]*normalizeHourlyForecast\([^)]*\)[\s\S]*hourlyForecastFetchedAt:\s*Date\.now\(\)/,
     `${label}: hourly normalization waits for both independent channels to settle and carries acquisition time`);
-  assert.doesNotMatch(extractFunction(html, 'getNextWaveSuggestion'), /hourlyForecast/,
-    `${label}: Phase 2 does not change recommendation behavior yet`);
-  assert.doesNotMatch(html, /Rain chance|Better window ahead|precip-adapt/,
-    `${label}: Phase 2 introduces no precipitation recommendation copy`);
+  assert.match(extractFunction(html, 'getNextWaveSuggestion'), /getForecastAwareOutdoorSuggestion/,
+    `${label}: Phase 4 consumes the Phase 2 hourly timeline through the bounded forecast helper`);
+  assert.match(html, /Rain chance|Better window ahead/,
+    `${label}: Phase 4 may expose probability-aware copy from normalized hourly data`);
+  assert.doesNotMatch(html, /precip-adapt|best time|it(?:'|’)s raining/i,
+    `${label}: forecast copy never turns precipitation into an anchor or observed-rain claim`);
   assert.doesNotMatch(html, /localStorage[^\n]*hourlyForecast|hourlyForecast[^\n]*localStorage/,
     `${label}: the full hourly forecast remains runtime-only`);
 }

@@ -3988,6 +3988,7 @@ function normalizeEnvironmentalReading(value, minimum = -Infinity) {
 }
 
 const MAX_HOURLY_FORECAST_POINTS = 50;
+const FORECAST_COPY_MAX_AGE_MS = 90 * 60 * 1000;
 
 const OPPORTUNITY_WINDOW_POLICY = Object.freeze({
   candidateStepMinutes:15,
@@ -4269,7 +4270,7 @@ function evaluateOpportunityWindows(habit, now, data, preferenceWindow = null) {
       !forecast || !Array.isArray(forecast.entries)) return emptyResult();
 
   const context = getEffectiveRecommendationContext(habit, preferenceWindow);
-  if (!context || context.recommend === false || context.setting !== 'outdoor' || habit?.cat !== 'movement') {
+  if (!context || context.recommend === false || context.setting !== 'outdoor') {
     return emptyResult();
   }
   if (typeof habit.activeFrom === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(habit.activeFrom) &&
@@ -4437,7 +4438,155 @@ function evaluateOpportunityWindows(habit, now, data, preferenceWindow = null) {
   return { timezone, candidates, windows, betterWindow };
 }
 
+function isHourlyForecastFresh(data, now) {
+  const forecast = data && typeof data === 'object' ? data.hourlyForecast : null;
+  const fetchedAt = data && typeof data === 'object' ? data.hourlyForecastFetchedAt : null;
+  const dateMethods = ['getTime','getFullYear','getMonth','getDate','getHours','getMinutes','getSeconds','getMilliseconds'];
+  if (!forecast || typeof forecast !== 'object' || !Array.isArray(forecast.entries) ||
+      forecast.entries.length === 0 || typeof forecast.timezone !== 'string' || !forecast.timezone ||
+      typeof fetchedAt !== 'number' || !Number.isFinite(fetchedAt) ||
+      !now || dateMethods.some(method => typeof now[method] !== 'function') || !Number.isFinite(now.getTime())) return false;
+  const age = now.getTime() - fetchedAt;
+  return age >= 0 && age <= FORECAST_COPY_MAX_AGE_MS;
+}
+
+function getFreshEnvironmentalSnapshot(data, now) {
+  const snapshot = data && typeof data === 'object' ? { ...data } : {};
+  const nowTime = now && typeof now.getTime === 'function' ? now.getTime() : NaN;
+  const isFreshObservedAt = observedAt => {
+    if (!Number.isFinite(nowTime) || typeof observedAt !== 'number' || !Number.isFinite(observedAt)) return false;
+    const age = nowTime - observedAt;
+    return age >= 0 && age <= FORECAST_COPY_MAX_AGE_MS;
+  };
+  if (Object.hasOwn(snapshot, 'weatherObservedAt') && !isFreshObservedAt(snapshot.weatherObservedAt)) {
+    ['uv','feel','isDay','sunrise','sunset','weatherObservedAt'].forEach(key => { delete snapshot[key]; });
+  }
+  if (Object.hasOwn(snapshot, 'aqiObservedAt') && !isFreshObservedAt(snapshot.aqiObservedAt)) {
+    ['aqi','aqiObservedAt'].forEach(key => { delete snapshot[key]; });
+  }
+  return snapshot;
+}
+
+function formatForecastClock(timestamp) {
+  if (typeof timestamp !== 'string') return '';
+  const match = timestamp.match(/^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d)$/);
+  if (!match) return '';
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const parsed = new Date(0);
+  parsed.setUTCHours(hour, Number(match[5]), 0, 0);
+  parsed.setUTCFullYear(year, month - 1, day);
+  if (month < 1 || month > 12 || parsed.getUTCFullYear() !== year ||
+      parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== day) return '';
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${match[5]} ${suffix}`;
+}
+
+function getForecastAwareOutdoorSuggestion(habit, now, data, preferenceWindow = null) {
+  if (!habit || habit.rhythm === null || !isHourlyForecastFresh(data, now)) return null;
+  const context = getEffectiveRecommendationContext(habit, preferenceWindow);
+  if (!context || context.recommend === false || context.setting !== 'outdoor') return null;
+
+  const forecast = data.hourlyForecast;
+  let deviceTimezone = null;
+  try { deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
+  if (typeof forecast?.timezone !== 'string' || !forecast.timezone ||
+      typeof deviceTimezone !== 'string' || !deviceTimezone || forecast.timezone !== deviceTimezone) return null;
+  const day = dateKey(now);
+  const pad = value => String(value).padStart(2, '0');
+  const rhythm = normalizeRhythmConfig(habit.rhythm);
+
+  // Sun protection is a two-minute protection task, not outdoor exposure.
+  // It may use weather-only hourly UV and is never deferred to a later window.
+  if (habit.id === 'sunscreen' || (rhythm?.type === 'uv-above' && context.duration === 2)) {
+    const currentHour = `${day}T${pad(now.getHours())}:00`;
+    const current = forecast.entries.find(entry => entry && entry.time === currentHour);
+    const threshold = rhythm?.type === 'uv-above' ? rhythm.threshold : OPPORTUNITY_WINDOW_POLICY.uvCueThreshold;
+    if (current && Number.isFinite(current.uv) && current.uv >= threshold) {
+      return {
+        reason:'forecast-uv',
+        eyebrow:'Suggested now',
+        detail:`Forecast UV ${current.uv} · Protect before going out.`,
+      };
+    }
+    return null;
+  }
+
+  const evaluation = evaluateOpportunityWindows(habit, now, data, preferenceWindow);
+  const better = evaluation.betterWindow;
+  if (better) {
+    const betterClock = formatForecastClock(better.start);
+    const startMatch = better.start.match(/T(\d{2}):(\d{2})$/);
+    const betterMinute = startMatch ? Number(startMatch[1]) * 60 + Number(startMatch[2]) : null;
+    const urgencyStart = Number.isInteger(context.urgencyStart) ? context.urgencyStart : null;
+    const canDefer = habit.id !== 'daylight' || urgencyStart === null ||
+      betterMinute !== null && betterMinute < urgencyStart;
+    if (!canDefer) return null;
+    if (betterClock) {
+      let detail = `Outdoor conditions may improve around ${betterClock}.`;
+      const includesRain = better.reasons.includes('rain') && Number.isFinite(better.precipitationProbability);
+      const includesHeat = better.reasons.includes('heat') && Number.isFinite(better.apparentTemperature);
+      if (includesRain && includesHeat) {
+        detail = `Feels like ${better.apparentTemperature}°F · Rain chance ${better.precipitationProbability}% around ${betterClock}.`;
+      } else if (includesRain) {
+        detail = `Rain chance drops to ${better.precipitationProbability}% around ${betterClock}.`;
+      } else if (includesHeat) {
+        detail = `Feels like ${better.apparentTemperature}°F around ${betterClock}.`;
+      } else if (better.reasons.includes('aqi')) {
+        detail = `Air may be more favorable around ${betterClock}.`;
+      }
+      return { reason:'forecast-window', eyebrow:'Better window ahead', detail };
+    }
+  }
+
+  const minuteNow = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60 + now.getMilliseconds() / 60000;
+  const expectedStartMinute = Math.ceil(minuteNow / OPPORTUNITY_WINDOW_POLICY.candidateStepMinutes) *
+    OPPORTUNITY_WINDOW_POLICY.candidateStepMinutes;
+  const current = evaluation.candidates.find(candidate => {
+    const match = candidate.start.match(/T(\d{2}):(\d{2})$/);
+    return match && Number(match[1]) * 60 + Number(match[2]) === expectedStartMinute;
+  });
+  if (!current) return null;
+  if (current.heatCue && (current.rainRisk === 'soft' || current.rainRisk === 'strong')) {
+    return {
+      reason:'forecast-conditions', eyebrow:'Suggested now',
+      detail:`Feels like ${current.apparentTemperature}°F · Rain chance ${current.precipitationProbability}%.`,
+    };
+  }
+  if (current.rainRisk === 'strong') {
+    return {
+      reason:'forecast-conditions', eyebrow:'Suggested now',
+      detail:`Rain chance ${current.precipitationProbability}% · Keep plans flexible.`,
+    };
+  }
+  if (current.rainRisk === 'soft') {
+    return {
+      reason:'forecast-conditions', eyebrow:'Suggested now',
+      detail:`Rain chance ${current.precipitationProbability}%`,
+    };
+  }
+  if (current.heatCue) {
+    return {
+      reason:'forecast-conditions', eyebrow:'Suggested now',
+      detail:`Feels like ${current.apparentTemperature}°F · ${habit.id === 'daylight' ? 'Keep it brief.' : 'Keep it easy.'}`,
+    };
+  }
+  if (current.uvCue) {
+    return {
+      reason:'forecast-conditions', eyebrow:'Suggested now',
+      detail:`UV ${current.uv} · Protection still matters.`,
+    };
+  }
+  return null;
+}
+
 function getHabitRecommendationFit(habit, date, data, preferenceWindow = null) {
+  const snapshot = typeof getFreshEnvironmentalSnapshot === 'function'
+    ? getFreshEnvironmentalSnapshot(data, date)
+    : data && typeof data === 'object' ? data : {};
   const context = getEffectiveRecommendationContext(habit, preferenceWindow);
   if (!context) return { eligible:true, reason:'available', phase:'available', nextBoundary:null };
   if (context.recommend === false) return { eligible:false, reason:'manual', phase:'unavailable', nextBoundary:null };
@@ -4447,7 +4596,7 @@ function getHabitRecommendationFit(habit, date, data, preferenceWindow = null) {
   if (start !== null && minute < start) return { eligible:false, reason:'early', phase:'unavailable', nextBoundary:start };
   if (end !== null && minute >= end) return { eligible:false, reason:'late', phase:'unavailable', nextBoundary:null };
   const rhythm = normalizeRhythmConfig(habit?.rhythm);
-  const aqi = Number.isFinite(data?.aqi) && data.aqi >= 0 ? data.aqi : null;
+  const aqi = Number.isFinite(snapshot.aqi) && snapshot.aqi >= 0 ? snapshot.aqi : null;
   const airReason = aqi !== null && aqi > 100 && aqi <= 150
     ? 'poor-air-sensitive'
     : aqi !== null && aqi > 150 ? 'poor-air' : null;
@@ -4459,11 +4608,11 @@ function getHabitRecommendationFit(habit, date, data, preferenceWindow = null) {
   if (context.setting === 'outdoor' && rhythm?.type === 'aqi-below' && supportsAirReason) {
     return { eligible:false, reason:airReason, phase:'unavailable', nextBoundary:null, aqi };
   }
-  const isDay = getDaylightState(date, data);
+  const isDay = getDaylightState(date, snapshot);
   if (context.daylight === 'required' && isDay === false) {
     return { eligible:false, reason:'dark', phase:'unavailable', nextBoundary:null };
   }
-  const sunset = parseDisplayClockMinutes(data?.sunset);
+  const sunset = parseDisplayClockMinutes(snapshot.sunset);
   const duration = Number.isInteger(context.duration) && context.duration > 0 ? context.duration : null;
   const daylightRemaining = context.daylight === 'required' && isDay === true && sunset !== null
     ? sunset - minute
@@ -4539,8 +4688,20 @@ function getNextWaveRefreshDelay(habits, date, data, preferenceWindows = null) {
   [sunrise, sunset].forEach(value => {
     if (value !== null && value > minute) boundaries.push(value);
   });
-  if (boundaries.length === 0) return null;
-  return Math.max(50, Math.min(...boundaries) * 60000 - elapsedMs + 50);
+  const delays = boundaries.map(boundary => Math.max(50, boundary * 60000 - elapsedMs + 50));
+  const hasForecastHabit = (Array.isArray(habits) ? habits : []).some(habit => {
+    const context = getEffectiveRecommendationContext(habit, preferenceWindows?.[habit.id]);
+    return context && context.recommend !== false && context.setting === 'outdoor' &&
+      habit.rhythm !== null && isHabitScheduledOn(habit, date);
+  });
+  if (hasForecastHabit && typeof isHourlyForecastFresh === 'function' && isHourlyForecastFresh(snapshot, date)) {
+    const stepMs = OPPORTUNITY_WINDOW_POLICY.candidateStepMinutes * 60000;
+    const nextCandidateBoundary = (Math.floor(elapsedMs / stepMs) + 1) * stepMs;
+    if (nextCandidateBoundary <= 24 * 60 * 60000) delays.push(nextCandidateBoundary - elapsedMs + 50);
+    const freshnessRemaining = snapshot.hourlyForecastFetchedAt + FORECAST_COPY_MAX_AGE_MS - date.getTime();
+    delays.push(Math.max(50, freshnessRemaining + 50));
+  }
+  return delays.length === 0 ? null : Math.min(...delays);
 }
 
 function scheduleNextWaveContextRefresh(now = new Date()) {
@@ -4550,7 +4711,13 @@ function scheduleNextWaveContextRefresh(now = new Date()) {
     nextWaveContextTimer = null;
     return;
   }
-  nextWaveContextTimer = setTimeout(() => renderNextWave(new Date()), delay);
+  nextWaveContextTimer = setTimeout(() => {
+    const refreshNow = new Date();
+    nextWaveContextTimer = null;
+    const forecastSettled = Number.isFinite(rhythmWeatherData?.hourlyForecastFetchedAt);
+    if (forecastSettled && !isHourlyForecastFresh(rhythmWeatherData, refreshNow)) renderInsights(refreshNow);
+    else renderNextWave(refreshNow);
+  }, delay);
 }
 
 function createNextWaveProgressCue(focusCue, habitId, direction, complete, now = new Date()) {
@@ -4574,6 +4741,9 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
   const dayDone = doneByDate[key] || {};
   const dayProgress = progressByDate[key] || {};
   const scheduled = getScheduledHabits(habits, date);
+  const snapshot = typeof getFreshEnvironmentalSnapshot === 'function'
+    ? getFreshEnvironmentalSnapshot(data, date)
+    : data && typeof data === 'object' ? data : {};
   const incompleteHabits = scheduled.filter(habit => {
     const progress = getHabitProgress(dayDone, dayProgress, habit);
     return !isHabitProgressComplete(habit, progress);
@@ -4605,7 +4775,7 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
   }
 
   const fitById = new Map(openHabits.map(habit => [habit.id,
-    getHabitRecommendationFit(habit, date, data, preferenceWindows?.[habit.id])]));
+    getHabitRecommendationFit(habit, date, snapshot, preferenceWindows?.[habit.id])]));
   const eligibleHabits = openHabits.filter(habit => fitById.get(habit.id).eligible);
   const cueAge = date.getTime() - Number(completionCue?.completedAt);
   const completionCueHabit = completionCue && completionCue.dateKey === key &&
@@ -4670,12 +4840,19 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
     const rhythm = habit ? normalizeRhythmConfig(habit.rhythm) : null;
     return habit && rhythm && rhythm.type === type ? { habit, rhythm } : null;
   };
-  const snapshot = data && typeof data === 'object' ? data : {};
   const aqi = Number.isFinite(snapshot.aqi) && snapshot.aqi >= 0 ? snapshot.aqi : null;
   const uv = Number.isFinite(snapshot.uv) && snapshot.uv >= 0 ? snapshot.uv : null;
   const feel = Number.isFinite(snapshot.feel) ? snapshot.feel : null;
   const hour = date.getHours();
   const minute = hour * 60 + date.getMinutes();
+  const forecastResult = habit => {
+    if (!habit || typeof getForecastAwareOutdoorSuggestion !== 'function') return null;
+    const suggestion = getForecastAwareOutdoorSuggestion(habit, date, snapshot, preferenceWindows?.[habit.id]);
+    return suggestion
+      ? result(habit, suggestion.reason, suggestion.eyebrow, suggestion.detail)
+      : null;
+  };
+  const withForecastCopy = (baseResult, habit) => forecastResult(habit) || baseResult;
 
   const movement = anchoredById('beach', 'aqi-below');
 
@@ -4687,50 +4864,57 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
   const daylight = anchoredById('daylight', 'sunrise');
   if (daylight) {
     const detail = snapshot.sunrise ? `Sunrise today · ${snapshot.sunrise}` : 'Your morning light habit is still open.';
-    return result(daylight.habit, 'sunrise-light', 'Suggested now', detail);
+    return withForecastCopy(result(daylight.habit, 'sunrise-light', 'Suggested now', detail), daylight.habit);
   }
 
   if (movement && aqi !== null && aqi <= 100 && aqi <= movement.rhythm.threshold) {
     const category = getAqiCategory(aqi);
-    return result(movement.habit, 'aqi-opportunity', 'Suggested now', `${category} · AQI ${aqi}`);
+    return withForecastCopy(
+      result(movement.habit, 'aqi-opportunity', 'Suggested now', `${category} · AQI ${aqi}`),
+      movement.habit,
+    );
   }
 
   const hydration = anchoredById('hydrate', 'temp-above');
   if (hydration && feel !== null && feel > hydration.rhythm.threshold) {
-    return result(hydration.habit, 'heat-hydrate', 'Suggested now', `Feels like ${feel}°F · Extra water may help`);
+    return withForecastCopy(
+      result(hydration.habit, 'heat-hydrate', 'Suggested now', `Feels like ${feel}°F · Extra water may help`),
+      hydration.habit,
+    );
   }
 
   const sunsetHabit = eligibleHabits.find(habit => normalizeRhythmConfig(habit.rhythm)?.type === 'sunset');
   if (sunsetHabit && hour >= 16) {
     const detail = snapshot.sunset ? `Sunset today · ${snapshot.sunset}` : 'Your evening cue is still open.';
-    return result(sunsetHabit, 'sunset-rhythm', 'Suggested now', detail);
+    return withForecastCopy(result(sunsetHabit, 'sunset-rhythm', 'Suggested now', detail), sunsetHabit);
   }
 
   const idealHabit = pickPhase('ideal');
   if (idealHabit) {
     const detail = idealHabit.context?.timelyDetail || 'This is a good time for it.';
-    return result(idealHabit, 'ideal-now', 'Ideal now', detail);
+    return withForecastCopy(result(idealHabit, 'ideal-now', 'Ideal now', detail), idealHabit);
   }
 
   const flexibleHabit = pickPhase('flexible');
   if (flexibleHabit) {
     const detail = flexibleHabit.context?.flexibleDetail || 'There’s still room for this today.';
-    return result(flexibleHabit, 'still-fits', 'Still fits today', detail);
+    return withForecastCopy(result(flexibleHabit, 'still-fits', 'Still fits today', detail), flexibleHabit);
   }
 
   const lateHabit = pickPhase('late');
   if (lateHabit) {
     const eyebrow = lateHabit.context?.lateEyebrow || 'Still fits tonight';
     const detail = lateHabit.context?.lateDetail || 'A lighter version can still work tonight.';
-    return result(lateHabit, 'late-form', eyebrow, detail);
+    return withForecastCopy(result(lateHabit, 'late-form', eyebrow, detail), lateHabit);
   }
 
   const availableHabit = pickPhase('available');
   const availableContext = getEffectiveRecommendationContext(availableHabit, preferenceWindows?.[availableHabit.id]);
   const idealComesLater = Number.isInteger(availableContext?.idealStart) && minute < availableContext.idealStart;
-  return idealComesLater
+  const availableResult = idealComesLater
     ? result(availableHabit, 'available-now', 'Available now', 'It fits now, though its ideal window comes later.')
     : result(availableHabit, 'available-now', 'Your next small win', 'One open habit that fits right now.');
+  return withForecastCopy(availableResult, availableHabit);
 }
 
 function renderNextWave(now = new Date()) {
@@ -4886,9 +5070,11 @@ function renderInsights(now = new Date()) {
         forecastResult.status === 'fulfilled' ? forecastResult.value : null,
         aqiResult.status === 'fulfilled' ? aqiResult.value : null
       );
-      updateRhythmAnchors({ hourlyForecast, hourlyForecastFetchedAt: Date.now() }, now);
+      const hourlyForecastUpdate = { hourlyForecast, hourlyForecastFetchedAt: Date.now() };
+      const forecastNow = new Date();
+      updateRhythmAnchors(hourlyForecastUpdate, forecastNow);
       rhythmWeatherReadyGeneration = generation;
-      renderNextWave(now);
+      renderNextWave(forecastNow);
     });
   });
 }
@@ -8128,12 +8314,20 @@ function init() {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       const visibilityNow = new Date();
-      if (!refreshForDateRollover(visibilityNow)) renderNextWave(visibilityNow);
+      if (!refreshForDateRollover(visibilityNow)) {
+        const forecastSettled = Number.isFinite(rhythmWeatherData?.hourlyForecastFetchedAt);
+        if (forecastSettled && !isHourlyForecastFresh(rhythmWeatherData, visibilityNow)) renderInsights(visibilityNow);
+        else renderNextWave(visibilityNow);
+      }
     }
   });
   window.addEventListener('pageshow', () => {
     const pageShowNow = new Date();
-    if (!refreshForDateRollover(pageShowNow)) renderNextWave(pageShowNow);
+    if (!refreshForDateRollover(pageShowNow)) {
+      const forecastSettled = Number.isFinite(rhythmWeatherData?.hourlyForecastFetchedAt);
+      if (forecastSettled && !isHourlyForecastFresh(rhythmWeatherData, pageShowNow)) renderInsights(pageShowNow);
+      else renderNextWave(pageShowNow);
+    }
   });
 }
 

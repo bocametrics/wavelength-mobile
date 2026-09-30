@@ -6,6 +6,7 @@ const URL = process.env.WAVELENGTH_URL || `${ORIGIN}/?next-wave-context-e2e=loca
 const THEME = process.env.WAVELENGTH_THEME || 'dark';
 const TOAST_SHOT = process.env.WAVELENGTH_TOAST_SHOT || 'C:\\Temp\\wavelength-toast-dock.png';
 const CONTEXT_SHOT = process.env.WAVELENGTH_CONTEXT_SHOT || 'C:\\Temp\\wavelength-next-wave-context.png';
+const FORECAST_SHOT = process.env.WAVELENGTH_FORECAST_SHOT || 'C:\\Temp\\wavelength-next-wave-forecast.png';
 const MOBILITY_SHOT = process.env.WAVELENGTH_MOBILITY_SHOT || 'C:\\Temp\\wavelength-mobility-late.png';
 let browser;
 
@@ -24,6 +25,7 @@ let browser;
   });
 
   await page.evaluateOnNewDocument(() => {
+    window.__forecastFetchCount = 0;
     Object.defineProperty(navigator, 'geolocation', {
       configurable:true,
       value:{ getCurrentPosition(success) { success({ coords:{ latitude:26.7153, longitude:-80.0534 } }); } },
@@ -31,6 +33,7 @@ let browser;
     window.fetch = async input => {
       const url = String(input);
       if (url.includes('api.open-meteo.com/v1/forecast')) {
+        window.__forecastFetchCount += 1;
         return new Response(JSON.stringify({
           current:{ apparent_temperature:84, uv_index:1, is_day:1 },
           hourly:{
@@ -77,8 +80,10 @@ let browser;
   ], 'the browser runtime joins hourly weather and AQI by timestamp');
   assert.equal(hourlySnapshot.timezone, 'America/New_York');
   assert.ok(Number.isFinite(hourlySnapshot.fetchedAt), 'the runtime-only hourly snapshot records acquisition time');
-  assert.doesNotMatch(hourlySnapshot.visibleCopy, /rain|precipitation|better window/i,
-    'Phase 2 hourly data does not change visible Next Wave copy');
+  assert.equal(await page.evaluate(() => window.__forecastFetchCount), 1,
+    'initial pageshow recovery does not abort and duplicate the in-flight forecast request');
+  assert.doesNotMatch(hourlySnapshot.visibleCopy, /best time|it(?:'|’)s raining/i,
+    'forecast copy never overstates probability as observed rain or a universal best time');
 
   await page.evaluate(() => toggleHabit('affirm'));
   await page.waitForSelector('#toast.show');
@@ -192,6 +197,15 @@ let browser;
     const at2109 = fixed(21, 9);
     const mobilityLate = getNextWaveSuggestion(HABITS, doneFor(at2109, idsExcept(['stretch'])), {}, at2109, { isDay:0 });
     state.done[dateKey(at2000)] = Object.fromEntries(idsExcept(['beach']).map(id => [id, true]));
+    rhythmWeatherData = {
+      ...rhythmWeatherData,
+      aqi:43,
+      isDay:0,
+      sunrise:'6:58 AM',
+      sunset:'7:42 PM',
+      weatherObservedAt:at2000.getTime(),
+      aqiObservedAt:at2000.getTime(),
+    };
     renderNextWave(at2000);
     return {
       earlyEvening,
@@ -266,6 +280,102 @@ let browser;
   }));
   assert.ok(layout.documentWidth <= layout.viewportWidth, 'contextual Next Wave has no horizontal overflow');
   assert.ok(layout.actionHeight >= 40, 'View habit action retains its touch target');
+
+  const forecastResults = await page.evaluate(() => {
+    const fixed = (hour, minute = 0) => new Date(2026, 8, 30, hour, minute, 0, 0);
+    const time = hour => `2026-09-30T${String(hour).padStart(2, '0')}:00`;
+    const doneExcept = (date, openIds) => ({
+      [dateKey(date)]:Object.fromEntries(DEFAULT_HABITS
+        .filter(habit => !openIds.includes(habit.id))
+        .map(habit => [habit.id, true])),
+    });
+    const data = (now, rows, extra = {}) => ({
+      sunrise:'6:58 AM', sunset:'8:00 PM', isDay:true,
+      hourlyForecastFetchedAt:now.getTime(),
+      hourlyForecast:{
+        timezone:'America/New_York',
+        entries:rows.map(([hour, apparentTemperature, uv, precipitationProbability, isDay, aqi]) => ({
+          time:time(hour), apparentTemperature, uv, precipitationProbability, isDay, aqi,
+        })),
+      },
+      ...extra,
+    });
+
+    const movementNow = fixed(16, 7);
+    const movementData = data(movementNow, [
+      [16, 90, 2, 80, true, 43], [17, 90, 2, 80, true, 43],
+      [18, 84, 2, 30, true, 43], [19, 84, 2, 30, true, 43],
+    ], { aqi:43 });
+    const movement = getNextWaveSuggestion(
+      DEFAULT_HABITS, doneExcept(movementNow, ['beach']), {}, movementNow, movementData,
+    );
+
+    const daylightNow = fixed(7, 7);
+    const daylightData = data(daylightNow, [
+      [7, 92, 2, 20, true, 40], [8, 84, 2, 20, true, 40],
+      [9, 84, 2, 20, true, 40], [10, 84, 2, 20, true, 40],
+    ]);
+    const daylight = getNextWaveSuggestion(
+      DEFAULT_HABITS, doneExcept(daylightNow, ['daylight']), {}, daylightNow, daylightData,
+    );
+
+    const sunscreenNow = fixed(8, 7);
+    const sunscreenData = data(sunscreenNow, [
+      [8, 80, 4, 20, true, undefined],
+      [9, 81, 4, 20, true, undefined],
+      [10, 82, 4, 20, true, undefined],
+    ]);
+    const sunscreen = getNextWaveSuggestion(
+      DEFAULT_HABITS, doneExcept(sunscreenNow, ['sunscreen']), {}, sunscreenNow, sunscreenData,
+    );
+
+    state.done[dateKey(movementNow)] = doneExcept(movementNow, ['beach'])[dateKey(movementNow)];
+    state.progress[dateKey(movementNow)] = {};
+    rhythmWeatherData = movementData;
+    rhythmWeatherReadyGeneration = rhythmWeatherGeneration;
+    renderNextWave(movementNow);
+    return {
+      movement,
+      daylight,
+      sunscreen,
+      rendered:{
+        eyebrow:document.getElementById('nextWaveEyebrow').textContent,
+        title:document.getElementById('nextWaveTitle').textContent,
+        detail:document.getElementById('nextWaveDetail').textContent,
+        habitId:document.getElementById('nextWaveAction').dataset.habitId,
+        documentWidth:document.documentElement.scrollWidth,
+        viewportWidth:window.innerWidth,
+      },
+    };
+  });
+  assert.deepEqual(forecastResults.movement, {
+    habitId:'beach', category:'movement', icon:'🌊', reason:'forecast-window', eyebrow:'Better window ahead',
+    title:'Outdoor walk or movement', targetLabel:'',
+    detail:'Feels like 84°F · Rain chance 30% around 6:00 PM.', action:'View habit',
+  }, 'movement exposes the exact bounded cooler-and-drier forecast copy');
+  assert.deepEqual(forecastResults.daylight, {
+    habitId:'daylight', category:'morning', icon:'🌤️', reason:'forecast-window', eyebrow:'Better window ahead',
+    title:'Get outdoor light after waking', targetLabel:'',
+    detail:'Feels like 84°F around 8:00 AM.', action:'View habit',
+  }, 'morning light participates without losing its stable habit identity');
+  assert.deepEqual(forecastResults.sunscreen, {
+    habitId:'sunscreen', category:'hygiene', icon:'🧴', reason:'forecast-uv', eyebrow:'Suggested now',
+    title:'Sun protection before outdoor time', targetLabel:'',
+    detail:'Forecast UV 4 · Protect before going out.', action:'View habit',
+  }, 'sun protection uses hourly UV without misrepresenting its two-minute task as outdoor exposure');
+  assert.deepEqual(forecastResults.rendered, {
+    eyebrow:'Better window ahead',
+    title:'Outdoor walk or movement',
+    detail:'Feels like 84°F · Rain chance 30% around 6:00 PM.',
+    habitId:'beach',
+    documentWidth:390,
+    viewportWidth:390,
+  });
+  await page.evaluate(() => {
+    document.querySelector('.next-wave-card').scrollIntoView({ block:'center' });
+  });
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('.next-wave-card')).opacity === '1');
+  await page.screenshot({ path:FORECAST_SHOT, fullPage:false });
 
   const renderedMobility = await page.evaluate(() => {
     const at2109 = new Date(2026, 7, 31, 21, 9, 0, 0);
