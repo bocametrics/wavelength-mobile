@@ -71,10 +71,20 @@ function loadFunctions(html) {
   return context.exports;
 }
 
+const indoorMovementVersion = {
+  setting:'indoor', duration:10, conditions:{
+    dark:{ reason:'after-dark-adapt', priority:'fallback', eyebrow:'Adapt tonight', detail:'Try 10 minutes of gentle indoor movement.' },
+    'daylight-short':{ reason:'low-light-adapt', priority:'fallback', eyebrow:'Adapt tonight', detail:'Try 10 minutes of gentle indoor movement.' },
+    'poor-air-sensitive':{ reason:'aqi-adapt', priority:'environmental', eyebrow:'Adapt today', detail:'AQI {aqi} · Move indoors if you’re sensitive.' },
+    'poor-air':{ reason:'aqi-adapt', priority:'environmental', eyebrow:'Adapt today', detail:'AQI {aqi} · Move indoors today.' },
+  },
+};
+
 const baseHabits = [
   { id:'daylight', cat:'morning', icon:'🌤️', text:'Get outdoor light after waking', note:'Morning light', rhythm:{ type:'sunrise' } },
   { id:'hydrate', cat:'morning', icon:'💧', text:'Drink water', note:'Water first', measurement:'amount', target:48, step:16, unit:'oz', rhythm:{ type:'temp-above', threshold:85, note:'Drink extra water' } },
-  { id:'beach', cat:'movement', icon:'🌊', text:'Outdoor walk or movement', note:'Walk or roll', rhythm:{ type:'aqi-below', threshold:100 } },
+  { id:'beach', cat:'movement', icon:'🌊', text:'Outdoor walk or movement', note:'Walk or roll', rhythm:{ type:'aqi-below', threshold:100 },
+    context:{ setting:'outdoor', duration:20, goal:'Move every day', versions:{ indoor:indoorMovementVersion } } },
   { id:'sunscreen', cat:'hygiene', icon:'🧴', text:'Sun protection before outdoor time', note:'Protect your skin', rhythm:{ type:'uv-above', threshold:3, note:'Use sun protection' } },
   { id:'meditate', cat:'mind', icon:'🧠', text:'Meditate', note:'Breath focus' },
   { id:'winddown', cat:'evening', icon:'🌙', text:'Wind down', note:'Settle down' },

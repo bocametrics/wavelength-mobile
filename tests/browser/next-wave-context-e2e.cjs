@@ -144,12 +144,19 @@ let browser;
     const earlyEvening = getNextWaveSuggestion(DEFAULT_HABITS, doneFor(at1921, idsExcept(keepAt1921)), {}, at1921, { aqi:43, isDay:1, sunrise:'6:58 AM', sunset:'7:42 PM' });
     const at1810 = fixed(18, 10);
     const dinnerClosing = getNextWaveSuggestion(DEFAULT_HABITS, doneFor(at1810, idsExcept(['dinner','beach'])), {}, at1810, { aqi:43, isDay:1, sunrise:'6:58 AM', sunset:'7:42 PM' });
+    const poorAirDinnerClosing = getNextWaveSuggestion(DEFAULT_HABITS, doneFor(at1810, idsExcept(['dinner','beach'])), {}, at1810, { aqi:121, isDay:1, sunrise:'6:58 AM', sunset:'7:42 PM' });
+    const poorAirOnly = getNextWaveSuggestion(DEFAULT_HABITS, doneFor(at1810, idsExcept(['beach'])), {}, at1810, { aqi:121, isDay:1, sunrise:'6:58 AM', sunset:'7:42 PM' });
     const sunsetEdge = fixed(19, 21);
     const daylightClosing = getNextWaveSuggestion(DEFAULT_HABITS, doneFor(sunsetEdge, idsExcept(['beach'])), {}, sunsetEdge, { aqi:43, isDay:1, sunrise:'6:58 AM', sunset:'7:42 PM' });
     const at1930 = fixed(19, 30);
     const lowLight = getNextWaveSuggestion(DEFAULT_HABITS, doneFor(at1930, idsExcept(['beach'])), {}, at1930, { aqi:43, isDay:1, sunrise:'6:58 AM', sunset:'7:42 PM' });
     const at2000 = fixed(20);
     const afterDark = getNextWaveSuggestion(DEFAULT_HABITS, doneFor(at2000, idsExcept(['beach'])), {}, at2000, { aqi:43, isDay:0, sunrise:'6:58 AM', sunset:'7:42 PM' });
+    const beach = DEFAULT_HABITS.find(habit => habit.id === 'beach');
+    const phaseCompetitor = (id, context) => ({ id, cat:'mind', icon:'○', text:`${id} habit`, note:'Fits indoors', context });
+    const flexibleOverFallback = getNextWaveSuggestion([beach, phaseCompetitor('flexible-fit', { start:360, idealStart:420, idealEnd:720, end:1260, setting:'indoor', duration:5 })], {}, {}, at2000, { aqi:43, isDay:0 });
+    const lateOverFallback = getNextWaveSuggestion([beach, phaseCompetitor('late-fit', { start:360, idealStart:420, idealEnd:720, lateStart:1140, end:1260, setting:'indoor', duration:5 })], {}, {}, at2000, { aqi:43, isDay:0 });
+    const availableOverFallback = getNextWaveSuggestion([beach, phaseCompetitor('available-fit', { start:360, idealStart:1260, end:1320, setting:'indoor', duration:5 })], {}, {}, at2000, { aqi:43, isDay:0 });
     const at2300 = fixed(23);
     const veryLate = getNextWaveSuggestion(DEFAULT_HABITS, doneFor(at2300, idsExcept(['beach'])), {}, at2300, { aqi:43, isDay:0, sunrise:'6:58 AM', sunset:'7:42 PM' });
     const at2205 = fixed(22, 5);
@@ -163,9 +170,14 @@ let browser;
     return {
       earlyEvening,
       dinnerClosing,
+      poorAirDinnerClosing,
+      poorAirOnly,
       daylightClosing,
       lowLight,
       afterDark,
+      flexibleOverFallback,
+      lateOverFallback,
+      availableOverFallback,
       veryLate,
       missedBedtime,
       mobilityFlexible,
@@ -181,11 +193,25 @@ let browser;
   assert.equal(contextResults.earlyEvening.habitId, 'meditate', '7:21 PM excludes premature wind-down');
   assert.equal(contextResults.dinnerClosing.habitId, 'dinner');
   assert.equal(contextResults.dinnerClosing.reason, 'window-closing');
+  assert.deepEqual(contextResults.poorAirDinnerClosing, {
+    habitId:'dinner', category:'fuel', icon:'🍳', reason:'window-closing', eyebrow:'Window closing',
+    title:'Finish dinner', detail:'Your dinner window is closing.', action:'View habit', targetLabel:'',
+  }, 'a genuine closing window outranks a poor-air indoor version');
+  assert.deepEqual(contextResults.poorAirOnly, {
+    habitId:'beach', category:'movement', icon:'🌊', reason:'aqi-adapt', eyebrow:'Adapt today',
+    title:'Outdoor walk or movement', detail:'AQI 121 · Move indoors if you’re sensitive.', action:'View habit', targetLabel:'',
+  }, 'poor air resolves to the data-driven indoor version when no higher-priority action fits');
   assert.equal(contextResults.daylightClosing.reason, 'daylight-closing');
   assert.equal(contextResults.daylightClosing.detail, 'About 21 minutes of daylight remain.');
   assert.equal(contextResults.lowLight.reason, 'low-light-adapt');
   assert.equal(contextResults.afterDark.reason, 'after-dark-adapt');
   assert.equal(contextResults.afterDark.title, 'Outdoor walk or movement');
+  assert.equal(contextResults.flexibleOverFallback.habitId, 'flexible-fit');
+  assert.equal(contextResults.flexibleOverFallback.reason, 'still-fits');
+  assert.equal(contextResults.lateOverFallback.habitId, 'late-fit');
+  assert.equal(contextResults.lateOverFallback.reason, 'late-form');
+  assert.equal(contextResults.availableOverFallback.habitId, 'available-fit');
+  assert.equal(contextResults.availableOverFallback.reason, 'available-now');
   assert.equal(contextResults.veryLate.reason, 'not-timely');
   assert.equal(contextResults.veryLate.habitId, null);
   assert.equal(contextResults.missedBedtime.reason, 'not-timely');

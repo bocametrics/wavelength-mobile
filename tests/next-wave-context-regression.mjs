@@ -89,7 +89,12 @@ const contextualHabits = [
     id:'beach', cat:'movement', icon:'🌊', text:'Outdoor walk or movement', note:'Walk or roll',
     rhythm:{ type:'aqi-below', threshold:100 },
     context:{ start:390, idealStart:480, urgencyStart:1110, end:1260, setting:'outdoor', daylight:'required', duration:20,
-      goal:'Move every day', adaptations:{ afterDark:{ title:'Keep your movement habit indoors tonight.', detail:'Try 10 minutes of gentle indoor movement.' } } },
+      goal:'Move every day', versions:{ indoor:{ setting:'indoor', duration:10, conditions:{
+        dark:{ reason:'after-dark-adapt', priority:'fallback', eyebrow:'Adapt tonight', detail:'Try 10 minutes of gentle indoor movement.' },
+        'daylight-short':{ reason:'low-light-adapt', priority:'fallback', eyebrow:'Adapt tonight', detail:'Try 10 minutes of gentle indoor movement.' },
+        'poor-air-sensitive':{ reason:'aqi-adapt', priority:'environmental', eyebrow:'Adapt today', detail:'AQI {aqi} · Move indoors if you’re sensitive.' },
+        'poor-air':{ reason:'aqi-adapt', priority:'environmental', eyebrow:'Adapt today', detail:'AQI {aqi} · Move indoors today.' },
+      } } } },
   },
   {
     id:'meditate', cat:'mind', icon:'🧠', text:'Meditate', note:'Breath focus',
@@ -240,6 +245,14 @@ for (const [label, htmlPath] of builds) {
     },
     `${label}: a closing meal window outranks favorable AQI as an optional outdoor opportunity`,
   );
+  assert.deepEqual(
+    plain(getNextWaveSuggestion([contextualHabits[0], dinner], doneFor(dinnerClosing, []), {}, dinnerClosing, { aqi:121, isDay:1 })),
+    {
+      habitId:'dinner', category:'fuel', icon:'🍳', reason:'window-closing', eyebrow:'Window closing',
+      title:'Finish dinner', detail:'Your dinner window is closing.', action:'View habit', targetLabel:'',
+    },
+    `${label}: a genuine closing window outranks an environmental indoor adaptation`,
+  );
 
   const afterDark = atTime(20);
   assert.equal(
@@ -256,6 +269,20 @@ for (const [label, htmlPath] of builds) {
     },
     `${label}: an indoor version preserves the movement goal when darkness is the only blocker`,
   );
+
+  const phaseCompetitors = [
+    ['flexible', { id:'flexible-fit', context:{ start:360, idealStart:420, idealEnd:720, end:1260, setting:'indoor', duration:5 } }, 'still-fits'],
+    ['late', { id:'late-fit', context:{ start:360, idealStart:420, idealEnd:720, lateStart:1140, end:1260, setting:'indoor', duration:5 } }, 'late-form'],
+    ['available', { id:'available-fit', context:{ start:360, idealStart:1260, end:1320, setting:'indoor', duration:5 } }, 'available-now'],
+  ];
+  for (const [phase, partialHabit, expectedReason] of phaseCompetitors) {
+    const competitor = { cat:'mind', icon:'○', text:`${phase} habit`, note:'Fits indoors', ...partialHabit };
+    const suggestion = getNextWaveSuggestion([beach, competitor], doneFor(afterDark, []), {}, afterDark, { aqi:43, isDay:0 });
+    assert.equal(suggestion.habitId, competitor.id,
+      `${label}: an eligible ${phase} habit outranks a darkness fallback`);
+    assert.equal(suggestion.reason, expectedReason,
+      `${label}: the eligible ${phase} habit keeps its phase-specific framing`);
+  }
 
   const veryLate = atTime(23);
   assert.equal(
@@ -291,6 +318,22 @@ for (const [label, htmlPath] of builds) {
   const completedExcept = (date, openIds) => doneFor(date, productionHabits
     .filter(habit => !openIds.includes(habit.id))
     .map(habit => habit.id));
+
+  const poorAirSensitiveFit = getHabitRecommendationFit(productionBeach, atTime(12), { aqi:121, isDay:1 });
+  assert.equal(poorAirSensitiveFit.eligible, false,
+    `${label}: unfavorable air makes the standard outdoor version ineligible`);
+  assert.equal(poorAirSensitiveFit.reason, 'poor-air-sensitive',
+    `${label}: moderate sensitivity guidance is represented as an explicit blocker`);
+  assert.equal(poorAirSensitiveFit.aqi, 121,
+    `${label}: the blocker retains the reading needed by the adaptive version`);
+  const indoorVersion = productionBeach.context?.versions?.indoor;
+  assert.equal(indoorVersion?.setting, 'indoor', `${label}: movement declares an indoor adaptive version`);
+  assert.equal(indoorVersion?.duration, 10, `${label}: the indoor version carries its own bounded duration`);
+  assert.deepEqual(
+    Object.keys(indoorVersion?.conditions || {}).sort(),
+    ['dark','daylight-short','poor-air','poor-air-sensitive'],
+    `${label}: one data-driven version covers light and air blockers without selector-specific copy`,
+  );
 
   assert.equal(getHabitRecommendationFit(productionMobility, atTime(9), { isDay:1 }).phase, 'ideal',
     `${label}: mobility is ideal during its default preferred window`);
@@ -524,8 +567,8 @@ for (const [label, htmlPath] of builds) {
 
   assert.match(html, /id:'beach'[\s\S]{0,500}context:\{[^}]*setting:'outdoor'[^}]*daylight:'required'/,
     `${label}: the shipped outdoor habit declares setting and daylight context`);
-  assert.match(html, /id:'beach'[\s\S]{0,700}goal:'Move every day'[\s\S]{0,300}afterDark:/,
-    `${label}: the shipped movement habit separates its goal from an after-dark version`);
+  assert.match(html, /id:'beach'[\s\S]{0,700}goal:'Move every day'[\s\S]{0,500}versions:\{ indoor:/,
+    `${label}: the shipped movement habit separates its goal from a structured indoor version`);
   assert.match(html, /id:'winddown'[\s\S]{0,500}context:\{[^}]*start:1230[^}]*idealStart:1275/,
     `${label}: the shipped wind-down habit has an explicit bedtime-relative window`);
   assert.match(html, /id:'medication'[\s\S]{0,500}context:\{[^}]*recommend:false/,
