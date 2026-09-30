@@ -3989,6 +3989,18 @@ function normalizeEnvironmentalReading(value, minimum = -Infinity) {
 
 const MAX_HOURLY_FORECAST_POINTS = 50;
 
+const OPPORTUNITY_WINDOW_POLICY = Object.freeze({
+  candidateStepMinutes:15,
+  maxHorizonMinutes:180,
+  aqiSafetyCeiling:100,
+  rainSoftThreshold:50,
+  rainStrongThreshold:70,
+  rainMaterialDrop:30,
+  heatCueThreshold:85,
+  heatMaterialDrop:5,
+  uvCueThreshold:3,
+});
+
 function normalizeHourlyForecastTimestamp(value) {
   if (typeof value !== 'string') return null;
   const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):00$/);
@@ -4246,6 +4258,183 @@ function getEffectiveRecommendationContext(habit, preferenceWindow = null) {
   const [start, idealStart, idealEnd, lateStart, end] = values;
   if (!(start <= idealStart && idealStart < idealEnd && idealEnd <= lateStart && lateStart < end)) return context;
   return { ...context, start, idealStart, idealEnd, lateStart, end };
+}
+
+function evaluateOpportunityWindows(habit, now, data, preferenceWindow = null) {
+  const forecast = data && typeof data === 'object' ? data.hourlyForecast : null;
+  const timezone = typeof forecast?.timezone === 'string' && forecast.timezone ? forecast.timezone : null;
+  const emptyResult = () => ({ timezone, candidates:[], windows:[], betterWindow:null });
+  const dateMethods = ['getTime','getFullYear','getMonth','getDate','getDay','getHours','getMinutes','getSeconds','getMilliseconds'];
+  if (!now || dateMethods.some(method => typeof now[method] !== 'function') || !Number.isFinite(now.getTime()) ||
+      !forecast || !Array.isArray(forecast.entries)) return emptyResult();
+
+  const context = getEffectiveRecommendationContext(habit, preferenceWindow);
+  if (!context || context.recommend === false || context.setting !== 'outdoor' || habit?.cat !== 'movement') {
+    return emptyResult();
+  }
+  if (typeof habit.activeFrom === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(habit.activeFrom) &&
+      dateKey(now) < habit.activeFrom) return emptyResult();
+  if (Array.isArray(habit.days) && !habit.days.includes(now.getDay())) return emptyResult();
+
+  const duration = Number.isInteger(context.duration) && context.duration > 0 ? context.duration : null;
+  if (duration === null || duration > 1440) return emptyResult();
+  const eligibleStart = Number.isInteger(context.start) && context.start >= 0 && context.start <= 1440
+    ? context.start
+    : 0;
+  const eligibleEnd = Number.isInteger(context.end) && context.end >= 0 && context.end <= 1440
+    ? context.end
+    : 1440;
+  if (eligibleStart >= eligibleEnd || duration > eligibleEnd - eligibleStart) return emptyResult();
+
+  const policy = OPPORTUNITY_WINDOW_POLICY;
+  const rhythm = normalizeRhythmConfig(habit.rhythm);
+  const configuredAqiLimit = rhythm?.type === 'aqi-below' ? rhythm.threshold : policy.aqiSafetyCeiling;
+  const aqiLimit = Math.min(configuredAqiLimit, policy.aqiSafetyCeiling);
+  const day = dateKey(now);
+  const rowsByTime = new Map();
+  forecast.entries.forEach(entry => {
+    if (!entry || typeof entry !== 'object' || typeof entry.time !== 'string') return;
+    if (!entry.time.startsWith(`${day}T`) || !/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):00$/.test(entry.time)) return;
+    if (!rowsByTime.has(entry.time)) rowsByTime.set(entry.time, entry);
+  });
+
+  const parseClockMinutes = value => {
+    if (typeof value !== 'string') return null;
+    const match = value.trim().match(/^(\d{1,2}):(\d{2})\s*([AP]M)$/i);
+    if (!match) return null;
+    let hour = Number(match[1]);
+    const minute = Number(match[2]);
+    if (hour < 1 || hour > 12 || minute > 59) return null;
+    if (hour === 12) hour = 0;
+    if (match[3].toUpperCase() === 'PM') hour += 12;
+    return hour * 60 + minute;
+  };
+  const sunrise = parseClockMinutes(data.sunrise);
+  const sunset = parseClockMinutes(data.sunset);
+  const daylightRequired = context.daylight === 'required';
+  const pad = value => String(value).padStart(2, '0');
+  const timestampForMinute = minute => {
+    if (minute < 1440) return `${day}T${pad(Math.floor(minute / 60))}:${pad(minute % 60)}`;
+    const followingDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    return `${dateKey(followingDay)}T00:00`;
+  };
+  const rowsForInterval = (start, end) => {
+    const rows = [];
+    for (let hour = Math.floor(start / 60); hour <= Math.floor((end - 1) / 60); hour += 1) {
+      const row = rowsByTime.get(`${day}T${pad(hour)}:00`);
+      if (!row) return null;
+      rows.push(row);
+    }
+    return rows;
+  };
+  const maximumReading = (rows, key, minimum = -Infinity, maximum = Infinity) => {
+    const readings = rows.map(row => row[key]);
+    if (readings.some(value => typeof value !== 'number' || !Number.isFinite(value) ||
+        value < minimum || value > maximum)) return null;
+    return Math.max(...readings);
+  };
+
+  const minuteNow = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60 + now.getMilliseconds() / 60000;
+  const firstStart = Math.max(
+    Math.ceil(minuteNow / policy.candidateStepMinutes) * policy.candidateStepMinutes,
+    Math.ceil(eligibleStart / policy.candidateStepMinutes) * policy.candidateStepMinutes
+  );
+  const lastStart = Math.min(
+    minuteNow + policy.maxHorizonMinutes,
+    eligibleEnd - duration,
+    1440 - duration,
+    daylightRequired && sunset !== null ? sunset - duration : Infinity
+  );
+  const evaluated = [];
+  for (let start = firstStart; start <= lastStart; start += policy.candidateStepMinutes) {
+    const end = start + duration;
+    const rows = rowsForInterval(start, end);
+    if (!rows) continue;
+    if (daylightRequired) {
+      if (sunrise !== null && start < sunrise) continue;
+      if (sunset !== null && end > sunset) continue;
+      if (rows.some(row => row.isDay === false || row.isDay === 0)) continue;
+      if ((sunrise === null || sunset === null) &&
+          !rows.every(row => row.isDay === true || row.isDay === 1)) continue;
+    }
+
+    const apparentTemperature = maximumReading(rows, 'apparentTemperature');
+    const uv = maximumReading(rows, 'uv', 0);
+    const precipitationProbability = maximumReading(rows, 'precipitationProbability', 0, 100);
+    const aqi = maximumReading(rows, 'aqi', 0);
+    if (aqi === null) continue;
+    const publicCandidate = {
+      start:timestampForMinute(start),
+      end:timestampForMinute(end),
+      apparentTemperature,
+      uv,
+      aqi,
+      precipitationProbability,
+      rainRisk:precipitationProbability === null
+        ? null
+        : precipitationProbability >= policy.rainStrongThreshold ? 'strong'
+        : precipitationProbability >= policy.rainSoftThreshold ? 'soft' : 'none',
+      heatCue:apparentTemperature !== null && apparentTemperature > policy.heatCueThreshold,
+      uvCue:uv !== null && uv >= policy.uvCueThreshold,
+    };
+    evaluated.push({
+      startMinute:start,
+      viable:aqi <= aqiLimit,
+      candidate:publicCandidate,
+    });
+  }
+
+  const viable = evaluated.filter(item => item.viable);
+  const candidates = viable.map(item => item.candidate);
+  const windows = [];
+  viable.forEach(item => {
+    const previous = windows.at(-1);
+    if (previous && item.startMinute === previous.latestStartMinute + policy.candidateStepMinutes) {
+      previous.latestStart = item.candidate.start;
+      previous.latestStartMinute = item.startMinute;
+      previous.end = item.candidate.end;
+      return;
+    }
+    windows.push({
+      start:item.candidate.start,
+      latestStart:item.candidate.start,
+      end:item.candidate.end,
+      latestStartMinute:item.startMinute,
+    });
+  });
+  windows.forEach(window => { delete window.latestStartMinute; });
+
+  let betterWindow = null;
+  const baseline = evaluated[0];
+  if (baseline) {
+    for (const item of evaluated.slice(1)) {
+      if (!item.viable) continue;
+      const reasons = [];
+      const current = baseline.candidate;
+      const later = item.candidate;
+      if (current.apparentTemperature !== null && later.apparentTemperature !== null &&
+          current.apparentTemperature > policy.heatCueThreshold &&
+          later.apparentTemperature <= policy.heatCueThreshold &&
+          current.apparentTemperature - later.apparentTemperature >= policy.heatMaterialDrop) reasons.push('heat');
+      if (current.precipitationProbability !== null && later.precipitationProbability !== null &&
+          later.precipitationProbability < policy.rainSoftThreshold &&
+          current.precipitationProbability - later.precipitationProbability >= policy.rainMaterialDrop) reasons.push('rain');
+      if (current.aqi > aqiLimit && later.aqi <= aqiLimit) reasons.push('aqi');
+      if (reasons.length === 0) continue;
+      betterWindow = {
+        start:later.start,
+        end:later.end,
+        reasons,
+        apparentTemperature:later.apparentTemperature,
+        uv:later.uv,
+        aqi:later.aqi,
+        precipitationProbability:later.precipitationProbability,
+      };
+      break;
+    }
+  }
+
+  return { timezone, candidates, windows, betterWindow };
 }
 
 function getHabitRecommendationFit(habit, date, data, preferenceWindow = null) {
