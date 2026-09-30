@@ -3987,6 +3987,86 @@ function normalizeEnvironmentalReading(value, minimum = -Infinity) {
   return typeof value === 'number' && Number.isFinite(value) && value >= minimum ? value : null;
 }
 
+const MAX_HOURLY_FORECAST_POINTS = 50;
+
+function normalizeHourlyForecastTimestamp(value) {
+  if (typeof value !== 'string') return null;
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):00$/);
+  if (!match) return null;
+  const [, yearText, monthText, dayText, hourText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  if (month < 1 || month > 12 || hour > 23) return null;
+  const candidate = new Date(0);
+  candidate.setUTCHours(hour, 0, 0, 0);
+  candidate.setUTCFullYear(year, month - 1, day);
+  if (candidate.getUTCFullYear() !== year || candidate.getUTCMonth() !== month - 1 ||
+      candidate.getUTCDate() !== day || candidate.getUTCHours() !== hour) return null;
+  return value;
+}
+
+function normalizeHourlyForecast(weatherData, aqiData) {
+  const timezoneOf = data => typeof data?.timezone === 'string' && data.timezone ? data.timezone : null;
+  const normalizeTimes = data => {
+    const rawTimes = data?.hourly?.time;
+    if (!Array.isArray(rawTimes) || rawTimes.length === 0) return null;
+    const times = rawTimes.map(normalizeHourlyForecastTimestamp);
+    if (times.some(time => time === null) || new Set(times).size !== times.length) return null;
+    return times;
+  };
+  const normalizeChannel = (data, fields) => {
+    const timezone = timezoneOf(data);
+    const times = normalizeTimes(data);
+    if (!timezone || !times) return null;
+    const validFields = fields.map(field => ({
+      ...field,
+      values:Array.isArray(data.hourly[field.source]) && data.hourly[field.source].length === times.length
+        ? data.hourly[field.source]
+        : null,
+    }));
+    const entries = new Map();
+    times.forEach((time, index) => {
+      const entry = { time };
+      validFields.forEach(field => {
+        if (!field.values) return;
+        const value = field.normalize(field.values[index]);
+        if (value !== null) entry[field.target] = value;
+      });
+      if (Object.keys(entry).length > 1) entries.set(time, entry);
+    });
+    return entries.size > 0 ? { timezone, entries } : null;
+  };
+
+  const weatherChannel = normalizeChannel(weatherData, [
+    { source:'apparent_temperature', target:'apparentTemperature', normalize:value => normalizeEnvironmentalReading(value) },
+    { source:'uv_index', target:'uv', normalize:value => normalizeEnvironmentalReading(value, 0) },
+    { source:'is_day', target:'isDay', normalize:value => value === 1 ? true : value === 0 ? false : null },
+    { source:'precipitation_probability', target:'precipitationProbability', normalize:value => {
+      const reading = normalizeEnvironmentalReading(value, 0);
+      return reading !== null && reading <= 100 ? reading : null;
+    } },
+  ]);
+  const aqiChannel = normalizeChannel(aqiData, [
+    { source:'us_aqi', target:'aqi', normalize:value => normalizeEnvironmentalReading(value, 0) },
+  ]);
+  const timezone = weatherChannel?.timezone || aqiChannel?.timezone || null;
+  const entries = new Map();
+  [weatherChannel, aqiChannel].forEach(channel => {
+    if (!channel || channel.timezone !== timezone) return;
+    channel.entries.forEach((entry, time) => {
+      entries.set(time, { ...(entries.get(time) || { time }), ...entry });
+    });
+  });
+
+  return {
+    timezone,
+    entries:[...entries.values()].sort((a, b) => a.time.localeCompare(b.time))
+      .slice(0, MAX_HOURLY_FORECAST_POINTS),
+  };
+}
+
 function getAqiCategory(aqi) {
   if (!Number.isFinite(aqi) || aqi < 0) return '';
   if (aqi <= 50) return 'Good air quality';
@@ -4566,7 +4646,7 @@ function renderInsights(now = new Date()) {
     if (!loc) return;
     if (generation !== rhythmWeatherGeneration || activeDateKey !== dateKey(new Date())) return;
 
-    const forecastRequest = fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=apparent_temperature,uv_index,is_day&daily=sunrise,sunset&timezone=auto&temperature_unit=fahrenheit`, { signal:rhythmWeatherController.signal })
+    const forecastRequest = fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=apparent_temperature,uv_index,is_day&daily=sunrise,sunset&hourly=apparent_temperature,uv_index,is_day,precipitation_probability&forecast_days=2&timezone=auto&temperature_unit=fahrenheit`, { signal:rhythmWeatherController.signal })
       .then(r => {
         if (!r.ok) throw new Error('Forecast request failed');
         return r.json();
@@ -4590,11 +4670,12 @@ function renderInsights(now = new Date()) {
           rhythmUpdate.weatherObservedAt = Date.now();
           updateRhythmAnchors(rhythmUpdate, now);
         }
+        return d;
       })
       .catch(() => { /* Next Wave keeps its habit-based fallback. */ });
 
     // Air quality is served by Open-Meteo's separate endpoint.
-    const aqiRequest = fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${loc.lat}&longitude=${loc.lon}&current=us_aqi&timezone=auto`, { signal:rhythmWeatherController.signal })
+    const aqiRequest = fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${loc.lat}&longitude=${loc.lon}&current=us_aqi&hourly=us_aqi&forecast_days=2&timezone=auto`, { signal:rhythmWeatherController.signal })
       .then(r => {
         if (!r.ok) throw new Error('Air-quality request failed');
         return r.json();
@@ -4606,11 +4687,17 @@ function renderInsights(now = new Date()) {
           const aqiObservedAt = Date.now();
           updateRhythmAnchors({ ...rhythmWeatherData, aqi, aqiObservedAt }, now);
         }
+        return d;
       })
       .catch(() => { /* anchored cards retain the offline-safe fallback */ });
 
-    Promise.allSettled([forecastRequest, aqiRequest]).then(() => {
+    Promise.allSettled([forecastRequest, aqiRequest]).then(([forecastResult, aqiResult]) => {
       if (generation !== rhythmWeatherGeneration || activeDateKey !== dateKey(new Date())) return;
+      const hourlyForecast = normalizeHourlyForecast(
+        forecastResult.status === 'fulfilled' ? forecastResult.value : null,
+        aqiResult.status === 'fulfilled' ? aqiResult.value : null
+      );
+      updateRhythmAnchors({ hourlyForecast, hourlyForecastFetchedAt: Date.now() }, now);
       rhythmWeatherReadyGeneration = generation;
       renderNextWave(now);
     });

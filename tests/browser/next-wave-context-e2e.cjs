@@ -33,12 +33,21 @@ let browser;
       if (url.includes('api.open-meteo.com/v1/forecast')) {
         return new Response(JSON.stringify({
           current:{ apparent_temperature:84, uv_index:1, is_day:1 },
+          hourly:{
+            time:['2026-09-30T08:00','2026-09-30T09:00','2026-09-30T10:00'],
+            apparent_temperature:[80,81,82], uv_index:[1,2,3], is_day:[1,1,1],
+            precipitation_probability:[20,65,80],
+          },
           daily:{ sunrise:['2026-08-31T06:58'], sunset:['2026-08-31T19:42'] },
           timezone:'America/New_York',
         }), { status:200, headers:{ 'Content-Type':'application/json' } });
       }
       if (url.includes('air-quality-api.open-meteo.com')) {
-        return new Response(JSON.stringify({ current:{ us_aqi:43 } }), {
+        return new Response(JSON.stringify({
+          current:{ us_aqi:43 },
+          hourly:{ time:['2026-09-30T09:00','2026-09-30T08:00'], us_aqi:[55,45] },
+          timezone:'America/New_York',
+        }), {
           status:200, headers:{ 'Content-Type':'application/json' },
         });
       }
@@ -53,6 +62,23 @@ let browser;
   }, THEME);
   await page.reload({ waitUntil:'networkidle0' });
   await page.waitForSelector('.habit[data-id="affirm"]');
+  await page.waitForFunction(() => rhythmWeatherReadyGeneration === rhythmWeatherGeneration &&
+    rhythmWeatherData?.hourlyForecast?.entries?.length === 3);
+  const hourlySnapshot = await page.evaluate(() => ({
+    timezone:rhythmWeatherData.hourlyForecast.timezone,
+    entries:rhythmWeatherData.hourlyForecast.entries,
+    fetchedAt:rhythmWeatherData.hourlyForecastFetchedAt,
+    visibleCopy:document.getElementById('nextWaveDetail').textContent,
+  }));
+  assert.deepEqual(hourlySnapshot.entries, [
+    { time:'2026-09-30T08:00', apparentTemperature:80, uv:1, isDay:true, precipitationProbability:20, aqi:45 },
+    { time:'2026-09-30T09:00', apparentTemperature:81, uv:2, isDay:true, precipitationProbability:65, aqi:55 },
+    { time:'2026-09-30T10:00', apparentTemperature:82, uv:3, isDay:true, precipitationProbability:80 },
+  ], 'the browser runtime joins hourly weather and AQI by timestamp');
+  assert.equal(hourlySnapshot.timezone, 'America/New_York');
+  assert.ok(Number.isFinite(hourlySnapshot.fetchedAt), 'the runtime-only hourly snapshot records acquisition time');
+  assert.doesNotMatch(hourlySnapshot.visibleCopy, /rain|precipitation|better window/i,
+    'Phase 2 hourly data does not change visible Next Wave copy');
 
   await page.evaluate(() => toggleHabit('affirm'));
   await page.waitForSelector('#toast.show');

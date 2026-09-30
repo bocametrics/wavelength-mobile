@@ -76,6 +76,8 @@ A habit can be anchored to an environmental condition so Wavelength can surface 
 
 When live environmental data loads from Open-Meteo, `updateRhythmAnchors()` updates a small accent-colored label on each anchored card. The forecast endpoint supplies feels-like temperature, sunrise, sunset, and UV index; Open-Meteo's air-quality endpoint supplies US AQI. Live labels use a compact `reading · meaning/action` pattern, while no-data fallbacks retain the configured threshold. AQI labels name the standard US AQI category instead of narrating a numeric comparison. An optional custom action is limited to 60 characters and rejects dense comparison punctuation or phrasing; invalid local legacy notes are dropped without removing their anchor, while strict backup imports reject them. Exact former shipped notes migrate to the current concise defaults. Manage does not persist rhythm overrides that are identical to shipped defaults.
 
+Phase 2 also requests two days of hourly weather and AQI context. After both independent requests settle, Wavelength normalizes their exact local timestamps into a chronological, timezone-matched union capped at 50 entries. Each runtime entry may contain `apparentTemperature`, `uv`, `isDay`, `precipitationProbability`, and `aqi`; malformed channels, fields, or readings are dropped without discarding valid data from the other request. The snapshot carries its acquisition time in memory only, is not persisted or exported, and does not yet change Next Wave recommendations or user-facing copy.
+
 Rhythm anchors do not change streaks, daily targets, or completion logic. They remain advisory context for choosing the right form of the same intention.
 
 ### Your next wave
