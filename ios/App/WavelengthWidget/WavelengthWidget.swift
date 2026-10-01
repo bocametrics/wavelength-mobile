@@ -187,6 +187,7 @@ private struct WavelengthWidgetView: View {
                     .font(.system(size: 9, weight: .semibold))
                     .tracking(0.7)
             }
+            .frame(maxWidth: .infinity, alignment: .center)
             .foregroundStyle(accentColor)
             .widgetAccentable()
 
@@ -230,6 +231,7 @@ private struct WavelengthWidgetView: View {
                     .font(.system(size: 9, weight: .semibold))
                     .tracking(0.7)
             }
+            .frame(maxWidth: .infinity, alignment: .center)
             .foregroundStyle(accentColor)
             .widgetAccentable()
 

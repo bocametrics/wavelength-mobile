@@ -52,6 +52,8 @@ assert.doesNotMatch(widgetSource, /Text\("TODAY"\)/,
   'today is implicit in the widget and must not replace the progress meaning');
 assert.match(widgetSource, /Text\("WAVELENGTH"\)[\s\S]*?\.font\(\.system\(size:\s*9,\s*weight:\s*\.semibold\)\)/,
   'the brand label must remain visually secondary to the progress ring');
+assert.equal((widgetSource.match(/\.frame\(maxWidth:\s*\.infinity,\s*alignment:\s*\.center\)/g) || []).length, 2,
+  'the small widget brand group must be centered in progress and recovery states');
 assert.match(widgetSource, /progress\.total\s*==\s*1\s*\?\s*"habit"\s*:\s*"habits"/,
   'VoiceOver progress copy must use singular and plural habit grammar');
 assert.match(widgetSource, /Open Wavelength/,
