@@ -180,16 +180,12 @@ private struct WavelengthWidgetView: View {
 
     private func progressView(_ progress: SnapshotProgress) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 4) {
-                Image(systemName: "wave.3.right")
-                    .font(.system(size: 9, weight: .semibold))
-                Text("WAVELENGTH")
-                    .font(.system(size: 9, weight: .semibold))
-                    .tracking(0.7)
-            }
-            .frame(maxWidth: .infinity, alignment: .center)
-            .foregroundStyle(accentColor)
-            .widgetAccentable()
+            Text("TODAY’S HABITS")
+                .font(.system(size: 9, weight: .semibold))
+                .tracking(0.7)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .foregroundStyle(accentColor)
+                .widgetAccentable()
 
             Spacer(minLength: 0)
 
@@ -224,16 +220,12 @@ private struct WavelengthWidgetView: View {
 
     private var unavailableView: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 4) {
-                Image(systemName: "wave.3.right")
-                    .font(.system(size: 9, weight: .semibold))
-                Text("WAVELENGTH")
-                    .font(.system(size: 9, weight: .semibold))
-                    .tracking(0.7)
-            }
-            .frame(maxWidth: .infinity, alignment: .center)
-            .foregroundStyle(accentColor)
-            .widgetAccentable()
+            Text("TODAY’S HABITS")
+                .font(.system(size: 9, weight: .semibold))
+                .tracking(0.7)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .foregroundStyle(accentColor)
+                .widgetAccentable()
 
             Spacer()
 
