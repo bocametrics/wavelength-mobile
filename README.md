@@ -10,7 +10,7 @@ This folder is the iPhone-first, installable version of Wavelength and the sole 
 - Standalone/full-screen presentation when installed
 - Offline app shell via service worker
 - Capacitor 8 iOS shell with official Local Notifications and Geolocation bridges, a Wavelength app icon, and a branded launch screen
-- WidgetKit shared-data foundation: the native app exports a compact, versioned snapshot through `group.com.bocametrics.wavelength` using atomic App Group storage; visible widget families are the next implementation phases
+- Native WidgetKit support: the app exports a compact, versioned snapshot through `group.com.bocametrics.wavelength`, and the read-only `systemSmall` widget renders today’s completion progress from atomic App Group storage with full-color, accented/tinted, and vibrant adaptation
 - Fixed **Home / Insights / Settings** dock with iPhone safe-area clearance
 - First Name, Appearance, Backup/Share, and Import controls on the dedicated **Settings** page
 - Full-screen **Categories → Manage Category → Edit Habit** navigation, with per-habit Monday–Sunday schedules and all seven days selected by default
@@ -211,9 +211,9 @@ Reminder preference and iOS permission are device-local. They are deliberately e
 
 Inside Capacitor, Wavelength requests approximate location through the official native Geolocation bridge. This produces one Wavelength-branded iOS prompt and avoids the second `localhost` website prompt created by `navigator.geolocation` inside a web view. The browser and installed PWA retain their normal web-geolocation fallback. Denial or native failure remains location-neutral, and coordinates are not added to backups or insight evidence.
 
-The iPhone 17e simulator acceptance pass compiles and launches the app with Xcode, verifies native location context without a website prompt, and exercises real notification permission, background delivery, and tap-to-Home routing. The delivered reminder remains generic and privacy-preserving. Physical-device signing, lock-screen delivery, and TestFlight still require an Apple Developer team and an available iPhone.
+The iPhone simulator acceptance pass compiles and launches the app with Xcode, verifies native location context without a website prompt, exercises real notification permission, background delivery, and tap-to-Home routing, and confirms the embedded `WavelengthWidget` extension can read the shared App Group snapshot. The delivered reminder remains generic and privacy-preserving. Physical-device signing, lock-screen delivery, and final widget appearance acceptance remain later release gates.
 
-Wavelength does not request calendar or HealthKit access and does not include a WidgetKit extension. EventKit and a Next Wave widget remain separate privacy and Xcode milestones.
+Wavelength does not request calendar or HealthKit access. Its first WidgetKit surface is a read-only `systemSmall` progress widget; `systemMedium` Next Wave, `systemLarge` ordered habits, and App Intent interactions remain separate phases.
 
 This Windows/WSL checkout can generate and synchronize the Xcode project, run native-bridge regression coverage, and run the 390px mock-bridge browser flows in `tests/browser/native-geolocation-e2e.cjs` and `tests/browser/native-notifications-e2e.cjs`. Building and simulator testing require macOS and Xcode. Physical-device testing, archiving, and App Store submission also require Apple Developer signing.
 
