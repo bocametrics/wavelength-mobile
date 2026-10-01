@@ -1,8 +1,9 @@
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 const isNative = Capacitor.isNativePlatform();
+const WidgetSnapshot = registerPlugin('WidgetSnapshot');
 
 window.WavelengthNative = {
   isNative,
@@ -18,5 +19,8 @@ window.WavelengthNative = {
     schedule: options => LocalNotifications.schedule(options),
     cancel: options => LocalNotifications.cancel(options),
     addActionListener: callback => LocalNotifications.addListener('localNotificationActionPerformed', callback),
+  } : null,
+  widgets: isNative ? {
+    publish: options => WidgetSnapshot.publish(options),
   } : null,
 };

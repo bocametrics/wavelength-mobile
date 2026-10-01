@@ -3671,6 +3671,133 @@ function isHabitProgressComplete(habit, progress) {
   return progress >= config.target;
 }
 
+function buildWidgetSnapshot(input) {
+  const { habits, dayDone, dayProgress, order, suggestion, generatedAt, dayKey, timeZone, expiresAt, nextRefreshAt } = input;
+  const habitsById = new Map(habits.map(habit => [habit.id, habit]));
+  const seen = new Set();
+  const canonicalHabits = [...order, ...habits.map(habit => habit.id)]
+    .filter(id => habitsById.has(id) && !seen.has(id) && seen.add(id))
+    .map(id => habitsById.get(id));
+  const rows = canonicalHabits.map(habit => {
+    const config = normalizeMeasurementConfig(habit);
+    const value = getHabitProgress(dayDone, dayProgress, habit);
+    return {
+      id:habit.id,
+      icon:habit.icon,
+      title:habit.text,
+      targetLabel:habit.targetLabel,
+      complete:isHabitProgressComplete(habit, value),
+      progress:config.type === 'check' ? null : { value, target:config.target, unit:config.unit },
+    };
+  });
+  const completed = rows.filter(row => row.complete).length;
+  return {
+    schemaVersion:1,
+    revision:Date.parse(generatedAt),
+    generatedAt,
+    dayKey,
+    timeZone,
+    expiresAt,
+    nextRefreshAt,
+    progress:{ completed, total:rows.length },
+    nextWave:{
+      state:suggestion.state,
+      eyebrow:suggestion.eyebrow,
+      habitId:suggestion.habitId,
+      title:suggestion.title,
+      targetLabel:suggestion.targetLabel,
+      detail:suggestion.detail,
+      freshUntil:suggestion.freshUntil,
+    },
+    habits:[
+      ...rows.filter(row => !row.complete),
+      ...rows.filter(row => row.complete),
+    ],
+  };
+}
+
+function getWidgetSnapshotExpiry(now) {
+  const expiry = new Date(now.getTime());
+  expiry.setHours(24, 0, 0, 0);
+  return expiry.toISOString();
+}
+
+function getWidgetSuggestionFreshUntil(suggestion, data, expiresAt, nextRefreshAt) {
+  const deadlines = [Date.parse(expiresAt), Date.parse(nextRefreshAt)].filter(Number.isFinite);
+  const forecastAcquiredAt = suggestion?.forecastEvidence?.acquiredAt;
+  if (Number.isFinite(forecastAcquiredAt)) deadlines.push(forecastAcquiredAt + FORECAST_COPY_MAX_AGE_MS);
+  const observedAtByReason = {
+    'aqi-adapt':data?.aqiObservedAt,
+    'aqi-opportunity':data?.aqiObservedAt,
+    'uv-protect':data?.weatherObservedAt,
+    'sunrise-light':data?.weatherObservedAt,
+    'heat-hydrate':data?.weatherObservedAt,
+    'sunset-rhythm':data?.weatherObservedAt,
+  };
+  const observedAt = observedAtByReason[suggestion?.reason];
+  if (Number.isFinite(observedAt)) deadlines.push(observedAt + FORECAST_COPY_MAX_AGE_MS);
+  return new Date(Math.min(...deadlines)).toISOString();
+}
+
+function getWidgetTransientCueDeadline(now, completionCue, progressCue) {
+  const nowMs = now?.getTime?.();
+  if (!Number.isFinite(nowMs)) return null;
+  const key = dateKey(now);
+  const deadlines = [];
+  const completionAt = completionCue?.completedAt;
+  const completionAge = nowMs - completionAt;
+  if (completionCue?.dateKey === key && typeof completionCue?.habitId === 'string' && completionCue.habitId &&
+      Number.isFinite(completionAt) && completionAge >= 0 && completionAge <= COMPLETION_CUE_WINDOW_MS) {
+    deadlines.push(completionAt + COMPLETION_CUE_WINDOW_MS);
+  }
+  const progressAt = progressCue?.actedAt;
+  const progressWindowMs = 60 * 60 * 1000;
+  const progressAge = nowMs - progressAt;
+  if (progressCue?.dateKey === key && typeof progressCue?.habitId === 'string' && progressCue.habitId &&
+      Number.isFinite(progressAt) && progressAge >= 0 && progressAge <= progressWindowMs) {
+    deadlines.push(progressAt + progressWindowMs);
+  }
+  return deadlines.length ? Math.min(...deadlines) : null;
+}
+
+function publishWidgetSnapshot(now, suggestion, nativeBridge = window.WavelengthNative) {
+  const widgets = nativeBridge?.isNative ? nativeBridge.widgets : null;
+  if (!widgets || typeof widgets.publish !== 'function') return null;
+  const key = dateKey(now);
+  const scheduledHabits = getScheduledHabits(HABITS, now);
+  const expiresAt = getWidgetSnapshotExpiry(now);
+  const refreshDelay = getNextWaveRefreshDelay(HABITS, now, rhythmWeatherData, getPreferenceWindowsMap(HABITS));
+  const refreshAt = Number.isFinite(refreshDelay) ? now.getTime() + Math.max(0, refreshDelay) : Date.parse(expiresAt);
+  const transientCueDeadline = getWidgetTransientCueDeadline(now, recentCompletionCue, recentNextWaveProgressCue);
+  const refreshDeadlines = [refreshAt, Date.parse(expiresAt), transientCueDeadline].filter(Number.isFinite);
+  const nextRefreshAt = new Date(Math.min(...refreshDeadlines)).toISOString();
+  let timeZone = '';
+  try { timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
+  const widgetSuggestion = {
+    state:suggestion.reason || 'none',
+    eyebrow:suggestion.eyebrow || '',
+    habitId:suggestion.habitId || '',
+    title:suggestion.title || '',
+    targetLabel:suggestion.targetLabel || '',
+    detail:suggestion.detail || '',
+    freshUntil:getWidgetSuggestionFreshUntil(suggestion, rhythmWeatherData, expiresAt, nextRefreshAt),
+  };
+  const snapshot = buildWidgetSnapshot({
+    habits:scheduledHabits,
+    dayDone:state.done?.[key] || {},
+    dayProgress:state.progress?.[key] || {},
+    order:userOrder,
+    suggestion:widgetSuggestion,
+    generatedAt:now.toISOString(),
+    dayKey:key,
+    timeZone,
+    expiresAt,
+    nextRefreshAt,
+  });
+  Promise.resolve(widgets.publish(snapshot)).catch(() => {});
+  return snapshot;
+}
+
 function updateMeasuredHabitState(doneByDate, progressByDate, habits, date, id, direction) {
   const habit = habits.find(item => item.id === id);
   if (!habit || normalizeMeasurementConfig(habit).type === 'check') return null;
@@ -5032,6 +5159,7 @@ function renderNextWave(now = new Date()) {
     saveInsightHistory(now);
     renderAdaptiveInsights(now);
   }
+  publishWidgetSnapshot(now, suggestion);
   scheduleNextWaveContextRefresh(now);
 }
 

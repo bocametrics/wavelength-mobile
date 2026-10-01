@@ -10,6 +10,7 @@ This folder is the iPhone-first, installable version of Wavelength and the sole 
 - Standalone/full-screen presentation when installed
 - Offline app shell via service worker
 - Capacitor 8 iOS shell with official Local Notifications and Geolocation bridges, a Wavelength app icon, and a branded launch screen
+- WidgetKit shared-data foundation: the native app exports a compact, versioned snapshot through `group.com.bocametrics.wavelength` using atomic App Group storage; visible widget families are the next implementation phases
 - Fixed **Home / Insights / Settings** dock with iPhone safe-area clearance
 - First Name, Appearance, Backup/Share, and Import controls on the dedicated **Settings** page
 - Full-screen **Categories → Manage Category → Edit Habit** navigation, with per-habit Monday–Sunday schedules and all seven days selected by default
