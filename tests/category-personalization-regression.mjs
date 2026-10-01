@@ -281,8 +281,8 @@ for (const [label, htmlPath] of builds) {
     `${label}: runtime category state loads independently of habit overrides`);
   assert.match(html, /HABITS = applyCategoryStateToHabits\(buildRuntimeHabits\(DEFAULT_HABITS, overrides \|\| \{\}\), categoryState\);/,
     `${label}: runtime habits receive navigation assignments after habit/context construction`);
-  assert.match(html, /const BACKUP_VERSION = 7;/,
-    `${label}: portable backups advance to schema v7 for arbitrary category emoji`);
+  assert.match(html, /const BACKUP_VERSION = 8;/,
+    `${label}: portable backup schema v8 retains arbitrary category emoji`);
   assert.match(html, /categoryState:normalizeCategoryState\(categoryState, DEFAULT_HABITS, true\)/,
     `${label}: v7 backups contain one normalized category document`);
   assert.match(html, /payload\.version >= 6 && !payload\.categoryState/,

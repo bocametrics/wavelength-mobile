@@ -377,6 +377,121 @@ let browser;
   await page.waitForFunction(() => getComputedStyle(document.querySelector('.next-wave-card')).opacity === '1');
   await page.screenshot({ path:FORECAST_SHOT, fullPage:false });
 
+  const habitCardForecast = await page.evaluate(() => {
+    const now = new Date(2026, 8, 30, 16, 7, 0, 0);
+    const key = dateKey(now);
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const beach = HABITS.find(habit => habit.id === 'beach');
+    const sunscreen = HABITS.find(habit => habit.id === 'sunscreen');
+    const cardio = HABITS.find(habit => habit.id === 'cardio');
+    const originalCardioRhythm = cardio.rhythm;
+    currentCat = 'all';
+    document.querySelectorAll('.cat-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.cat === 'all'));
+    state.done[key] = {};
+    state.progress[key] = {};
+    const makeData = ({ currentRain = 60, laterRain = currentRain, observedAqi = 31,
+      forecastAqi = 31, fetchedAt = now.getTime(), forecastTimezone = timezone,
+      includeForecastAqi = true } = {}) => ({
+      aqi:observedAqi,
+      uv:4,
+      isDay:true,
+      sunrise:'6:58 AM',
+      sunset:'8:00 PM',
+      weatherObservedAt:now.getTime(),
+      aqiObservedAt:now.getTime(),
+      hourlyForecastFetchedAt:fetchedAt,
+      hourlyForecast:{
+        timezone:forecastTimezone,
+        entries:[16,17,18,19].map(hour => ({
+          time:`2026-09-30T${String(hour).padStart(2, '0')}:00`,
+          apparentTemperature:80,
+          uv:4,
+          isDay:true,
+          precipitationProbability:hour < 18 ? currentRain : laterRain,
+          ...(includeForecastAqi ? { aqi:forecastAqi } : {}),
+        })),
+      },
+    });
+    const capture = (data, id = 'beach') => {
+      rhythmWeatherData = data;
+      rhythmWeatherReadyGeneration = rhythmWeatherGeneration;
+      renderHabits(now);
+      const card = document.querySelector(`.habit[data-id="${id}"]`);
+      const anchor = card?.querySelector('.rhythm-anchor-label');
+      return {
+        text:anchor?.textContent || '',
+        ariaLabel:anchor?.getAttribute('aria-label') || '',
+        cardHeight:card ? Math.round(card.getBoundingClientRect().height) : null,
+        anchorFits:!!anchor && anchor.scrollWidth <= anchor.clientWidth,
+        allCardHeights:[...document.querySelectorAll('.habit')]
+          .map(element => Math.round(element.getBoundingClientRect().height)),
+        documentWidth:document.documentElement.scrollWidth,
+        viewportWidth:innerWidth,
+      };
+    };
+
+    const rain60 = capture(makeData({ currentRain:60 }));
+    const rain90 = capture(makeData({ currentRain:90 }));
+    const belowThreshold = capture(makeData({ currentRain:49 }));
+    const unsafeAqi = capture(makeData({ currentRain:90, observedAqi:121 }));
+    const sunscreenOnly = capture(makeData({ currentRain:90 }), sunscreen.id);
+    cardio.rhythm = { type:'aqi-below', threshold:100 };
+    const eitherSetting = capture(makeData({ currentRain:90 }), cardio.id);
+    cardio.rhythm = originalCardioRhythm;
+    const expired = capture(makeData({ currentRain:90, fetchedAt:now.getTime() - FORECAST_COPY_MAX_AGE_MS - 1 }));
+    const future = capture(makeData({ currentRain:90, fetchedAt:now.getTime() + 1 }));
+    const timezoneMismatch = capture(makeData({ currentRain:90, forecastTimezone:`${timezone}-mismatch` }));
+    const missingAqi = capture(makeData({ currentRain:90, includeForecastAqi:false }));
+    const drierLater = capture(makeData({ currentRain:90, laterRain:30 }));
+    return {
+      rain60, rain90, belowThreshold, unsafeAqi, sunscreenOnly, eitherSetting,
+      expired, future, timezoneMismatch, missingAqi, drierLater,
+      resolverIdentity:{ beach:beach.id, sunscreen:sunscreen.id, cardio:cardio.id },
+    };
+  });
+  const compact = result => ({ text:result.text, ariaLabel:result.ariaLabel });
+  assert.deepEqual(compact(habitCardForecast.rain60), {
+    text:'AQI 31 · Rain 60%', ariaLabel:'AQI 31 · Rain chance 60%',
+  }, 'safe observed air plus a full-duration 60% rain forecast renders compact probability-honest copy');
+  assert.deepEqual(compact(habitCardForecast.rain90), {
+    text:'AQI 31 · Rain 90%', ariaLabel:'AQI 31 · Rain chance 90%',
+  }, 'safe observed air plus a full-duration 90% rain forecast renders compact probability-honest copy');
+  assert.deepEqual(compact(habitCardForecast.belowThreshold), {
+    text:'🍃 AQI 31 · Good air quality', ariaLabel:'🍃 AQI 31 · Good air quality',
+  }, 'rain below 50% falls back to the observed good-AQI anchor');
+  assert.deepEqual(compact(habitCardForecast.unsafeAqi), {
+    text:'AQI 121 · Unhealthy for sensitive groups', ariaLabel:'AQI 121 · Unhealthy for sensitive groups',
+  }, 'unsafe observed AQI suppresses rain context');
+  assert.deepEqual(compact(habitCardForecast.sunscreenOnly), {
+    text:'☀️ UV 4 · Use sun protection', ariaLabel:'☀️ UV 4 · Use sun protection',
+  }, 'sun protection remains UV-only');
+  assert.deepEqual(compact(habitCardForecast.eitherSetting), {
+    text:'🍃 AQI 31 · Good air quality', ariaLabel:'🍃 AQI 31 · Good air quality',
+  }, 'Cardio with an either setting never receives outdoor rain copy');
+  for (const name of ['expired','future','timezoneMismatch','missingAqi']) {
+    assert.deepEqual(compact(habitCardForecast[name]), {
+      text:'🍃 AQI 31 · Good air quality', ariaLabel:'🍃 AQI 31 · Good air quality',
+    }, `${name} forecast evidence reverts the rendered card to observed AQI copy`);
+  }
+  assert.deepEqual(compact(habitCardForecast.drierLater), {
+    text:'AQI 31 · Rain 30% 6:00 PM',
+    ariaLabel:'AQI 31 · Rain chance drops to 30% around 6:00 PM',
+  }, 'a materially drier later window fits in the compact anchor while preserving probability language');
+  for (const [name, result] of Object.entries(habitCardForecast)) {
+    if (!result || !Array.isArray(result.allCardHeights)) continue;
+    assert.ok(result.allCardHeights.every(height => height === 104), `${name}: ${JSON.stringify(result.allCardHeights)}`);
+    assert.equal(result.cardHeight, 104, `${name} card remains 104px tall`);
+    assert.equal(result.anchorFits, true, `${name} anchor does not overflow its card`);
+    assert.ok(result.documentWidth <= result.viewportWidth, `${name} introduces no horizontal overflow`);
+  }
+  assert.doesNotMatch([
+    habitCardForecast.rain60.text,
+    habitCardForecast.rain90.text,
+    habitCardForecast.drierLater.text,
+    habitCardForecast.drierLater.ariaLabel,
+  ].join(' '), /(?:it(?:'|’)s|will be) raining|rain-free|dry weather/i,
+  'rendered rain copy remains probability-honest');
+
   const renderedMobility = await page.evaluate(() => {
     const at2109 = new Date(2026, 7, 31, 21, 9, 0, 0);
     const key = dateKey(at2109);

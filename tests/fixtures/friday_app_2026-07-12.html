@@ -115,6 +115,10 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     --dock-space: 82px;
   }
 
+  html[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
   html[data-theme="light"] {
     color-scheme: light;
     --bg: #f3f7f8;
@@ -3988,7 +3992,9 @@ function normalizeEnvironmentalReading(value, minimum = -Infinity) {
 }
 
 const MAX_HOURLY_FORECAST_POINTS = 50;
+const ENVIRONMENT_SOFT_REFRESH_MS = 30 * 60 * 1000;
 const FORECAST_COPY_MAX_AGE_MS = 90 * 60 * 1000;
+const ENVIRONMENT_REQUEST_TIMEOUT_MS = 15000;
 
 const OPPORTUNITY_WINDOW_POLICY = Object.freeze({
   candidateStepMinutes:15,
@@ -4127,6 +4133,7 @@ function getDailyHabitStats(doneByDate, habits, date, baseTarget = 5, progressBy
 const LOC_CACHE_KEY = 'wavelength_loc';
 const LOC_CACHE_TTL = 7 * 86400000; // re-ask geolocation at most weekly
 
+
 function normalizeLocation(loc) {
   if (!loc || typeof loc !== 'object') return null;
   const lat = loc.lat;
@@ -4154,6 +4161,7 @@ function cacheLoc(loc) {
 // Resolve one coordinate snapshot without crossing native and browser permission models.
 async function getCurrentCoordinates(nativeBridge = window.WavelengthNative, browserGeolocation = navigator.geolocation) {
   if (nativeBridge?.isNative) {
+    if (getCurrentCoordinates.nativePermissionDenied === true) return null;
     const geolocation = nativeBridge.geolocation;
     if (!geolocation) return null;
     try {
@@ -4162,7 +4170,10 @@ async function getCurrentCoordinates(nativeBridge = window.WavelengthNative, bro
       if (!granted(permission)) {
         permission = await geolocation.requestPermissions({ permissions:['coarseLocation'] });
       }
-      if (!granted(permission)) return null;
+      if (!granted(permission)) {
+        getCurrentCoordinates.nativePermissionDenied = true;
+        return null;
+      }
       const position = await geolocation.getCurrentPosition({
         enableHighAccuracy:false,
         timeout:6000,
@@ -4174,6 +4185,7 @@ async function getCurrentCoordinates(nativeBridge = window.WavelengthNative, bro
     }
   }
   return new Promise(resolve => {
+    if (getCurrentCoordinates.browserPermissionDenied === true) { resolve(null); return; }
     if (!browserGeolocation) { resolve(null); return; }
     try {
       browserGeolocation.getCurrentPosition(
@@ -4182,7 +4194,10 @@ async function getCurrentCoordinates(nativeBridge = window.WavelengthNative, bro
           lon:position?.coords?.longitude,
           city:'',
         })),
-        () => resolve(null),
+        error => {
+          if (error && error.code === error.PERMISSION_DENIED) getCurrentCoordinates.browserPermissionDenied = true;
+          resolve(null);
+        },
         { timeout:6000, maximumAge:300000 }
       );
     } catch (e) {
@@ -4197,7 +4212,9 @@ function getLocation() {
   if (cached) return Promise.resolve(cached);
   return getCurrentCoordinates().then(coordinates => {
     if (!coordinates) return null;
-    return fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coordinates.lat}&longitude=${coordinates.lon}&localityLanguage=en`)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), ENVIRONMENT_REQUEST_TIMEOUT_MS);
+    return fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coordinates.lat}&longitude=${coordinates.lon}&localityLanguage=en`, { signal:controller.signal })
       .then(response => {
         if (!response.ok) throw new Error('Reverse-geocode request failed');
         return response.json();
@@ -4211,7 +4228,8 @@ function getLocation() {
       .catch(() => {
         cacheLoc(coordinates);
         return coordinates;
-      });
+      })
+      .finally(() => clearTimeout(timeoutId));
   });
 }
 
@@ -4435,7 +4453,12 @@ function evaluateOpportunityWindows(habit, now, data, preferenceWindow = null) {
     }
   }
 
-  return { timezone, candidates, windows, betterWindow };
+  const result = { timezone, candidates, windows, betterWindow };
+  Object.defineProperty(result, 'baselineCandidate', {
+    value:evaluated.length > 0 ? evaluated[0].candidate : null,
+    enumerable:false,
+  });
+  return result;
 }
 
 function isHourlyForecastFresh(data, now) {
@@ -4498,6 +4521,53 @@ function getForecastAwareOutdoorSuggestion(habit, now, data, preferenceWindow = 
   const day = dateKey(now);
   const pad = value => String(value).padStart(2, '0');
   const rhythm = normalizeRhythmConfig(habit.rhythm);
+  const readingsFor = (candidate, reasons) => {
+    const readings = {};
+    if (reasons.includes('rain') && Number.isFinite(candidate?.precipitationProbability)) readings.precipitationProbability = candidate.precipitationProbability;
+    if (reasons.includes('heat') && Number.isFinite(candidate?.apparentTemperature)) readings.apparentTemperature = candidate.apparentTemperature;
+    if (reasons.includes('uv') && Number.isFinite(candidate?.uv)) readings.uv = candidate.uv;
+    if (reasons.includes('aqi') && Number.isFinite(candidate?.aqi)) readings.aqi = candidate.aqi;
+    return readings;
+  };
+  const limitsFor = reasons => {
+    const limits = Object.create(Object.getPrototypeOf(habit));
+    if (reasons.includes('rain')) {
+      limits.rainSoftThreshold = OPPORTUNITY_WINDOW_POLICY.rainSoftThreshold;
+      limits.rainStrongThreshold = OPPORTUNITY_WINDOW_POLICY.rainStrongThreshold;
+      limits.rainMaterialDrop = OPPORTUNITY_WINDOW_POLICY.rainMaterialDrop;
+    }
+    if (reasons.includes('heat')) {
+      limits.heatCueThreshold = OPPORTUNITY_WINDOW_POLICY.heatCueThreshold;
+      limits.heatMaterialDrop = OPPORTUNITY_WINDOW_POLICY.heatMaterialDrop;
+    }
+    if (reasons.includes('uv')) limits.uvCueThreshold = rhythm?.threshold ?? OPPORTUNITY_WINDOW_POLICY.uvCueThreshold;
+    if (reasons.includes('aqi')) {
+      const configuredLimit = rhythm?.type === 'aqi-below'
+        ? rhythm.threshold
+        : OPPORTUNITY_WINDOW_POLICY.aqiSafetyCeiling;
+      limits.aqiSafetyCeiling = Math.min(configuredLimit, OPPORTUNITY_WINDOW_POLICY.aqiSafetyCeiling);
+    }
+    return limits;
+  };
+  const withEvidence = (suggestion, kind, reasons, candidate, baseline = null) => {
+    const sources = {};
+    if (reasons.some(reason => ['rain','heat','uv'].includes(reason))) sources.weather = 'open-meteo';
+    if (reasons.includes('aqi')) sources.aqi = 'open-meteo';
+    const forecastEvidence = {
+      acquiredAt:data.hourlyForecastFetchedAt,
+      timezone:forecast.timezone,
+      policyVersion:1,
+      kind,
+      ...(baseline ? { baseline:{ start:baseline.start, end:baseline.end, readings:readingsFor(baseline, reasons) } } : {}),
+      candidate:{ start:candidate.start, end:candidate.end, readings:readingsFor(candidate, reasons) },
+      materialReasons:[...reasons],
+      limits:limitsFor(reasons),
+      sources,
+    };
+    Object.defineProperty(suggestion, 'habitId', { value:habit.id, enumerable:false });
+    Object.defineProperty(suggestion, 'forecastEvidence', { value:forecastEvidence, enumerable:false });
+    return suggestion;
+  };
 
   // Sun protection is a two-minute protection task, not outdoor exposure.
   // It may use weather-only hourly UV and is never deferred to a later window.
@@ -4506,11 +4576,13 @@ function getForecastAwareOutdoorSuggestion(habit, now, data, preferenceWindow = 
     const current = forecast.entries.find(entry => entry && entry.time === currentHour);
     const threshold = rhythm?.type === 'uv-above' ? rhythm.threshold : OPPORTUNITY_WINDOW_POLICY.uvCueThreshold;
     if (current && Number.isFinite(current.uv) && current.uv >= threshold) {
-      return {
+      const endMinute = Math.min(59, context.duration || 2);
+      const candidate = { start:current.time, end:`${day}T${pad(now.getHours())}:${pad(endMinute)}`, uv:current.uv };
+      return withEvidence({
         reason:'forecast-uv',
         eyebrow:'Suggested now',
         detail:`Forecast UV ${current.uv} · Protect before going out.`,
-      };
+      }, 'hour', ['uv'], candidate);
     }
     return null;
   }
@@ -4538,7 +4610,10 @@ function getForecastAwareOutdoorSuggestion(habit, now, data, preferenceWindow = 
       } else if (better.reasons.includes('aqi')) {
         detail = `Air may be more favorable around ${betterClock}.`;
       }
-      return { reason:'forecast-window', eyebrow:'Better window ahead', detail };
+      const baseline = evaluation.baselineCandidate;
+      if (!baseline) return null;
+      return withEvidence({ reason:'forecast-window', eyebrow:'Better window ahead', detail },
+        'comparison', better.reasons, better, baseline);
     }
   }
 
@@ -4551,34 +4626,34 @@ function getForecastAwareOutdoorSuggestion(habit, now, data, preferenceWindow = 
   });
   if (!current) return null;
   if (current.heatCue && (current.rainRisk === 'soft' || current.rainRisk === 'strong')) {
-    return {
+    return withEvidence({
       reason:'forecast-conditions', eyebrow:'Suggested now',
       detail:`Feels like ${current.apparentTemperature}°F · Rain chance ${current.precipitationProbability}%.`,
-    };
+    }, 'interval', ['heat','rain'], current);
   }
   if (current.rainRisk === 'strong') {
-    return {
+    return withEvidence({
       reason:'forecast-conditions', eyebrow:'Suggested now',
       detail:`Rain chance ${current.precipitationProbability}% · Keep plans flexible.`,
-    };
+    }, 'interval', ['rain'], current);
   }
   if (current.rainRisk === 'soft') {
-    return {
+    return withEvidence({
       reason:'forecast-conditions', eyebrow:'Suggested now',
       detail:`Rain chance ${current.precipitationProbability}%`,
-    };
+    }, 'interval', ['rain'], current);
   }
   if (current.heatCue) {
-    return {
+    return withEvidence({
       reason:'forecast-conditions', eyebrow:'Suggested now',
       detail:`Feels like ${current.apparentTemperature}°F · ${habit.id === 'daylight' ? 'Keep it brief.' : 'Keep it easy.'}`,
-    };
+    }, 'interval', ['heat'], current);
   }
   if (current.uvCue) {
-    return {
+    return withEvidence({
       reason:'forecast-conditions', eyebrow:'Suggested now',
       detail:`UV ${current.uv} · Protection still matters.`,
-    };
+    }, 'interval', ['uv'], current);
   }
   return null;
 }
@@ -4698,6 +4773,8 @@ function getNextWaveRefreshDelay(habits, date, data, preferenceWindows = null) {
     const stepMs = OPPORTUNITY_WINDOW_POLICY.candidateStepMinutes * 60000;
     const nextCandidateBoundary = (Math.floor(elapsedMs / stepMs) + 1) * stepMs;
     if (nextCandidateBoundary <= 24 * 60 * 60000) delays.push(nextCandidateBoundary - elapsedMs + 50);
+    const softRefreshRemaining = snapshot.hourlyForecastFetchedAt + ENVIRONMENT_SOFT_REFRESH_MS - date.getTime();
+    delays.push(Math.max(50, softRefreshRemaining + 50));
     const freshnessRemaining = snapshot.hourlyForecastFetchedAt + FORECAST_COPY_MAX_AGE_MS - date.getTime();
     delays.push(Math.max(50, freshnessRemaining + 50));
   }
@@ -4714,9 +4791,15 @@ function scheduleNextWaveContextRefresh(now = new Date()) {
   nextWaveContextTimer = setTimeout(() => {
     const refreshNow = new Date();
     nextWaveContextTimer = null;
-    const forecastSettled = Number.isFinite(rhythmWeatherData?.hourlyForecastFetchedAt);
-    if (forecastSettled && !isHourlyForecastFresh(rhythmWeatherData, refreshNow)) renderInsights(refreshNow);
-    else renderNextWave(refreshNow);
+    if (shouldRefreshEnvironmentalData(
+      rhythmWeatherData, refreshNow, rhythmWeatherReadyGeneration, rhythmWeatherGeneration
+    )) {
+      if (typeof refreshRhythmAnchorLabels === 'function') refreshRhythmAnchorLabels(refreshNow);
+      renderInsights(refreshNow);
+    } else {
+      updateRhythmAnchors({}, refreshNow);
+      renderNextWave(refreshNow);
+    }
   }, delay);
 }
 
@@ -4848,9 +4931,12 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
   const forecastResult = habit => {
     if (!habit || typeof getForecastAwareOutdoorSuggestion !== 'function') return null;
     const suggestion = getForecastAwareOutdoorSuggestion(habit, date, snapshot, preferenceWindows?.[habit.id]);
-    return suggestion
-      ? result(habit, suggestion.reason, suggestion.eyebrow, suggestion.detail)
-      : null;
+    if (!suggestion) return null;
+    const visible = result(habit, suggestion.reason, suggestion.eyebrow, suggestion.detail);
+    if (suggestion.forecastEvidence) {
+      Object.defineProperty(visible, 'forecastEvidence', { value:suggestion.forecastEvidence, enumerable:false });
+    }
+    return visible;
   };
   const withForecastCopy = (baseResult, habit) => forecastResult(habit) || baseResult;
 
@@ -4977,6 +5063,8 @@ let rhythmWeatherData = null;
 let rhythmWeatherGeneration = 0;
 let rhythmWeatherReadyGeneration = -1;
 let rhythmWeatherController = null;
+let rhythmWeatherRefreshPromise = null;
+let environmentLifecycleRefreshAt = 0;
 let nextWaveContextTimer = null;
 let nextWaveFocusCue = null;
 let recentNextWaveProgressCue = null;
@@ -5007,76 +5095,106 @@ function setRecentCompletionCue(habitId, now = new Date()) {
   return true;
 }
 
+function shouldRefreshEnvironmentalData(data, now, readyGeneration, generation) {
+  if (readyGeneration !== generation) return true;
+  if (!data || typeof data !== 'object' || Number.isFinite(data.refreshFailedAt)) return true;
+  const forecast = data.hourlyForecast;
+  const fetchedAt = data.hourlyForecastFetchedAt;
+  if (!forecast || !Array.isArray(forecast.entries) || forecast.entries.length === 0 ||
+      !Number.isFinite(fetchedAt) || !now || typeof now.getTime !== 'function') return true;
+  const age = now.getTime() - fetchedAt;
+  return age < 0 || age >= ENVIRONMENT_SOFT_REFRESH_MS;
+}
+
+function claimEnvironmentalLifecycleRefresh(now) {
+  if (now.getTime() - environmentLifecycleRefreshAt <= 1000) return false;
+  environmentLifecycleRefreshAt = now.getTime();
+  return true;
+}
+
 function renderInsights(now = new Date()) {
-  rhythmWeatherController?.abort();
-  rhythmWeatherController = new AbortController();
-  rhythmWeatherData = null;
+  if (rhythmWeatherRefreshPromise) return rhythmWeatherRefreshPromise;
   const generation = ++rhythmWeatherGeneration;
   const activeDateKey = dateKey(now);
   rhythmWeatherReadyGeneration = -1;
+  rhythmWeatherController = new AbortController();
+  const timeoutId = setTimeout(() => rhythmWeatherController.abort(), ENVIRONMENT_REQUEST_TIMEOUT_MS);
+  refreshRhythmAnchorLabels(now);
   renderNextWave(now);
-  getLocation().then(loc => {
-    if (!loc) return;
-    if (generation !== rhythmWeatherGeneration || activeDateKey !== dateKey(new Date())) return;
 
-    const forecastRequest = fetch(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=apparent_temperature,uv_index,is_day&daily=sunrise,sunset&hourly=apparent_temperature,uv_index,is_day,precipitation_probability&forecast_days=2&timezone=auto&temperature_unit=fahrenheit`, { signal:rhythmWeatherController.signal })
-      .then(r => {
-        if (!r.ok) throw new Error('Forecast request failed');
-        return r.json();
-      })
-      .then(d => {
-        if (generation !== rhythmWeatherGeneration || activeDateKey !== dateKey(new Date())) return;
-        if (!d) return;
-        const current = d.current || {};
-        const feel = normalizeEnvironmentalReading(current.apparent_temperature);
-        const uv = normalizeEnvironmentalReading(current.uv_index);
-        const isDay = current.is_day === 1 ? true : current.is_day === 0 ? false : null;
-        const sunrise = d.daily && d.daily.sunrise && d.daily.sunrise[0] ? fmtClock(d.daily.sunrise[0]) : '';
-        const sunset = d.daily && d.daily.sunset && d.daily.sunset[0] ? fmtClock(d.daily.sunset[0]) : '';
+  const refreshPromise = (async () => {
+    try {
+      const loc = await getLocation();
+      if (generation !== rhythmWeatherGeneration || activeDateKey !== dateKey(new Date())) return;
+      if (!loc) throw new Error('Location unavailable');
+      const requestJson = async url => {
+        const response = await fetch(url, { signal:rhythmWeatherController.signal });
+        if (!response.ok) throw new Error('Environmental request failed');
+        return response.json();
+      };
+      const forecastRequest = requestJson(`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=apparent_temperature,uv_index,is_day&daily=sunrise,sunset&hourly=apparent_temperature,uv_index,is_day,precipitation_probability&forecast_days=2&timezone=auto&temperature_unit=fahrenheit`);
+      const aqiRequest = requestJson(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${loc.lat}&longitude=${loc.lon}&current=us_aqi&hourly=us_aqi&forecast_days=2&timezone=auto`);
+      const [forecastResult, aqiResult] = await Promise.allSettled([forecastRequest, aqiRequest]);
+      if (generation !== rhythmWeatherGeneration || activeDateKey !== dateKey(new Date())) return;
+
+      const settledAt = Date.now();
+      const weatherData = forecastResult.status === 'fulfilled' ? forecastResult.value : null;
+      const aqiData = aqiResult.status === 'fulfilled' ? aqiResult.value : null;
+      if (weatherData) {
+        const current = weatherData.current || {};
         const rhythmUpdate = {};
-        if (sunrise) rhythmUpdate.sunrise = sunrise;
-        if (sunset) rhythmUpdate.sunset = sunset;
+        const feel = normalizeEnvironmentalReading(current.apparent_temperature);
+        const uv = normalizeEnvironmentalReading(current.uv_index, 0);
+        const isDay = current.is_day === 1 ? true : current.is_day === 0 ? false : null;
+        const sunrise = weatherData.daily?.sunrise?.[0] ? fmtClock(weatherData.daily.sunrise[0]) : '';
+        const sunset = weatherData.daily?.sunset?.[0] ? fmtClock(weatherData.daily.sunset[0]) : '';
         if (feel !== null) rhythmUpdate.feel = feel;
         if (uv !== null) rhythmUpdate.uv = uv;
         if (isDay !== null) rhythmUpdate.isDay = isDay;
+        if (sunrise) rhythmUpdate.sunrise = sunrise;
+        if (sunset) rhythmUpdate.sunset = sunset;
         if (Object.keys(rhythmUpdate).length > 0) {
           rhythmUpdate.weatherObservedAt = Date.now();
           updateRhythmAnchors(rhythmUpdate, now);
         }
-        return d;
-      })
-      .catch(() => { /* Next Wave keeps its habit-based fallback. */ });
-
-    // Air quality is served by Open-Meteo's separate endpoint.
-    const aqiRequest = fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${loc.lat}&longitude=${loc.lon}&current=us_aqi&hourly=us_aqi&forecast_days=2&timezone=auto`, { signal:rhythmWeatherController.signal })
-      .then(r => {
-        if (!r.ok) throw new Error('Air-quality request failed');
-        return r.json();
-      })
-      .then(d => {
-        if (generation !== rhythmWeatherGeneration || activeDateKey !== dateKey(new Date())) return;
-        const aqi = d && d.current ? normalizeEnvironmentalReading(d.current.us_aqi, 0) : null;
+      }
+      if (aqiData) {
+        const d = aqiData;
+        const aqi = d.current ? normalizeEnvironmentalReading(d.current.us_aqi, 0) : null;
         if (aqi !== null) {
           const aqiObservedAt = Date.now();
           updateRhythmAnchors({ ...rhythmWeatherData, aqi, aqiObservedAt }, now);
         }
-        return d;
-      })
-      .catch(() => { /* anchored cards retain the offline-safe fallback */ });
-
-    Promise.allSettled([forecastRequest, aqiRequest]).then(([forecastResult, aqiResult]) => {
-      if (generation !== rhythmWeatherGeneration || activeDateKey !== dateKey(new Date())) return;
-      const hourlyForecast = normalizeHourlyForecast(
-        forecastResult.status === 'fulfilled' ? forecastResult.value : null,
-        aqiResult.status === 'fulfilled' ? aqiResult.value : null
-      );
-      const hourlyForecastUpdate = { hourlyForecast, hourlyForecastFetchedAt: Date.now() };
-      const forecastNow = new Date();
-      updateRhythmAnchors(hourlyForecastUpdate, forecastNow);
+      }
+      const hourlyForecast = normalizeHourlyForecast(weatherData, aqiData);
+      const usableHourly = hourlyForecast.timezone && hourlyForecast.entries.length > 0;
+      const partialFailure = forecastResult.status === 'rejected' || aqiResult.status === 'rejected';
+      const existingHourlyFresh = isHourlyForecastFresh(rhythmWeatherData, new Date(settledAt));
+      const finalUpdate = partialFailure && existingHourlyFresh
+        ? { refreshFailedAt:settledAt }
+        : usableHourly
+          ? { hourlyForecast, hourlyForecastFetchedAt: Date.now() }
+          : { refreshFailedAt:settledAt };
+      if (partialFailure) finalUpdate.refreshFailedAt = settledAt;
+      else if (rhythmWeatherData) delete rhythmWeatherData.refreshFailedAt;
+      updateRhythmAnchors(finalUpdate, new Date(settledAt));
       rhythmWeatherReadyGeneration = generation;
-      renderNextWave(forecastNow);
-    });
-  });
+      now = new Date();
+      renderNextWave(now);
+    } catch (error) {
+      if (generation !== rhythmWeatherGeneration) return;
+      rhythmWeatherData = mergeRhythmWeatherData(rhythmWeatherData, { refreshFailedAt:Date.now() });
+    } finally {
+      clearTimeout(timeoutId);
+      if (generation === rhythmWeatherGeneration) {
+        refreshRhythmAnchorLabels(new Date());
+        renderNextWave(new Date());
+      }
+      if (rhythmWeatherRefreshPromise === refreshPromise) rhythmWeatherRefreshPromise = null;
+    }
+  })();
+  rhythmWeatherRefreshPromise = refreshPromise;
+  return rhythmWeatherRefreshPromise;
 }
 
 function mergeRhythmWeatherData(current, update) {
@@ -5085,17 +5203,33 @@ function mergeRhythmWeatherData(current, update) {
 
 function updateRhythmAnchors(data, now = new Date()) {
   rhythmWeatherData = mergeRhythmWeatherData(rhythmWeatherData, data);
+  const preferenceWindows = getPreferenceWindowsMap(HABITS);
   document.querySelectorAll('.habit[data-id]').forEach(el => {
     const habit = HABITS.find(h => h.id === el.dataset.id);
     if (!habit) return;
-    const rhythm = normalizeRhythmConfig(habit.rhythm);
-    if (!rhythm) return;
     const label = el.querySelector('.rhythm-anchor-label');
     if (!label) return;
-    const text = getRhythmAnchorText(rhythm, rhythmWeatherData);
-    if (text) label.textContent = text;
+    const cardContext = resolveHabitCardContext(habit, now, rhythmWeatherData, preferenceWindows?.[habit.id]);
+    if (!cardContext) return;
+    label.textContent = cardContext.text;
+    label.setAttribute('aria-label', cardContext.ariaLabel);
   });
   renderNextWave(now);
+}
+
+function refreshRhythmAnchorLabels(now = new Date()) {
+  const snapshot = getFreshEnvironmentalSnapshot(rhythmWeatherData, now);
+  const preferenceWindows = getPreferenceWindowsMap(HABITS);
+  document.querySelectorAll('.habit[data-id]').forEach(el => {
+    const habit = HABITS.find(item => item.id === el.dataset.id);
+    const rhythm = normalizeRhythmConfig(habit?.rhythm);
+    const label = el.querySelector('.rhythm-anchor-label');
+    if (!habit || !rhythm || !label) return;
+    label.textContent = getRhythmAnchorText(rhythm, snapshot);
+    const cardContext = resolveHabitCardContext(habit, now, rhythmWeatherData, preferenceWindows?.[habit.id]);
+    label.textContent = cardContext.text;
+    label.setAttribute('aria-label', cardContext.ariaLabel);
+  });
 }
 
 function getRhythmAnchorText(rhythm, data) {
@@ -5136,6 +5270,60 @@ function getRhythmAnchorText(rhythm, data) {
     default:
       return '';
   }
+}
+
+function resolveHabitCardContext(habit, now, data, preferenceWindow = null) {
+  const rhythm = normalizeRhythmConfig(habit?.rhythm);
+  if (!rhythm) return null;
+  const snapshot = getFreshEnvironmentalSnapshot(data, now);
+  const baseText = getRhythmAnchorText(rhythm, snapshot);
+  const base = { text:baseText, ariaLabel:baseText };
+  const context = getEffectiveRecommendationContext(habit, preferenceWindow);
+
+  // Only real outdoor exposure habits receive rain context. Protection tasks
+  // remain UV-only, and an indoor-capable habit is never presented as outdoor.
+  if (!context || context.setting !== 'outdoor' || context.daylight !== 'required' ||
+      habit.id === 'sunscreen' || rhythm.type === 'uv-above') return base;
+  if (rhythm.type === 'aqi-below') {
+    if (!Number.isFinite(snapshot.aqi) || snapshot.aqi < 0 || snapshot.aqi > 100 ||
+        snapshot.aqi > rhythm.threshold) return base;
+  }
+  if (!isHourlyForecastFresh(snapshot, now)) return base;
+  let deviceTimezone = null;
+  try { deviceTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
+  if (!deviceTimezone || snapshot.hourlyForecast?.timezone !== deviceTimezone) return base;
+
+  const evaluation = evaluateOpportunityWindows(habit, now, snapshot, preferenceWindow);
+  const minuteNow = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60 + now.getMilliseconds() / 60000;
+  const expectedStartMinute = Math.ceil(minuteNow / OPPORTUNITY_WINDOW_POLICY.candidateStepMinutes) *
+    OPPORTUNITY_WINDOW_POLICY.candidateStepMinutes;
+  const current = evaluation.candidates.find(candidate => {
+    const match = candidate.start.match(/T(\d{2}):(\d{2})$/);
+    return match && Number(match[1]) * 60 + Number(match[2]) === expectedStartMinute;
+  });
+  const forecastAqiLimit = rhythm.type === 'aqi-below'
+    ? Math.min(rhythm.threshold, OPPORTUNITY_WINDOW_POLICY.aqiSafetyCeiling)
+    : OPPORTUNITY_WINDOW_POLICY.aqiSafetyCeiling;
+  if (!current || !Number.isFinite(current.aqi) || current.aqi > forecastAqiLimit) return base;
+  const observedPrefix = rhythm.type === 'aqi-below' ? `AQI ${snapshot.aqi}` :
+    snapshot.sunrise ? `Sunrise ${snapshot.sunrise}` : (RHYTHM_LABELS[rhythm.type] || baseText);
+  const later = evaluation.betterWindow;
+  if (later?.reasons?.includes('rain') && Number.isFinite(later.precipitationProbability)) {
+    const clock = formatForecastClock(later.start);
+    if (clock) {
+      return {
+        text:`${observedPrefix} · Rain ${later.precipitationProbability}% ${clock}`,
+        ariaLabel:`${observedPrefix} · Rain chance drops to ${later.precipitationProbability}% around ${clock}`,
+      };
+    }
+  }
+  if (current.rainRisk === 'soft' || current.rainRisk === 'strong') {
+    return {
+      text:`${observedPrefix} · Rain ${current.precipitationProbability}%`,
+      ariaLabel:`${observedPrefix} · Rain chance ${current.precipitationProbability}%`,
+    };
+  }
+  return base;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -5235,8 +5423,10 @@ function saveFirstName(value) {
 }
 
 const INSIGHT_STORAGE_KEY = 'wavelength_insights_v1';
-const INSIGHT_HISTORY_VERSION = 1;
-const CONTEXT_INSIGHT_REASONS = new Set(['aqi-adapt','uv-protect','sunrise-light','aqi-opportunity','heat-hydrate','sunset-rhythm']);
+const INSIGHT_HISTORY_VERSION = 2;
+const OBSERVED_INSIGHT_REASONS = new Set(['aqi-adapt','uv-protect','sunrise-light','aqi-opportunity','heat-hydrate','sunset-rhythm']);
+const FORECAST_INSIGHT_REASONS = new Set(['forecast-window','forecast-conditions','forecast-uv']);
+const CONTEXT_INSIGHT_REASONS = new Set([...OBSERVED_INSIGHT_REASONS, ...FORECAST_INSIGHT_REASONS]);
 
 function isValidDateKey(key) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return false;
@@ -5257,19 +5447,51 @@ function normalizeInsightHistory(rawHistory, habits, strict = false) {
     invalid('Insight history must be an object.');
     return empty;
   }
-  if (rawHistory.version !== INSIGHT_HISTORY_VERSION || !rawHistory.days || typeof rawHistory.days !== 'object' || Array.isArray(rawHistory.days)) {
+  const sourceVersion = rawHistory.version;
+  if (![1, INSIGHT_HISTORY_VERSION].includes(sourceVersion) || !rawHistory.days ||
+      typeof rawHistory.days !== 'object' || Array.isArray(rawHistory.days)) {
     invalid('Insight history version or days are invalid.');
     return empty;
   }
   if (strict && Object.keys(rawHistory).some(key => !['version','days'].includes(key))) {
     throw new Error('Insight history contains unsupported fields.');
   }
-  const validIds = new Set((habits || []).map(habit => habit.id));
+
+  const habitById = new Map((habits || []).map(habit => [habit.id, habit]));
+  const validIds = new Set(habitById.keys());
   const validTimestamp = value => Number.isInteger(value) && value >= 0 && value <= 4102444800000;
   const conditionKeys = new Set(['uv','aqi','feel','sunrise','sunset']);
   const requiredCondition = {
     'aqi-adapt':'aqi', 'uv-protect':'uv', 'sunrise-light':'sunrise',
     'aqi-opportunity':'aqi', 'heat-hydrate':'feel', 'sunset-rhythm':'sunset',
+  };
+  const validRuleShapes = {
+    'uv-protect':['weather','uv','>='], 'heat-hydrate':['weather','feel','>'],
+    'aqi-adapt':['aqi','aqi','>'], 'aqi-opportunity':['aqi','aqi','<='],
+    'sunrise-light':['weather','sunrise','within-minutes'],
+    'sunset-rhythm':['weather','sunset','within-minutes'],
+  };
+  const reasonReading = { rain:'precipitationProbability', heat:'apparentTemperature', uv:'uv', aqi:'aqi' };
+  const readingRanges = {
+    precipitationProbability:[0,100], apparentTemperature:[-200,200], uv:[0,100], aqi:[0,1000],
+  };
+  const limitPolicy = {
+    rainSoftThreshold:50, rainStrongThreshold:70, rainMaterialDrop:30,
+    heatCueThreshold:85, heatMaterialDrop:5, uvCueThreshold:3, aqiSafetyCeiling:100,
+  };
+  const reasonLimits = {
+    rain:['rainSoftThreshold','rainStrongThreshold','rainMaterialDrop'],
+    heat:['heatCueThreshold','heatMaterialDrop'], uv:['uvCueThreshold'], aqi:['aqiSafetyCeiling'],
+  };
+  const parseIntervalTime = (value, key) => {
+    if (typeof value !== 'string') return null;
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d)$/);
+    if (!match || value.slice(0, 10) !== key) return null;
+    const parts = match.slice(1).map(Number);
+    const parsed = new Date(parts[0], parts[1] - 1, parts[2], parts[3], parts[4], 0, 0);
+    if (parsed.getFullYear() !== parts[0] || parsed.getMonth() !== parts[1] - 1 ||
+        parsed.getDate() !== parts[2] || parsed.getHours() !== parts[3] || parsed.getMinutes() !== parts[4]) return null;
+    return parsed.getTime();
   };
   const normalized = { version:INSIGHT_HISTORY_VERSION, days:{} };
 
@@ -5289,97 +5511,266 @@ function normalizeInsightHistory(rawHistory, habits, strict = false) {
     }
     if (strict && rawRecommendations.length > 12) throw new Error(`Insight day ${key} has too many recommendations.`);
     const recommendations = [];
-    for (const rawRecord of rawRecommendations.slice(-12)) {
+    for (const rawRecord of rawRecommendations.slice(0, 12)) {
       if (!rawRecord || typeof rawRecord !== 'object' || Array.isArray(rawRecord)) {
         invalid('Insight recommendation must be an object.');
         continue;
       }
-      const allowedFields = ['habitId','reason','shownAt','lastShownAt','observedAt','viewedAt','completedAt','conditions','sources','habitLabel','measurementType','ruleVersion','rule'];
+      const evidenceType = sourceVersion === 1 ? 'observed' : rawRecord.evidenceType;
+      const commonFields = ['evidenceType','habitId','reason','shownAt','lastShownAt','viewedAt','completedAt','habitLabel','measurementType'];
+      const observedFields = ['observedAt','conditions','sources','ruleVersion','rule'];
+      const forecastFields = ['forecast'];
+      const allowedFields = evidenceType === 'observed'
+        ? [...commonFields, ...observedFields]
+        : evidenceType === 'forecast' ? [...commonFields, ...forecastFields] : commonFields;
       if (strict && Object.keys(rawRecord).some(field => !allowedFields.includes(field))) {
-        throw new Error('Insight recommendation contains unsupported fields.');
+        throw new Error(`${evidenceType === 'forecast' ? 'Forecast' : 'Observed'} evidence arm contains unsupported fields.`);
+      }
+      if (!['observed','forecast'].includes(evidenceType)) {
+        invalid('Insight evidenceType must be observed or forecast.');
+        continue;
       }
       if (!validIds.has(rawRecord.habitId)) {
         invalid(`Insight recommendation references unknown habit: ${rawRecord.habitId}.`);
         continue;
       }
-      if (!CONTEXT_INSIGHT_REASONS.has(rawRecord.reason)) {
-        invalid('Insight recommendation reason is invalid.');
+      const habit = habitById.get(rawRecord.habitId);
+      const reasonSet = evidenceType === 'observed' ? OBSERVED_INSIGHT_REASONS : FORECAST_INSIGHT_REASONS;
+      if (!reasonSet.has(rawRecord.reason)) {
+        invalid('Insight recommendation reason is invalid for its evidence arm.');
         continue;
       }
-      const validRuleShapes = {
-        'uv-protect':['weather','uv','>='],
-        'heat-hydrate':['weather','feel','>'],
-        'aqi-adapt':['aqi','aqi','>'],
-        'aqi-opportunity':['aqi','aqi','<='],
-        'sunrise-light':['weather','sunrise','within-minutes'],
-        'sunset-rhythm':['weather','sunset','within-minutes'],
-      };
-      const expectedRule = validRuleShapes[rawRecord.reason];
-      const rule = rawRecord.rule;
       if (typeof rawRecord.habitLabel !== 'string' || !rawRecord.habitLabel.trim() || rawRecord.habitLabel.length > 80 ||
-          !['check','count','amount'].includes(rawRecord.measurementType) || rawRecord.ruleVersion !== 1 ||
-          !rule || typeof rule !== 'object' || Array.isArray(rule) ||
-          Object.keys(rule).some(field => !['channel','reading','operator','threshold'].includes(field)) ||
-          rule.channel !== expectedRule[0] || rule.reading !== expectedRule[1] || rule.operator !== expectedRule[2] ||
-          !Number.isFinite(rule.threshold)) {
-        invalid('Insight exposure snapshot is invalid.');
-        continue;
-      }
-      if (!validTimestamp(rawRecord.shownAt) || !validTimestamp(rawRecord.lastShownAt) || rawRecord.lastShownAt < rawRecord.shownAt ||
-          (rawRecord.observedAt !== undefined && !validTimestamp(rawRecord.observedAt)) ||
+          !['check','count','amount'].includes(rawRecord.measurementType) ||
+          !validTimestamp(rawRecord.shownAt) || !validTimestamp(rawRecord.lastShownAt) || rawRecord.lastShownAt < rawRecord.shownAt ||
           (rawRecord.viewedAt !== undefined && !validTimestamp(rawRecord.viewedAt)) ||
-          (rawRecord.completedAt !== undefined && (!validTimestamp(rawRecord.completedAt) || rawRecord.completedAt < rawRecord.shownAt))) {
-        invalid('Insight recommendation timestamp is invalid.');
+          (rawRecord.completedAt !== undefined && (!validTimestamp(rawRecord.completedAt) || rawRecord.completedAt < rawRecord.shownAt)) ||
+          dateKey(new Date(rawRecord.shownAt)) !== key) {
+        invalid('Insight recommendation identity or timestamp is invalid.');
         continue;
       }
-      const rawConditions = rawRecord.conditions;
-      if (!rawConditions || typeof rawConditions !== 'object' || Array.isArray(rawConditions) ||
-          Object.keys(rawConditions).some(field => !conditionKeys.has(field))) {
-        invalid('Insight environmental reading is invalid.');
-        continue;
-      }
-      const conditions = {};
-      let readingsValid = true;
-      for (const [field, value] of Object.entries(rawConditions)) {
-        if (field === 'uv' || field === 'aqi') {
-          if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) readingsValid = false;
-          else conditions[field] = value;
-        } else if (field === 'feel') {
-          if (typeof value !== 'number' || !Number.isFinite(value)) readingsValid = false;
-          else conditions[field] = value;
-        } else if (typeof value !== 'string' || value.length === 0 || value.length > 32) readingsValid = false;
-        else conditions[field] = value;
-      }
-      if (!readingsValid || !Object.hasOwn(conditions, requiredCondition[rawRecord.reason])) {
-        invalid('Insight environmental reading is invalid.');
-        continue;
-      }
-      const hasWeatherReading = ['uv','feel','sunrise','sunset'].some(field => Object.hasOwn(conditions, field));
-      const hasAqiReading = Object.hasOwn(conditions, 'aqi');
-      if (!rawRecord.sources || typeof rawRecord.sources !== 'object' || Array.isArray(rawRecord.sources) ||
-          Object.keys(rawRecord.sources).some(field => !['weather','aqi'].includes(field)) ||
-          (hasWeatherReading && rawRecord.sources.weather !== 'open-meteo') ||
-          (hasAqiReading && rawRecord.sources.aqi !== 'open-meteo') ||
-          (strict && !hasWeatherReading && rawRecord.sources.weather !== undefined) ||
-          (strict && !hasAqiReading && rawRecord.sources.aqi !== undefined)) {
-        invalid('Insight source is invalid.');
-        continue;
-      }
-      const sources = {};
-      if (hasWeatherReading) sources.weather = 'open-meteo';
-      if (hasAqiReading) sources.aqi = 'open-meteo';
       const record = {
-        habitId:rawRecord.habitId, reason:rawRecord.reason,
+        evidenceType, habitId:rawRecord.habitId, reason:rawRecord.reason,
         shownAt:rawRecord.shownAt, lastShownAt:rawRecord.lastShownAt,
-        observedAt:rawRecord.observedAt === undefined ? rawRecord.lastShownAt : rawRecord.observedAt,
         habitLabel:rawRecord.habitLabel, measurementType:rawRecord.measurementType,
-        ruleVersion:1, rule:{ channel:rule.channel, reading:rule.reading, operator:rule.operator, threshold:rule.threshold },
-        conditions, sources,
       };
+
+      if (evidenceType === 'observed') {
+        if (Object.hasOwn(rawRecord, 'forecast')) {
+          invalid('Observed evidence arm cannot contain forecast evidence.');
+          continue;
+        }
+        const expectedRule = validRuleShapes[rawRecord.reason];
+        const rule = rawRecord.rule;
+        if (rawRecord.ruleVersion !== 1 || !rule || typeof rule !== 'object' || Array.isArray(rule) ||
+            Object.keys(rule).some(field => !['channel','reading','operator','threshold'].includes(field)) ||
+            rule.channel !== expectedRule[0] || rule.reading !== expectedRule[1] || rule.operator !== expectedRule[2] ||
+            !Number.isFinite(rule.threshold)) {
+          invalid('Insight exposure snapshot is invalid.');
+          continue;
+        }
+        const observedAt = rawRecord.observedAt === undefined ? rawRecord.lastShownAt : rawRecord.observedAt;
+        if (!validTimestamp(observedAt) || observedAt > rawRecord.lastShownAt) {
+          invalid('Insight observation timestamp is invalid.');
+          continue;
+        }
+        const rawConditions = rawRecord.conditions;
+        if (!rawConditions || typeof rawConditions !== 'object' || Array.isArray(rawConditions) ||
+            Object.keys(rawConditions).some(field => !conditionKeys.has(field))) {
+          invalid('Insight environmental reading is invalid.');
+          continue;
+        }
+        const conditions = {};
+        let readingsValid = true;
+        for (const [field, value] of Object.entries(rawConditions)) {
+          if (field === 'uv' || field === 'aqi') {
+            if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) readingsValid = false;
+            else conditions[field] = value;
+          } else if (field === 'feel') {
+            if (typeof value !== 'number' || !Number.isFinite(value)) readingsValid = false;
+            else conditions[field] = value;
+          } else if (typeof value !== 'string' || value.length === 0 || value.length > 32) readingsValid = false;
+          else conditions[field] = value;
+        }
+        if (!readingsValid || !Object.hasOwn(conditions, requiredCondition[rawRecord.reason])) {
+          invalid('Insight environmental reading is invalid.');
+          continue;
+        }
+        const hasWeatherReading = ['uv','feel','sunrise','sunset'].some(field => Object.hasOwn(conditions, field));
+        const hasAqiReading = Object.hasOwn(conditions, 'aqi');
+        if (!rawRecord.sources || typeof rawRecord.sources !== 'object' || Array.isArray(rawRecord.sources) ||
+            Object.keys(rawRecord.sources).some(field => !['weather','aqi'].includes(field)) ||
+            (hasWeatherReading && rawRecord.sources.weather !== 'open-meteo') ||
+            (hasAqiReading && rawRecord.sources.aqi !== 'open-meteo') ||
+            (strict && !hasWeatherReading && rawRecord.sources.weather !== undefined) ||
+            (strict && !hasAqiReading && rawRecord.sources.aqi !== undefined)) {
+          invalid('Insight source is invalid.');
+          continue;
+        }
+        const sources = {};
+        if (hasWeatherReading) sources.weather = 'open-meteo';
+        if (hasAqiReading) sources.aqi = 'open-meteo';
+        Object.assign(record, {
+          observedAt, ruleVersion:1,
+          rule:{ channel:rule.channel, reading:rule.reading, operator:rule.operator, threshold:rule.threshold },
+          conditions, sources,
+        });
+      } else {
+        if (['observedAt','conditions','sources','ruleVersion','rule'].some(field => Object.hasOwn(rawRecord, field))) {
+          invalid('Forecast evidence arm cannot contain observed fields.');
+          continue;
+        }
+        const forecast = rawRecord.forecast;
+        const forecastFieldsAllowed = ['acquiredAt','timezone','policyVersion','kind','baseline','candidate','materialReasons','limits','sources'];
+        if (!forecast || typeof forecast !== 'object' || Array.isArray(forecast) ||
+            Object.keys(forecast).some(field => !forecastFieldsAllowed.includes(field))) {
+          invalid('Forecast evidence contains unsupported or unknown fields.');
+          continue;
+        }
+        const acquisitionAge = rawRecord.shownAt - forecast.acquiredAt;
+        let localTimezone = null;
+        try { localTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) {}
+        if (!validTimestamp(forecast.acquiredAt) || acquisitionAge < 0 || acquisitionAge > 90 * 60 * 1000 ||
+            typeof forecast.timezone !== 'string' || !forecast.timezone || forecast.timezone !== localTimezone ||
+            forecast.policyVersion !== 1 || !['comparison','interval','hour'].includes(forecast.kind)) {
+          invalid('Forecast acquisition is future, stale, or has an invalid timezone or policy.');
+          continue;
+        }
+        const expectedKind = { 'forecast-window':'comparison', 'forecast-conditions':'interval', 'forecast-uv':'hour' }[rawRecord.reason];
+        if (forecast.kind !== expectedKind || (forecast.kind === 'comparison') !== Object.hasOwn(forecast, 'baseline')) {
+          invalid('Forecast evidence kind does not match its reason or comparison arm.');
+          continue;
+        }
+        if (!Array.isArray(forecast.materialReasons) || forecast.materialReasons.length === 0 ||
+            new Set(forecast.materialReasons).size !== forecast.materialReasons.length ||
+            forecast.materialReasons.some(reason => !Object.hasOwn(reasonReading, reason))) {
+          invalid('Forecast material reasons are malformed.');
+          continue;
+        }
+        const normalizeInterval = rawInterval => {
+          if (!rawInterval || typeof rawInterval !== 'object' || Array.isArray(rawInterval) ||
+              Object.keys(rawInterval).some(field => !['start','end','readings'].includes(field))) return null;
+          const start = parseIntervalTime(rawInterval.start, key);
+          const end = parseIntervalTime(rawInterval.end, key);
+          if (start === null || end === null || end <= start) return null;
+          if (!rawInterval.readings || typeof rawInterval.readings !== 'object' || Array.isArray(rawInterval.readings)) return null;
+          const requiredReadings = forecast.materialReasons.map(reason => reasonReading[reason]);
+          if (Object.keys(rawInterval.readings).length !== requiredReadings.length ||
+              Object.keys(rawInterval.readings).some(reading => !requiredReadings.includes(reading))) return null;
+          const readings = {};
+          for (const reading of requiredReadings) {
+            const value = rawInterval.readings[reading];
+            const range = readingRanges[reading];
+            if (typeof value !== 'number' || !Number.isFinite(value) || value < range[0] || value > range[1]) return null;
+            readings[reading] = value;
+          }
+          return { start:rawInterval.start, end:rawInterval.end, readings };
+        };
+        const candidate = normalizeInterval(forecast.candidate);
+        const baseline = forecast.kind === 'comparison' ? normalizeInterval(forecast.baseline) : null;
+        if (!candidate || (forecast.kind === 'comparison' && !baseline)) {
+          invalid('Forecast interval or reading is invalid.');
+          continue;
+        }
+        const intervalMinute = interval => {
+          const startHour = Number(interval.start.slice(11, 13));
+          const startMinute = Number(interval.start.slice(14, 16));
+          const endHour = Number(interval.end.slice(11, 13));
+          const endMinute = Number(interval.end.slice(14, 16));
+          return { start:startHour * 60 + startMinute, end:endHour * 60 + endMinute };
+        };
+        const shownDate = new Date(rawRecord.shownAt);
+        const shownMinute = shownDate.getHours() * 60 + shownDate.getMinutes() +
+          shownDate.getSeconds() / 60 + shownDate.getMilliseconds() / 60000;
+        const expectedQuarterStart = Math.ceil(shownMinute / 15) * 15;
+        const candidateMinute = intervalMinute(candidate);
+        const habitDuration = Number.isInteger(habit?.context?.duration) && habit.context.duration > 0
+          ? habit.context.duration
+          : habit?.id === 'sunscreen' ? 2 : null;
+        let timingValid = habitDuration !== null;
+        if (forecast.kind === 'comparison') {
+          const baselineMinute = intervalMinute(baseline);
+          timingValid = timingValid && baselineMinute.start === expectedQuarterStart &&
+            baselineMinute.end - baselineMinute.start === habitDuration &&
+            candidateMinute.end - candidateMinute.start === habitDuration &&
+            candidateMinute.start > baselineMinute.start &&
+            (candidateMinute.start - baselineMinute.start) % 15 === 0 &&
+            candidateMinute.start <= shownMinute + 180;
+        } else if (forecast.kind === 'interval') {
+          timingValid = timingValid && candidateMinute.start === expectedQuarterStart &&
+            candidateMinute.end - candidateMinute.start === habitDuration;
+        } else {
+          timingValid = timingValid && rawRecord.reason === 'forecast-uv' &&
+            candidateMinute.start === Math.floor(shownMinute / 60) * 60 &&
+            candidateMinute.end - candidateMinute.start === habitDuration;
+        }
+        if (!timingValid) {
+          invalid('Forecast interval timing or duration could not have generated the shown recommendation.');
+          continue;
+        }
+        const supportedLimitPolicy = { ...limitPolicy };
+        if (habit?.rhythm?.type === 'aqi-below' && Number.isFinite(habit.rhythm.threshold) && habit.rhythm.threshold > 0) {
+          supportedLimitPolicy.aqiSafetyCeiling = Math.min(habit.rhythm.threshold, limitPolicy.aqiSafetyCeiling);
+        }
+        if (habit?.rhythm?.type === 'uv-above' && Number.isFinite(habit.rhythm.threshold) && habit.rhythm.threshold > 0) {
+          supportedLimitPolicy.uvCueThreshold = habit.rhythm.threshold;
+        }
+        const provesReason = reason => {
+          const reading = reasonReading[reason];
+          const candidateValue = candidate.readings[reading];
+          if (forecast.kind === 'comparison') {
+            const baselineValue = baseline.readings[reading];
+            if (reason === 'rain') return candidateValue < supportedLimitPolicy.rainSoftThreshold &&
+              baselineValue - candidateValue >= supportedLimitPolicy.rainMaterialDrop;
+            if (reason === 'heat') return baselineValue > supportedLimitPolicy.heatCueThreshold &&
+              candidateValue <= supportedLimitPolicy.heatCueThreshold &&
+              baselineValue - candidateValue >= supportedLimitPolicy.heatMaterialDrop;
+            if (reason === 'aqi') return baselineValue > supportedLimitPolicy.aqiSafetyCeiling &&
+              candidateValue <= supportedLimitPolicy.aqiSafetyCeiling;
+            return false;
+          }
+          if (reason === 'rain') return candidateValue >= supportedLimitPolicy.rainSoftThreshold;
+          if (reason === 'heat') return candidateValue > supportedLimitPolicy.heatCueThreshold;
+          if (reason === 'uv') return candidateValue >= supportedLimitPolicy.uvCueThreshold;
+          return false;
+        };
+        if (forecast.materialReasons.some(reason => !provesReason(reason))) {
+          invalid('Forecast readings do not prove the material reason.');
+          continue;
+        }
+        const requiredLimits = [...new Set(forecast.materialReasons.flatMap(reason => reasonLimits[reason]))];
+        if (!forecast.limits || typeof forecast.limits !== 'object' || Array.isArray(forecast.limits) ||
+            Object.keys(forecast.limits).length !== requiredLimits.length ||
+            requiredLimits.some(limit => forecast.limits[limit] !== supportedLimitPolicy[limit])) {
+          invalid('Forecast limits are malformed or do not match policy.');
+          continue;
+        }
+        const needsWeather = forecast.materialReasons.some(reason => ['rain','heat','uv'].includes(reason));
+        const needsAqi = forecast.materialReasons.includes('aqi');
+        if (!forecast.sources || typeof forecast.sources !== 'object' || Array.isArray(forecast.sources) ||
+            Object.keys(forecast.sources).some(field => !['weather','aqi'].includes(field)) ||
+            (needsWeather && forecast.sources.weather !== 'open-meteo') ||
+            (needsAqi && forecast.sources.aqi !== 'open-meteo') ||
+            (!needsWeather && forecast.sources.weather !== undefined) || (!needsAqi && forecast.sources.aqi !== undefined)) {
+          invalid('Forecast source does not match its readings.');
+          continue;
+        }
+        const sources = {};
+        if (needsWeather) sources.weather = 'open-meteo';
+        if (needsAqi) sources.aqi = 'open-meteo';
+        record.forecast = {
+          acquiredAt:forecast.acquiredAt, timezone:forecast.timezone, policyVersion:1, kind:forecast.kind,
+          ...(baseline ? { baseline } : {}), candidate,
+          materialReasons:[...forecast.materialReasons],
+          limits:Object.fromEntries(requiredLimits.map(limit => [limit, forecast.limits[limit]])),
+          sources,
+        };
+      }
       if (rawRecord.viewedAt !== undefined) record.viewedAt = rawRecord.viewedAt;
       if (rawRecord.completedAt !== undefined) record.completedAt = rawRecord.completedAt;
       recommendations.push(record);
     }
+
     const completions = {};
     for (const [habitId, timestamp] of Object.entries(rawCompletions)) {
       if (!validIds.has(habitId)) {
@@ -5392,14 +5783,24 @@ function normalizeInsightHistory(rawHistory, habits, strict = false) {
       }
       completions[habitId] = timestamp;
     }
-    for (const record of recommendations) {
-      const completionTimestamp = completions[record.habitId];
-      if (strict && ((record.completedAt !== undefined && record.completedAt !== completionTimestamp) ||
-          (record.completedAt === undefined && completionTimestamp !== undefined))) {
-        throw new Error('Insight completion evidence does not match its day completion.');
-      }
-      if (completionTimestamp === undefined) delete record.completedAt;
-      else record.completedAt = completionTimestamp;
+    for (const habitId of validIds) {
+      const matching = recommendations.filter(record => record.habitId === habitId)
+        .sort((left, right) => right.lastShownAt - left.lastShownAt || right.shownAt - left.shownAt);
+      const completionTimestamp = completions[habitId];
+      matching.forEach((record, index) => {
+        const viewOnOlderEpisode = index > 0 && record.viewedAt !== undefined;
+        if (strict && sourceVersion === INSIGHT_HISTORY_VERSION && viewOnOlderEpisode) {
+          throw new Error('Insight view evidence does not match its latest episode.');
+        }
+        if (viewOnOlderEpisode) delete record.viewedAt;
+        const shouldComplete = index === 0 && completionTimestamp !== undefined;
+        if (strict && sourceVersion === INSIGHT_HISTORY_VERSION && ((shouldComplete && record.completedAt !== completionTimestamp) ||
+            (!shouldComplete && record.completedAt !== undefined))) {
+          throw new Error('Insight completion evidence does not match its latest episode.');
+        }
+        if (shouldComplete) record.completedAt = completionTimestamp;
+        else delete record.completedAt;
+      });
     }
     normalized.days[key] = { recommendations, completions };
   }
@@ -5414,6 +5815,13 @@ function getInsightExposureSnapshot(suggestion, habits) {
     ? habit.text.trim()
     : habit && typeof habit.title === 'string' ? habit.title.trim() : '';
   if (!habitLabel) return null;
+  const measurementType = habit.measurement && ['check','count','amount'].includes(habit.measurement.type)
+    ? habit.measurement.type
+    : 'check';
+  if (FORECAST_INSIGHT_REASONS.has(suggestion.reason)) {
+    if (!suggestion.forecastEvidence) return null;
+    return { habitLabel:habitLabel.slice(0, 80), measurementType, forecast:suggestion.forecastEvidence };
+  }
   const rhythmThreshold = habit.rhythm && Number.isFinite(Number(habit.rhythm.threshold))
     ? Number(habit.rhythm.threshold)
     : null;
@@ -5427,56 +5835,87 @@ function getInsightExposureSnapshot(suggestion, habits) {
   };
   const rule = rules[suggestion.reason];
   if (!rule) return null;
-  const measurementType = habit.measurement && ['check','count','amount'].includes(habit.measurement.type)
-    ? habit.measurement.type
-    : 'check';
   return { habitLabel:habitLabel.slice(0, 80), measurementType, ruleVersion:1, rule };
 }
 
 function recordInsightSuggestion(history, suggestion, data, now, exposure) {
-  if (!history || !history.days || !suggestion || !CONTEXT_INSIGHT_REASONS.has(suggestion.reason) || !suggestion.habitId || !suggestion.action) return false;
-  if (!exposure || typeof exposure.habitLabel !== 'string' || !exposure.habitLabel.trim() ||
-      !['check','count','amount'].includes(exposure.measurementType) || exposure.ruleVersion !== 1 ||
-      !exposure.rule || !Number.isFinite(exposure.rule.threshold)) return false;
-  if (!now || typeof now.getTime !== 'function' || !Number.isFinite(now.getTime())) return false;
-  const snapshot = data && typeof data === 'object' ? data : {};
-  const conditions = {};
-  if (typeof snapshot.uv === 'number' && Number.isFinite(snapshot.uv) && snapshot.uv >= 0) conditions.uv = snapshot.uv;
-  if (typeof snapshot.aqi === 'number' && Number.isFinite(snapshot.aqi) && snapshot.aqi >= 0) conditions.aqi = snapshot.aqi;
-  if (typeof snapshot.feel === 'number' && Number.isFinite(snapshot.feel)) conditions.feel = snapshot.feel;
-  if (typeof snapshot.sunrise === 'string' && snapshot.sunrise.length > 0 && snapshot.sunrise.length <= 32) conditions.sunrise = snapshot.sunrise;
-  if (typeof snapshot.sunset === 'string' && snapshot.sunset.length > 0 && snapshot.sunset.length <= 32) conditions.sunset = snapshot.sunset;
-  const required = {
-    'aqi-adapt':'aqi', 'uv-protect':'uv', 'sunrise-light':'sunrise',
-    'aqi-opportunity':'aqi', 'heat-hydrate':'feel', 'sunset-rhythm':'sunset',
-  }[suggestion.reason];
-  if (!Object.hasOwn(conditions, required)) return false;
-  const ruleValue = conditions[exposure.rule.reading];
-  if ((exposure.rule.operator === '>=' && !(ruleValue >= exposure.rule.threshold)) ||
-      (exposure.rule.operator === '>' && !(ruleValue > exposure.rule.threshold)) ||
-      (exposure.rule.operator === '<=' && !(ruleValue <= exposure.rule.threshold))) return false;
-  const sources = {};
-  if (['uv','feel','sunrise','sunset'].some(field => Object.hasOwn(conditions, field))) sources.weather = 'open-meteo';
-  if (Object.hasOwn(conditions, 'aqi')) sources.aqi = 'open-meteo';
-  const key = dateKey(now);
-  const day = history.days[key] || (history.days[key] = { recommendations:[], completions:{} });
+  if (!history || !history.days || !suggestion || !CONTEXT_INSIGHT_REASONS.has(suggestion.reason) ||
+      !suggestion.habitId || !suggestion.action || !now || typeof now.getTime !== 'function' ||
+      !Number.isFinite(now.getTime()) || !exposure || typeof exposure.habitLabel !== 'string' ||
+      !exposure.habitLabel.trim() || !['check','count','amount'].includes(exposure.measurementType)) return false;
   const timestamp = now.getTime();
-  const sourceObservedAt = required === 'aqi' ? data.aqiObservedAt : data.weatherObservedAt;
-  const observationTimestamp = Number.isInteger(sourceObservedAt) && sourceObservedAt >= 0 && sourceObservedAt <= 4102444800000
-    ? sourceObservedAt
-    : timestamp;
-  const existing = day.recommendations.find(record => record.habitId === suggestion.habitId && record.reason === suggestion.reason);
+  const key = dateKey(now);
+  const day = history.days[key] || { recommendations:[], completions:{} };
+  const isForecast = FORECAST_INSIGHT_REASONS.has(suggestion.reason);
+  const canonicalForecastFingerprint = forecast => JSON.stringify({
+    acquiredAt:forecast.acquiredAt, timezone:forecast.timezone, policyVersion:forecast.policyVersion, kind:forecast.kind,
+    ...(forecast.baseline ? { baseline:forecast.baseline } : {}), candidate:forecast.candidate,
+    materialReasons:forecast.materialReasons, limits:forecast.limits, sources:forecast.sources,
+  });
+  let record;
+  let fingerprint;
+
+  if (isForecast) {
+    const forecast = exposure.forecast;
+    if (!forecast || suggestion.forecastEvidence && suggestion.forecastEvidence !== forecast ||
+        !Number.isInteger(forecast.acquiredAt) || forecast.acquiredAt > timestamp ||
+        timestamp - forecast.acquiredAt > 90 * 60 * 1000) return false;
+    record = {
+      evidenceType:'forecast', habitId:suggestion.habitId, reason:suggestion.reason,
+      shownAt:timestamp, lastShownAt:timestamp,
+      habitLabel:exposure.habitLabel.slice(0, 80), measurementType:exposure.measurementType,
+      forecast:JSON.parse(JSON.stringify(forecast)),
+    };
+    fingerprint = JSON.stringify([record.habitId, record.reason, canonicalForecastFingerprint(record.forecast)]);
+  } else {
+    if (!OBSERVED_INSIGHT_REASONS.has(suggestion.reason) || exposure.ruleVersion !== 1 ||
+        !exposure.rule || !Number.isFinite(exposure.rule.threshold)) return false;
+    const snapshot = data && typeof data === 'object' ? data : {};
+    const conditions = {};
+    if (typeof snapshot.uv === 'number' && Number.isFinite(snapshot.uv) && snapshot.uv >= 0) conditions.uv = snapshot.uv;
+    if (typeof snapshot.aqi === 'number' && Number.isFinite(snapshot.aqi) && snapshot.aqi >= 0) conditions.aqi = snapshot.aqi;
+    if (typeof snapshot.feel === 'number' && Number.isFinite(snapshot.feel)) conditions.feel = snapshot.feel;
+    if (typeof snapshot.sunrise === 'string' && snapshot.sunrise.length > 0 && snapshot.sunrise.length <= 32) conditions.sunrise = snapshot.sunrise;
+    if (typeof snapshot.sunset === 'string' && snapshot.sunset.length > 0 && snapshot.sunset.length <= 32) conditions.sunset = snapshot.sunset;
+    const required = {
+      'aqi-adapt':'aqi', 'uv-protect':'uv', 'sunrise-light':'sunrise',
+      'aqi-opportunity':'aqi', 'heat-hydrate':'feel', 'sunset-rhythm':'sunset',
+    }[suggestion.reason];
+    if (!Object.hasOwn(conditions, required)) return false;
+    const ruleValue = conditions[exposure.rule.reading];
+    if ((exposure.rule.operator === '>=' && !(ruleValue >= exposure.rule.threshold)) ||
+        (exposure.rule.operator === '>' && !(ruleValue > exposure.rule.threshold)) ||
+        (exposure.rule.operator === '<=' && !(ruleValue <= exposure.rule.threshold))) return false;
+    const sources = {};
+    if (['uv','feel','sunrise','sunset'].some(field => Object.hasOwn(conditions, field))) sources.weather = 'open-meteo';
+    if (Object.hasOwn(conditions, 'aqi')) sources.aqi = 'open-meteo';
+    const sourceObservedAt = required === 'aqi' ? snapshot.aqiObservedAt : snapshot.weatherObservedAt;
+    const observedAt = Number.isInteger(sourceObservedAt) && sourceObservedAt >= 0 && sourceObservedAt <= timestamp
+      ? sourceObservedAt : timestamp;
+    record = {
+      evidenceType:'observed', habitId:suggestion.habitId, reason:suggestion.reason,
+      shownAt:timestamp, lastShownAt:timestamp, observedAt, conditions, sources,
+      habitLabel:exposure.habitLabel.slice(0, 80), measurementType:exposure.measurementType,
+      ruleVersion:1, rule:{ ...exposure.rule },
+    };
+    fingerprint = JSON.stringify([record.habitId, record.reason, record.rule, record.conditions, record.observedAt]);
+  }
+
+  const existing = day.recommendations.find(candidate => {
+    if ((candidate.evidenceType || 'observed') !== record.evidenceType || candidate.habitId !== record.habitId || candidate.reason !== record.reason) return false;
+    if (record.evidenceType === 'observed') return true;
+    const candidateFingerprint = JSON.stringify([candidate.habitId, candidate.reason, canonicalForecastFingerprint(candidate.forecast)]);
+    return candidateFingerprint === fingerprint;
+  });
   if (existing) {
     existing.lastShownAt = timestamp;
     return true;
   }
-  if (day.recommendations.length >= 12) day.recommendations.shift();
-  day.recommendations.push({
-    habitId:suggestion.habitId, reason:suggestion.reason,
-    shownAt:timestamp, lastShownAt:timestamp, observedAt:observationTimestamp, conditions, sources,
-    habitLabel:exposure.habitLabel.slice(0, 80), measurementType:exposure.measurementType,
-    ruleVersion:1, rule:{ ...exposure.rule },
-  });
+  if (day.recommendations.length >= 12) return false;
+  day.recommendations.filter(candidate => candidate.habitId === record.habitId)
+    .forEach(candidate => { delete candidate.viewedAt; });
+  if (!history.days[key]) history.days[key] = day;
+  day.recommendations.push(record);
   return true;
 }
 
@@ -5484,8 +5923,10 @@ function markInsightViewed(history, habitId, now) {
   if (!history || !history.days || typeof habitId !== 'string' || !now || typeof now.getTime !== 'function' || !Number.isFinite(now.getTime())) return false;
   const day = history.days[dateKey(now)];
   if (!day) return false;
-  const matching = day.recommendations.filter(record => record.habitId === habitId).sort((a, b) => b.lastShownAt - a.lastShownAt);
+  const matching = day.recommendations.filter(record => record.habitId === habitId)
+    .sort((left, right) => right.lastShownAt - left.lastShownAt || right.shownAt - left.shownAt);
   if (matching.length === 0) return false;
+  matching.forEach(record => { delete record.viewedAt; });
   matching[0].viewedAt = now.getTime();
   return true;
 }
@@ -5496,16 +5937,16 @@ function recordInsightCompletion(history, habitId, now, completed) {
   const key = dateKey(now);
   const day = history.days[key] || (completed ? (history.days[key] = { recommendations:[], completions:{} }) : null);
   if (!day) return false;
-  const matching = day.recommendations.filter(record => record.habitId === habitId);
+  const matching = day.recommendations.filter(record => record.habitId === habitId)
+    .sort((left, right) => right.lastShownAt - left.lastShownAt || right.shownAt - left.shownAt);
+  const latest = matching[0];
   if (completed) {
     const timestamp = now.getTime();
     day.completions[habitId] = timestamp;
-    matching.forEach(record => {
-      if (timestamp >= record.shownAt) record.completedAt = timestamp;
-    });
+    if (latest && timestamp >= latest.shownAt) latest.completedAt = timestamp;
   } else {
     delete day.completions[habitId];
-    matching.forEach(record => { delete record.completedAt; });
+    if (latest) delete latest.completedAt;
   }
   return true;
 }
@@ -5558,7 +5999,7 @@ function getConditionInsightCards(history, minimumRelevantDays = 10, now = new D
     const groups = new Map();
     Object.entries((history && history.days) || {}).forEach(([key, day]) => {
       if (!isValidDateKey(key) || key >= todayKey) return;
-      (day.recommendations || []).filter(record => record.reason === definition.reason).forEach(record => {
+      (day.recommendations || []).filter(record => record.evidenceType !== 'forecast' && record.reason === definition.reason).forEach(record => {
         if (!record.habitLabel || !record.rule) return;
         const signature = JSON.stringify([record.habitId, record.habitLabel, record.measurementType, record.ruleVersion, record.rule]);
         if (!groups.has(signature)) groups.set(signature, { label:record.habitLabel, relevant:new Set(), completed:new Set() });
@@ -5603,6 +6044,7 @@ function getWavesRiddenCard(history, now = new Date()) {
       if (age < 0 || age > 29) return null;
       const seenHabits = new Set();
       const labels = [];
+      const evidenceTypes = new Set();
       (day.recommendations || []).forEach(record => {
         if (!CONTEXT_INSIGHT_REASONS.has(record.reason) || !record.habitLabel ||
             !Number.isInteger(record.completedAt) || record.completedAt < record.shownAt ||
@@ -5610,8 +6052,9 @@ function getWavesRiddenCard(history, now = new Date()) {
             day.completions[record.habitId] !== record.completedAt) return;
         seenHabits.add(record.habitId);
         labels.push(`“${record.habitLabel}”`);
+        evidenceTypes.add(record.evidenceType === 'forecast' ? 'forecast' : 'observed');
       });
-      return labels.length > 0 ? { key, labels } : null;
+      return labels.length > 0 ? { key, labels, evidenceTypes } : null;
     })
     .filter(Boolean);
   if (qualifyingDays.length === 0) return null;
@@ -5626,9 +6069,14 @@ function getWavesRiddenCard(history, now = new Date()) {
   const [, month, date] = latest.key.split('-').map(Number);
   const monthName = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][month - 1];
   const days = qualifyingDays.length;
+  const hasObserved = qualifyingDays.some(day => day.evidenceTypes.has('observed'));
+  const hasForecast = qualifyingDays.some(day => day.evidenceTypes.has('forecast'));
+  const evidencePhrase = hasObserved && hasForecast
+    ? 'current conditions and forecast cues'
+    : hasForecast ? 'forecast cues' : 'conditions';
   return {
     id:'waves-ridden', icon:'🏄', eyebrow:'Waves ridden',
-    title:`You followed through on ${days} ${days === 1 ? 'day' : 'days'} when conditions shaped your Next Wave.`,
+    title:`You followed through on ${days} ${days === 1 ? 'day' : 'days'} when ${evidencePhrase} shaped your Next Wave.`,
     detail:`${completed} suggested ${completed === 1 ? 'habit' : 'habits'} completed in the last 30 days. Most recently on ${monthName} ${date}: ${latestPhrase}.`,
     days, completed, latestDate:latest.key,
   };
@@ -6849,9 +7297,10 @@ function updateDateDisplay(now = new Date()) {
 
 function refreshForDateRollover(now = new Date()) {
   if (dateKey(now) === lastRenderedDateKey) return false;
-  rhythmWeatherData = null;
   rhythmWeatherController?.abort();
+  rhythmWeatherData = null;
   rhythmWeatherGeneration++;
+  rhythmWeatherRefreshPromise = null;
   updateDateDisplay(now);
   renderHabits(now);
   renderInsights(now);
@@ -6909,6 +7358,7 @@ function renderHabits(now = new Date()) {
     return userOrder.indexOf(a.id) - userOrder.indexOf(b.id);
   });
   const grouped = partitionHabitsForTracking(sorted, todayDone, todayProgress);
+  const preferenceWindows = getPreferenceWindowsMap(HABITS);
 
   document.getElementById('doneCount').textContent = `${todayStats.doneCount}/${todayStats.scheduledCount}`;
 
@@ -6916,6 +7366,7 @@ function renderHabits(now = new Date()) {
   const renderHabitCards = habits => habits.map(h => {
     const measurement = normalizeMeasurementConfig(h);
     const rhythm = normalizeRhythmConfig(h.rhythm);
+    const cardContext = resolveHabitCardContext(h, now, rhythmWeatherData, preferenceWindows?.[h.id]);
     const progress = getHabitProgress(todayDone, todayProgress, h);
     const isDone = isHabitProgressComplete(h, progress);
     const measurementDisplay = measurement.type === 'check' ? null : getMeasurementDisplay(h, progress);
@@ -6945,7 +7396,7 @@ function renderHabits(now = new Date()) {
         <div class="habit-body">
           <div class="habit-text"><span class="habit-name">${escapeHtml(h.text)}</span>${h.targetLabel ? `<span class="habit-target" aria-label="Target ${escapeHtml(h.targetLabel)}">${escapeHtml(h.targetLabel)}</span>` : ''}</div>
           <div class="habit-note">${escapeHtml(h.note)}</div>
-          ${rhythm ? `<div class="rhythm-anchor-label" aria-live="polite">${escapeHtml(getRhythmAnchorText(rhythm, rhythmWeatherData))}</div>` : ''}
+          ${rhythm ? `<div class="rhythm-anchor-label" aria-live="polite" aria-label="${escapeHtml(cardContext.ariaLabel)}">${escapeHtml(cardContext ? cardContext.text : getRhythmAnchorText(rhythm, rhythmWeatherData))}</div>` : ''}
           ${progressMarkup}
         </div>
         ${progressControls}
@@ -8016,12 +8467,19 @@ function saveHabitEditorPage() {
 // ═══════════════════════════════════════════════════════════════════
 // OFFLINE AND DATA TRANSFER
 // ═══════════════════════════════════════════════════════════════════
-const BACKUP_VERSION = 7;
+const BACKUP_VERSION = 8;
 
 function setupOfflineStatus() {
   const pill = document.getElementById('offlinePill');
   const update = () => pill.classList.toggle('show', !navigator.onLine);
   window.addEventListener('online', update);
+  window.addEventListener('online', () => {
+    const onlineNow = new Date();
+    if (shouldRefreshEnvironmentalData(rhythmWeatherData, onlineNow, rhythmWeatherReadyGeneration, rhythmWeatherGeneration) &&
+        claimEnvironmentalLifecycleRefresh(onlineNow)) {
+      renderInsights(onlineNow);
+    }
+  });
   window.addEventListener('offline', update);
   update();
 
@@ -8078,7 +8536,7 @@ async function importBackupFile(file) {
   if (!file) return;
   try {
     const payload = JSON.parse(await file.text());
-    if (payload.app !== 'wavelength' || ![1, 2, 3, 4, 5, 6, BACKUP_VERSION].includes(payload.version) || !payload.state || !Array.isArray(payload.order) ||
+    if (payload.app !== 'wavelength' || ![1, 2, 3, 4, 5, 6, 7, BACKUP_VERSION].includes(payload.version) || !payload.state || !Array.isArray(payload.order) ||
         (payload.version >= 2 && !payload.insightHistory) ||
         (payload.version >= 4 && typeof payload.firstName !== 'string') ||
         (payload.version >= 6 && !payload.categoryState)) {
@@ -8102,7 +8560,7 @@ async function importBackupFile(file) {
     const importedState = normalizeStoredState(payload.state, importedHabits, true);
     const importDate = new Date();
     reconcileMeasuredDay(importedState.done, importedState.progress, importedHabits, importDate);
-    const importedInsightHistory = payload.version === 1
+    const importedInsightHistory = payload.version === 1 && !payload.insightHistory
       ? normalizeInsightHistory(null, importedHabits)
       : normalizeInsightHistory(payload.insightHistory, importedHabits, true);
     normalizeInsightHistoryAgainstState(importedInsightHistory, importedState, true);
@@ -8315,8 +8773,7 @@ function init() {
     if (document.visibilityState === 'visible') {
       const visibilityNow = new Date();
       if (!refreshForDateRollover(visibilityNow)) {
-        const forecastSettled = Number.isFinite(rhythmWeatherData?.hourlyForecastFetchedAt);
-        if (forecastSettled && !isHourlyForecastFresh(rhythmWeatherData, visibilityNow)) renderInsights(visibilityNow);
+        if (shouldRefreshEnvironmentalData(rhythmWeatherData, visibilityNow, rhythmWeatherReadyGeneration, rhythmWeatherGeneration) && claimEnvironmentalLifecycleRefresh(visibilityNow)) renderInsights(visibilityNow);
         else renderNextWave(visibilityNow);
       }
     }
@@ -8324,8 +8781,7 @@ function init() {
   window.addEventListener('pageshow', () => {
     const pageShowNow = new Date();
     if (!refreshForDateRollover(pageShowNow)) {
-      const forecastSettled = Number.isFinite(rhythmWeatherData?.hourlyForecastFetchedAt);
-      if (forecastSettled && !isHourlyForecastFresh(rhythmWeatherData, pageShowNow)) renderInsights(pageShowNow);
+      if (shouldRefreshEnvironmentalData(rhythmWeatherData, pageShowNow, rhythmWeatherReadyGeneration, rhythmWeatherGeneration) && claimEnvironmentalLifecycleRefresh(pageShowNow)) renderInsights(pageShowNow);
       else renderNextWave(pageShowNow);
     }
   });

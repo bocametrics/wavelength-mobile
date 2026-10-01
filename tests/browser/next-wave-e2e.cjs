@@ -354,45 +354,158 @@ function collectErrors(page) {
   await page.waitForFunction(() => Object.keys(state.done[dateKey(new Date())] || {}).length === 0);
 
   const generation = await page.evaluate(async () => {
-    const first = rhythmWeatherGeneration;
-    const origFetch = window.fetch;
-    const origGetLocation = getLocation;
-    getLocation = () => Promise.resolve({ lat:26.7153, lon:-80.0534 });
-    let aqiCall = 0;
-    window.fetch = (url) => {
+    if (rhythmWeatherRefreshPromise) await rhythmWeatherRefreshPromise;
+    if (nextWaveContextTimer !== null) {
+      clearTimeout(nextWaveContextTimer);
+      nextWaveContextTimer = null;
+    }
+    const originalFetch = window.fetch;
+    const originalGetLocation = getLocation;
+    const counts = { location:0, forecast:0, aqi:0 };
+    const requestBody = url => {
+      const now = new Date();
+      const day = dateKey(now);
+      const hour = String(now.getHours()).padStart(2, '0');
       if (String(url).includes('air-quality')) {
-        const value = aqiCall++ === 0 ? 999 : 43;
-        const delay = value === 999 ? 80 : 0;
-        return new Promise(resolve => setTimeout(() => {
-          resolve({ ok:true, json:() => Promise.resolve({ current:{ us_aqi:value } }) });
-        }, delay));
+        return { current:{ us_aqi:43 }, hourly:{ time:[`${day}T${hour}:00`], us_aqi:[43] }, timezone:Intl.DateTimeFormat().resolvedOptions().timeZone };
       }
-      if (String(url).includes('api.open-meteo.com/v1/forecast')) {
-        return Promise.resolve({
-          ok:true,
-          json:() => Promise.resolve({
-            current:{ apparent_temperature:72, uv_index:1, is_day:1 },
-            daily:{ sunrise:['2026-08-31T06:58'], sunset:['2026-08-31T19:42'] },
-          }),
-        });
-      }
-      return origFetch(url);
+      return {
+        current:{ apparent_temperature:72, uv_index:1, is_day:1 },
+        hourly:{ time:[`${day}T${hour}:00`], apparent_temperature:[72], uv_index:[1], is_day:[1], precipitation_probability:[20] },
+        daily:{ sunrise:[`${day}T06:58`], sunset:[`${day}T19:42`] },
+        timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,
+      };
     };
+    getLocation = () => {
+      counts.location += 1;
+      return Promise.resolve({ lat:26.7153, lon:-80.0534 });
+    };
+    const installFetch = (delay = 20) => {
+      window.fetch = url => {
+        const key = String(url).includes('air-quality') ? 'aqi' : 'forecast';
+        counts[key] += 1;
+        return new Promise(resolve => setTimeout(() => resolve({
+          ok:true,
+          json:() => Promise.resolve(requestBody(url)),
+        }), delay));
+      };
+    };
+    installFetch();
     try {
-      renderInsights(new Date());
-      await Promise.resolve();
-      renderInsights(new Date());
+      const first = rhythmWeatherGeneration;
+      const firstPromise = renderInsights(new Date());
+      const secondPromise = renderInsights(new Date());
+      const samePromise = firstPromise === secondPromise;
       const afterDouble = rhythmWeatherGeneration;
-      await new Promise(resolve => setTimeout(resolve, 250));
-      return { first, afterDouble, finalAqi:rhythmWeatherData?.aqi ?? null, aqiCall };
+      await firstPromise;
+      const singleFlight = {
+        first,
+        afterDouble,
+        samePromise,
+        location:counts.location,
+        forecast:counts.forecast,
+        aqi:counts.aqi,
+        settled:rhythmWeatherRefreshPromise === null,
+        ready:rhythmWeatherReadyGeneration === rhythmWeatherGeneration,
+        finalAqi:rhythmWeatherData?.aqi ?? null,
+      };
+
+      const runRecovery = async (kind, dispatch) => {
+        counts.location = 0;
+        counts.forecast = 0;
+        counts.aqi = 0;
+        environmentLifecycleRefreshAt = 0;
+        if (kind === 'missing') {
+          rhythmWeatherData = null;
+          rhythmWeatherReadyGeneration = rhythmWeatherGeneration;
+        } else {
+          rhythmWeatherData.hourlyForecastFetchedAt = Date.now() - ENVIRONMENT_SOFT_REFRESH_MS;
+          rhythmWeatherReadyGeneration = rhythmWeatherGeneration;
+        }
+        dispatch();
+        await Promise.resolve();
+        const promise = rhythmWeatherRefreshPromise;
+        if (promise) await promise;
+        return {
+          refreshStarted:!!promise,
+          location:counts.location,
+          forecast:counts.forecast,
+          aqi:counts.aqi,
+          ready:rhythmWeatherReadyGeneration === rhythmWeatherGeneration,
+        };
+      };
+      const softDue = shouldRefreshEnvironmentalData(
+        rhythmWeatherData,
+        new Date(rhythmWeatherData.hourlyForecastFetchedAt + ENVIRONMENT_SOFT_REFRESH_MS),
+        rhythmWeatherReadyGeneration,
+        rhythmWeatherGeneration,
+      );
+      const missingDue = shouldRefreshEnvironmentalData(null, new Date(), rhythmWeatherGeneration, rhythmWeatherGeneration);
+      const onlineRecovery = await runRecovery('soft', () => {
+        window.dispatchEvent(new Event('online'));
+        window.dispatchEvent(new Event('pageshow'));
+        document.dispatchEvent(new Event('visibilitychange'));
+      });
+      const lifecycleRecovery = await runRecovery('missing', () => {
+        window.dispatchEvent(new Event('pageshow'));
+        document.dispatchEvent(new Event('visibilitychange'));
+        window.dispatchEvent(new Event('online'));
+      });
+
+      counts.location = 0;
+      counts.forecast = 0;
+      counts.aqi = 0;
+      rhythmWeatherData = { aqi:17 };
+      rhythmWeatherReadyGeneration = rhythmWeatherGeneration;
+      installFetch(40);
+      const guardStart = rhythmWeatherGeneration;
+      const guardedPromise = renderInsights(new Date());
+      await Promise.resolve();
+      rhythmWeatherGeneration += 1;
+      await guardedPromise;
+      const generationGuard = {
+        generationDelta:rhythmWeatherGeneration - guardStart,
+        location:counts.location,
+        forecast:counts.forecast,
+        aqi:counts.aqi,
+        finalAqi:rhythmWeatherData?.aqi ?? null,
+        staleGenerationNotReady:rhythmWeatherReadyGeneration !== rhythmWeatherGeneration,
+        settled:rhythmWeatherRefreshPromise === null,
+      };
+      return { singleFlight, softDue, missingDue, onlineRecovery, lifecycleRecovery, generationGuard };
     } finally {
-      window.fetch = origFetch;
-      getLocation = origGetLocation;
+      window.fetch = originalFetch;
+      getLocation = originalGetLocation;
     }
   });
-  assert.equal(generation.afterDouble, generation.first + 2, 'each renderInsights call increments the generation');
-  assert.equal(generation.aqiCall, 2, 'both AQI requests started so the stale-response guard is exercised');
-  assert.equal(generation.finalAqi, 43, 'newest environmental response wins after the superseded response resolves');
+  assert.deepEqual(generation.singleFlight, {
+    first:generation.singleFlight.first,
+    afterDouble:generation.singleFlight.first + 1,
+    samePromise:true,
+    location:1,
+    forecast:1,
+    aqi:1,
+    settled:true,
+    ready:true,
+    finalAqi:43,
+  }, 'two overlapping render requests share one settled generation and one request per endpoint');
+  assert.equal(generation.softDue, true, 'a snapshot becomes refreshable exactly at the 30-minute soft due time');
+  assert.equal(generation.missingDue, true, 'missing environmental data is immediately refreshable');
+  assert.deepEqual(generation.onlineRecovery, {
+    refreshStarted:true, location:1, forecast:1, aqi:1, ready:true,
+  }, 'online plus lifecycle recovery coalesces a soft-due snapshot into one refresh');
+  assert.deepEqual(generation.lifecycleRecovery, {
+    refreshStarted:true, location:1, forecast:1, aqi:1, ready:true,
+  }, 'lifecycle plus online recovery coalesces missing data into one refresh');
+  assert.deepEqual(generation.generationGuard, {
+    generationDelta:2,
+    location:1,
+    forecast:1,
+    aqi:1,
+    finalAqi:17,
+    staleGenerationNotReady:true,
+    settled:true,
+  }, 'an invalidated generation cannot apply its settled response without starting a competing refresh');
 
   const rollover = await page.evaluate(() => {
     rhythmWeatherData = { sunrise:'6:00 AM', sunset:'8:00 PM', feel:72, uv:4, aqi:43 };

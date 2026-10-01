@@ -82,10 +82,10 @@ for (const [label, htmlPath] of builds) {
     `${label}: custom emoji validation preserves one complete emoji grapheme including flags`);
   assert.match(html, /const CATEGORY_SCHEMA_VERSION = 2;/,
     `${label}: arbitrary emoji persistence uses an explicit migrated category schema`);
-  assert.match(html, /const BACKUP_VERSION = 7;/,
-    `${label}: backups version the expanded category icon contract`);
-  assert.match(html, /\[1, 2, 3, 4, 5, 6, BACKUP_VERSION\]/,
-    `${label}: version 6 backups remain import-compatible after the version 7 bump`);
+  assert.match(html, /const BACKUP_VERSION = 8;/,
+    `${label}: backups retain the expanded category icon contract in schema v8`);
+  assert.match(html, /\[1, 2, 3, 4, 5, 6, 7, BACKUP_VERSION\]/,
+    `${label}: version 7 backups remain import-compatible after the version 8 bump`);
   assert.match(html, /function getCategoryIcon\([\s\S]*normalizeCategoryEmoji[\s\S]*CATEGORY_ICON_MAP/,
     `${label}: every category surface resolves custom emoji with a curated fallback`);
 

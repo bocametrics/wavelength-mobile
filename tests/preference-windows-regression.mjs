@@ -113,10 +113,10 @@ for (const { label, path } of BUILD_FILES) {
   assert(/changes\.preferenceWindow = null/.test(script), 'clearing the field clears the preference');
   assert(/preferenceWindowToDisplayTime\(h\.preferenceWindow\)/.test(script), 'editor pre-fills from stored preference');
 
-  // ── backup schema (v7) ──
-  assert(/const BACKUP_VERSION = 7;/.test(script), 'backup schema is version 7');
-  assert(!/preferenceWindows:\s*Object\.fromEntries\(/.test(script), 'v7 avoids a duplicate top-level preferenceWindows map');
-  assert(/\[1, 2, 3, 4, 5, 6, BACKUP_VERSION\]\.includes\(payload\.version\)/.test(html), 'import still accepts v1–v6');
+  // ── backup schema (v8) ──
+  assert(/const BACKUP_VERSION = 8;/.test(script), 'backup schema is version 8');
+  assert(!/preferenceWindows:\s*Object\.fromEntries\(/.test(script), 'v8 avoids a duplicate top-level preferenceWindows map');
+  assert(/\[1, 2, 3, 4, 5, 6, 7, BACKUP_VERSION\]\.includes\(payload\.version\)/.test(html), 'import still accepts v1–v7');
   assert(/payload\.version <= 5 && payload\.preferenceWindows/.test(script),
     'legacy v5 and earlier imports restore the former preferenceWindows map');
 

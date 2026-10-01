@@ -40,6 +40,8 @@ function loadFunctions(html) {
   assert.ok(opportunityPolicy, 'OPPORTUNITY_WINDOW_POLICY is missing');
   const freshnessPolicy = html.match(/const FORECAST_COPY_MAX_AGE_MS\s*=\s*[^;]+;/);
   assert.ok(freshnessPolicy, 'FORECAST_COPY_MAX_AGE_MS is missing');
+  const softRefreshPolicy = html.match(/const ENVIRONMENT_SOFT_REFRESH_MS\s*=\s*[^;]+;/);
+  assert.ok(softRefreshPolicy, 'ENVIRONMENT_SOFT_REFRESH_MS is missing');
   const rhythmPrelude = html.match(/const RHYTHM_TYPES\s*=\s*[^;]+;/);
   assert.ok(rhythmPrelude, 'rhythm constants are missing');
   const names = [
@@ -71,7 +73,7 @@ function loadFunctions(html) {
   const context = {};
   vm.createContext(context);
   vm.runInContext(
-    `${opportunityPolicy[0]}\n${freshnessPolicy[0]}\n${rhythmPrelude[0]}\n` +
+    `${opportunityPolicy[0]}\n${softRefreshPolicy[0]}\n${freshnessPolicy[0]}\n${rhythmPrelude[0]}\n` +
     `${names.map(name => extractFunction(html, name)).join('\n')}\n` +
     `globalThis.exports = { ${names.join(', ')} };`,
     context,
@@ -93,6 +95,8 @@ function executeScheduleExpiryProbe(html) {
     nextWaveContextTimer:null,
     HABITS:[],
     rhythmWeatherData:{ hourlyForecastFetchedAt:1 },
+    rhythmWeatherReadyGeneration:1,
+    rhythmWeatherGeneration:1,
     getPreferenceWindowsMap:() => ({}),
     getNextWaveRefreshDelay:() => 50,
     clearTimeout:() => {},
@@ -101,7 +105,9 @@ function executeScheduleExpiryProbe(html) {
       context.delay = delay;
       return 1;
     },
-    isHourlyForecastFresh:() => false,
+    shouldRefreshEnvironmentalData:() => true,
+    refreshRhythmAnchorLabels:() => {},
+    updateRhythmAnchors:() => {},
     renderInsights:() => { context.insightsRenders += 1; },
     renderNextWave:() => { context.nextWaveRenders += 1; },
     insightsRenders:0,
@@ -367,8 +373,8 @@ for (const [label, htmlPath] of builds) {
     `${label}: resuming with stale forecast data can trigger a refetch`);
   assert.match(html, /pageshow[\s\S]{0,300}renderInsights\(pageShowNow\)/,
     `${label}: pageshow recovery can refresh stale forecast data`);
-  assert.match(extractFunction(html, 'scheduleNextWaveContextRefresh'), /isHourlyForecastFresh[\s\S]*renderInsights\(/,
-    `${label}: the foreground forecast-expiry timer refetches instead of merely rerendering stale readings`);
+  assert.match(extractFunction(html, 'scheduleNextWaveContextRefresh'), /shouldRefreshEnvironmentalData[\s\S]*renderInsights\(/,
+    `${label}: the foreground soft/hard refresh timer refetches instead of merely rerendering stale readings`);
   assert.deepEqual(executeScheduleExpiryProbe(html), { insightsRenders:1, nextWaveRenders:0 },
     `${label}: crossing the production timer callback refetches stale environmental data`);
 }
