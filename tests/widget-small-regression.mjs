@@ -46,7 +46,14 @@ assert.match(widgetSource, /\.containerBackground\(for:\s*\.widget\)/);
 assert.match(widgetSource, /\.privacySensitive\(\)/);
 assert.match(widgetSource, /Circle\(\)/);
 assert.match(widgetSource, /\.trim\(from:\s*0,\s*to:/);
-assert.match(widgetSource, /Text\("TODAY"\)/);
+assert.match(widgetSource, /Text\("COMPLETED"\)/,
+  'the progress caption must explain what the completed/total count represents');
+assert.doesNotMatch(widgetSource, /Text\("TODAY"\)/,
+  'today is implicit in the widget and must not replace the progress meaning');
+assert.match(widgetSource, /Text\("WAVELENGTH"\)[\s\S]*?\.font\(\.system\(size:\s*9,\s*weight:\s*\.semibold\)\)/,
+  'the brand label must remain visually secondary to the progress ring');
+assert.match(widgetSource, /progress\.total\s*==\s*1\s*\?\s*"habit"\s*:\s*"habits"/,
+  'VoiceOver progress copy must use singular and plural habit grammar');
 assert.match(widgetSource, /Open Wavelength/,
   'missing or invalid data must render an honest recovery state');
 assert.doesNotMatch(widgetSource, /\bButton\s*\(|\bToggle\s*\(|AppIntent/,

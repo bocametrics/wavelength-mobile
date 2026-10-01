@@ -179,12 +179,12 @@ private struct WavelengthWidgetView: View {
     }
 
     private func progressView(_ progress: SnapshotProgress) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 4) {
                 Image(systemName: "wave.3.right")
-                    .font(.caption.weight(.bold))
+                    .font(.system(size: 9, weight: .semibold))
                 Text("WAVELENGTH")
-                    .font(.caption2.weight(.bold))
+                    .font(.system(size: 9, weight: .semibold))
                     .tracking(0.7)
             }
             .foregroundStyle(accentColor)
@@ -209,24 +209,25 @@ private struct WavelengthWidgetView: View {
                         .font(.title2.weight(.bold).monospacedDigit())
                         .foregroundStyle(.primary)
                         .minimumScaleFactor(0.75)
-                    Text("TODAY")
+                    Text("COMPLETED")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
             }
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Today's progress")
-            .accessibilityValue("\(progress.completed) of \(progress.total) habits complete")
+            .accessibilityValue(accessibilityProgressValue(progress))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
     private var unavailableView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 4) {
                 Image(systemName: "wave.3.right")
+                    .font(.system(size: 9, weight: .semibold))
                 Text("WAVELENGTH")
-                    .font(.caption2.weight(.bold))
+                    .font(.system(size: 9, weight: .semibold))
                     .tracking(0.7)
             }
             .foregroundStyle(accentColor)
@@ -278,6 +279,11 @@ private struct WavelengthWidgetView: View {
     private func progressFraction(_ progress: SnapshotProgress) -> CGFloat {
         guard progress.total > 0 else { return 0 }
         return CGFloat(progress.completed) / CGFloat(progress.total)
+    }
+
+    private func accessibilityProgressValue(_ progress: SnapshotProgress) -> String {
+        let habitWord = progress.total == 1 ? "habit" : "habits"
+        return "\(progress.completed) of \(progress.total) \(habitWord) completed today"
     }
 }
 
