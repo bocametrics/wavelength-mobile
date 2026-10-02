@@ -65,14 +65,14 @@ The first visible widget shows today’s completed/total count inside a circular
 
 ## Implemented `systemMedium` widget
 
-The medium widget renders the current app-authored Next Wave presentation model. The extension does not repeat scheduling, weather, habit-selection, or recommendation logic. It keeps the left-aligned **YOUR NEXT WAVE** header, then mirrors the in-app card with the habit emoji on the left and a compact right-hand stack: uppercase eyebrow, stable habit title plus optional target, detail, and final button-like action label.
+The medium widget renders the current app-authored Next Wave presentation model. The extension does not repeat scheduling, weather, habit-selection, or recommendation logic. It keeps the left-aligned **YOUR NEXT WAVE** header in the same shared type treatment as the small widget’s **TODAY’S HABITS** header. Beneath it, the vertically balanced main block mirrors the in-app card with the habit emoji on the left and a right-hand stack: uppercase eyebrow, stable habit title plus an optional `·` target, detail, and final 40-point-high action affordance.
 
 - The schema-v1 `nextWave` object is required and is decoded only into its allowlisted state, eyebrow, habit ID, habit emoji, title, target label, detail, action label, and `freshUntil` fields. A missing or malformed object invalidates the whole snapshot.
 - `freshUntil` must not exceed either `nextRefreshAt` or `expiresAt`. A recommendation is current only while `freshUntil` is later than the timeline date.
 - Recommendation staleness does not invalidate valid same-day progress. At `freshUntil`, the medium timeline fails closed to an **Open Wavelength** recovery state while retaining progress for the small family; the whole snapshot still fails closed at `expiresAt`.
 - Reload policy considers `nextRefreshAt`, `freshUntil`, and `expiresAt`, so the app’s earliest known boundary remains authoritative even when iOS delays a reload.
 - Placeholder and gallery snapshots provide representative content for both implemented families without introducing a second decision engine.
-- Long copy is bounded with line limits and scaling. Primary and secondary semantic styles, widget accenting, and container backgrounds adapt to full-color, accented/tinted, and vibrant rendering modes.
+- Long copy is bounded with line limits and scaling. The eyebrow and title rows use the in-app card’s five-point separation, while the action keeps the app card’s 12-point top gap and 40-point minimum height. Primary and secondary semantic styles, widget accenting, and container backgrounds adapt to full-color, accented/tinted, and vibrant rendering modes.
 - Recommendation content is privacy-sensitive. The final action is a visual launch affordance rather than a completion control; the widget remains read-only, with no direct completion, App Intent, weather lookup, or independent shared-state mutation.
 - When the recommendation is stale or unavailable, the medium surface asks the user to open Wavelength and refresh for a current suggestion rather than presenting expired guidance.
 

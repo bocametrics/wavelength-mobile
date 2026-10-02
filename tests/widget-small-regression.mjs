@@ -50,12 +50,13 @@ assert.match(widgetSource, /Text\("COMPLETED"\)/,
   'the progress caption must explain what the completed/total count represents');
 assert.doesNotMatch(widgetSource, /Text\("TODAY"\)/,
   'today is implicit in the widget and must not replace the progress meaning');
-assert.match(widgetSource, /Text\("TODAY’S HABITS"\)[\s\S]*?\.font\(\.system\(size:\s*9,\s*weight:\s*\.semibold\)\)/,
-  'the centered small-widget header must describe its content rather than repeat the app name');
+assert.match(widgetSource,
+  /private func widgetSectionHeader\(_ title:\s*String,\s*alignment:\s*Alignment\)[\s\S]*?Text\(title\)[\s\S]*?\.font\(\.system\(size:\s*9,\s*weight:\s*\.semibold\)\)[\s\S]*?\.tracking\(0\.7\)/,
+  'small and medium content headers must share one exact typography treatment');
+assert.equal((widgetSource.match(/widgetSectionHeader\("TODAY’S HABITS",\s*alignment:\s*\.center\)/g) || []).length, 2,
+  'the small-widget progress and recovery headers must both use the shared centered treatment');
 assert.doesNotMatch(widgetSource, /Text\("WAVELENGTH"\)|wave\.3\.right/,
   'the system app label already identifies Wavelength beneath the widget');
-assert.equal((widgetSource.match(/\.frame\(maxWidth:\s*\.infinity,\s*alignment:\s*\.center\)/g) || []).length, 2,
-  'the small widget content header must be centered in progress and recovery states');
 assert.match(widgetSource, /progress\.total\s*==\s*1\s*\?\s*"habit"\s*:\s*"habits"/,
   'VoiceOver progress copy must use singular and plural habit grammar');
 assert.match(widgetSource, /Open Wavelength/,

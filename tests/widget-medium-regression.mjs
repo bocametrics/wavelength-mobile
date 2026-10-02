@@ -41,7 +41,8 @@ assert.match(widgetSource, /supportedFamilies\(\[\.systemSmall,\s*\.systemMedium
 assert.doesNotMatch(widgetSource, /\.systemLarge/,
   'systemLarge remains out of Phase 3 scope');
 
-assert.match(widgetSource, /Text\("YOUR NEXT WAVE"\)/);
+assert.match(widgetSource, /widgetSectionHeader\("YOUR NEXT WAVE",\s*alignment:\s*\.leading\)/,
+  'the medium header must use the same typography helper as the small-widget header');
 assert.match(widgetSource, /Text\(nextWave\.eyebrow/);
 assert.match(widgetSource, /Text\(nextWave\.icon/,
   'the medium card must use the JavaScript-authored habit emoji');
@@ -56,21 +57,20 @@ const nextWaveView = widgetSource.slice(
   widgetSource.indexOf('private var nextWaveUnavailableView'),
 );
 assert.match(nextWaveView,
-  /Text\("YOUR NEXT WAVE"\)[\s\S]*?HStack\(alignment:\s*\.top,[\s\S]*?Text\(nextWave\.icon\)[\s\S]*?VStack\(alignment:\s*\.leading,[\s\S]*?Text\(nextWave\.eyebrow\)[\s\S]*?Text\(nextWave\.title\)[\s\S]*?Text\(nextWave\.detail\)[\s\S]*?Text\(nextWave\.action\)/,
-  'the medium card must keep its header, then place the emoji left of a compact card-like content stack');
-const headerToEyebrow = nextWaveView.slice(
-  nextWaveView.indexOf('Text("YOUR NEXT WAVE")'),
-  nextWaveView.indexOf('Text(nextWave.eyebrow'),
-);
-assert.doesNotMatch(headerToEyebrow, /Spacer\s*\(/,
-  'the medium card must not insert flexible empty space between its header and eyebrow');
+  /widgetSectionHeader\("YOUR NEXT WAVE",\s*alignment:\s*\.leading\)[\s\S]*?Spacer\(minLength:\s*4\)[\s\S]*?HStack\(alignment:\s*\.top,[\s\S]*?Text\(nextWave\.icon\)[\s\S]*?VStack\(alignment:\s*\.leading,\s*spacing:\s*0\)[\s\S]*?Text\(nextWave\.eyebrow\)[\s\S]*?Text\(nextWave\.title\)[\s\S]*?Text\(nextWave\.detail\)[\s\S]*?Text\(nextWave\.action\)[\s\S]*?Spacer\(minLength:\s*4\)/,
+  'the medium card must keep its header fixed while vertically balancing the emoji and roomier content stack beneath it');
 assert.match(nextWaveView, /Text\(nextWave\.eyebrow\)[\s\S]*?\.textCase\(\.uppercase\)/,
   'the eyebrow must retain the in-app card’s uppercase treatment');
 assert.match(nextWaveView,
-  /HStack\(alignment:\s*\.firstTextBaseline,[\s\S]*?Text\(nextWave\.title\)[\s\S]*?Text\(nextWave\.targetLabel\)/,
-  'the optional target must share the habit-title row like the in-app card');
-assert.match(nextWaveView, /Text\(nextWave\.action\)[\s\S]*?\.background\([\s\S]*?Capsule\(\)/,
-  'View habit must read visually as the final button-like item');
+  /HStack\(alignment:\s*\.firstTextBaseline,\s*spacing:\s*7\)[\s\S]*?Text\(nextWave\.title\)[\s\S]*?Text\("·"\)[\s\S]*?Text\(nextWave\.targetLabel\)[\s\S]*?\.font\(\.system\(size:\s*13,\s*weight:\s*\.semibold\)\)/,
+  'the title row must mirror the in-app card with a middle dot and a larger semibold target');
+assert.match(nextWaveView, /Text\(nextWave\.eyebrow\)[\s\S]*?\.padding\(\.bottom,\s*5\)/,
+  'the eyebrow must have the same breathing room as the in-app card');
+assert.match(nextWaveView, /HStack\(alignment:\s*\.firstTextBaseline,[\s\S]*?\.padding\(\.bottom,\s*5\)/,
+  'the title row must have the same breathing room as the in-app card');
+assert.match(nextWaveView,
+  /Text\(nextWave\.action\)[\s\S]*?\.padding\(\.horizontal,\s*14\)[\s\S]*?\.frame\(minHeight:\s*40\)[\s\S]*?\.background\([\s\S]*?Capsule\(\)[\s\S]*?\.padding\(\.top,\s*12\)/,
+  'View habit must finish the stack at the in-app card’s height and spacing');
 assert.match(widgetSource, /nextWaveView\(nextWave\)[\s\S]*?\.privacySensitive\(\)/,
   'recommendation content must be privacy-sensitive');
 assert.match(widgetSource, /current suggestion/,

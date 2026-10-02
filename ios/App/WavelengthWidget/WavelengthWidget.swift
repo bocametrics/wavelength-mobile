@@ -271,13 +271,20 @@ private struct WavelengthWidgetView: View {
         }
     }
 
+    private func widgetSectionHeader(_ title: String, alignment: Alignment) -> some View {
+        Text(title)
+            .font(.system(size: 9, weight: .semibold))
+            .tracking(0.7)
+            .frame(maxWidth: .infinity, alignment: alignment)
+            .foregroundStyle(accentColor)
+            .widgetAccentable()
+    }
+
     private func nextWaveView(_ nextWave: SnapshotNextWave) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Text("YOUR NEXT WAVE")
-                .font(.system(size: 9, weight: .semibold))
-                .tracking(0.7)
-                .foregroundStyle(accentColor)
-                .widgetAccentable()
+        VStack(alignment: .leading, spacing: 0) {
+            widgetSectionHeader("YOUR NEXT WAVE", alignment: .leading)
+
+            Spacer(minLength: 4)
 
             HStack(alignment: .top, spacing: 10) {
                 Text(nextWave.icon)
@@ -285,7 +292,7 @@ private struct WavelengthWidgetView: View {
                     .frame(width: 30, alignment: .leading)
                     .accessibilityHidden(true)
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 0) {
                     Text(nextWave.eyebrow)
                         .font(.caption2.weight(.semibold))
                         .textCase(.uppercase)
@@ -294,8 +301,9 @@ private struct WavelengthWidgetView: View {
                         .widgetAccentable()
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
+                        .padding(.bottom, 5)
 
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline, spacing: 7) {
                         Text(nextWave.title)
                             .font(.headline)
                             .foregroundStyle(.primary)
@@ -304,33 +312,41 @@ private struct WavelengthWidgetView: View {
                             .layoutPriority(1)
 
                         if !nextWave.targetLabel.isEmpty {
+                            Text("·")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.secondary)
+
                             Text(nextWave.targetLabel)
-                                .font(.caption2.weight(.semibold))
+                                .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
                         }
                     }
+                    .padding(.bottom, 5)
 
                     Text(nextWave.detail)
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
 
                     if !nextWave.action.isEmpty {
                         Text(nextWave.action)
-                            .font(.caption2.weight(.semibold))
+                            .font(.caption.weight(.semibold))
                             .foregroundStyle(accentColor)
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 4)
+                            .padding(.horizontal, 14)
+                            .frame(minHeight: 40)
                             .background(accentColor.opacity(0.12), in: Capsule())
                             .widgetAccentable()
+                            .padding(.top, 12)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+
+            Spacer(minLength: 4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .multilineTextAlignment(.leading)
@@ -339,11 +355,7 @@ private struct WavelengthWidgetView: View {
 
     private var nextWaveUnavailableView: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("YOUR NEXT WAVE")
-                .font(.system(size: 9, weight: .semibold))
-                .tracking(0.7)
-                .foregroundStyle(accentColor)
-                .widgetAccentable()
+            widgetSectionHeader("YOUR NEXT WAVE", alignment: .leading)
 
             Spacer(minLength: 0)
 
@@ -366,12 +378,7 @@ private struct WavelengthWidgetView: View {
 
     private func progressView(_ progress: SnapshotProgress) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("TODAY’S HABITS")
-                .font(.system(size: 9, weight: .semibold))
-                .tracking(0.7)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .foregroundStyle(accentColor)
-                .widgetAccentable()
+            widgetSectionHeader("TODAY’S HABITS", alignment: .center)
 
             Spacer(minLength: 0)
 
@@ -406,12 +413,7 @@ private struct WavelengthWidgetView: View {
 
     private var unavailableView: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("TODAY’S HABITS")
-                .font(.system(size: 9, weight: .semibold))
-                .tracking(0.7)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .foregroundStyle(accentColor)
-                .widgetAccentable()
+            widgetSectionHeader("TODAY’S HABITS", alignment: .center)
 
             Spacer()
 
