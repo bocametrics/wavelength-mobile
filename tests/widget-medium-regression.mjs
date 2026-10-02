@@ -41,8 +41,8 @@ assert.match(widgetSource, /supportedFamilies\(\[\.systemSmall,\s*\.systemMedium
 assert.doesNotMatch(widgetSource, /\.systemLarge/,
   'systemLarge remains out of Phase 3 scope');
 
-assert.match(widgetSource, /widgetSectionHeader\("YOUR NEXT WAVE",\s*alignment:\s*\.leading\)/,
-  'the medium header must use the same typography helper as the small-widget header');
+assert.doesNotMatch(widgetSource, /Text\("YOUR NEXT WAVE"\)|widgetSectionHeader\("YOUR NEXT WAVE"/,
+  'the external Wavelength label makes an internal medium-widget header redundant');
 assert.match(widgetSource, /Text\(nextWave\.eyebrow/);
 assert.match(widgetSource, /Text\(nextWave\.icon/,
   'the medium card must use the JavaScript-authored habit emoji');
@@ -57,8 +57,11 @@ const nextWaveView = widgetSource.slice(
   widgetSource.indexOf('private var nextWaveUnavailableView'),
 );
 assert.match(nextWaveView,
-  /widgetSectionHeader\("YOUR NEXT WAVE",\s*alignment:\s*\.leading\)[\s\S]*?Spacer\(minLength:\s*4\)[\s\S]*?HStack\(alignment:\s*\.top,[\s\S]*?Text\(nextWave\.icon\)[\s\S]*?VStack\(alignment:\s*\.leading,\s*spacing:\s*0\)[\s\S]*?Text\(nextWave\.eyebrow\)[\s\S]*?Text\(nextWave\.title\)[\s\S]*?Text\(nextWave\.detail\)[\s\S]*?Text\(nextWave\.action\)[\s\S]*?Spacer\(minLength:\s*4\)/,
-  'the medium card must keep its header fixed while vertically balancing the emoji and roomier content stack beneath it');
+  /VStack\(alignment:\s*\.leading,\s*spacing:\s*0\)[\s\S]*?Spacer\(minLength:\s*4\)[\s\S]*?HStack\(alignment:\s*\.top,[\s\S]*?Text\(nextWave\.icon\)[\s\S]*?VStack\(alignment:\s*\.leading,\s*spacing:\s*0\)[\s\S]*?Text\(nextWave\.eyebrow\)[\s\S]*?Text\(nextWave\.title\)[\s\S]*?Text\(nextWave\.detail\)[\s\S]*?Text\(nextWave\.action\)[\s\S]*?Spacer\(minLength:\s*4\)/,
+  'equal bounded spacers must vertically center the emoji and content stack across the medium card');
+assert.match(nextWaveView,
+  /Text\(nextWave\.icon\)[\s\S]*?\.font\(\.system\(size:\s*20\)\)[\s\S]*?\.frame\(width:\s*44,\s*height:\s*44\)[\s\S]*?\.background\([\s\S]*?RoundedRectangle\(cornerRadius:\s*13,\s*style:\s*\.continuous\)/,
+  'the emoji must mirror the in-app 44-point rounded-square accent tile');
 assert.match(nextWaveView, /Text\(nextWave\.eyebrow\)[\s\S]*?\.textCase\(\.uppercase\)/,
   'the eyebrow must retain the in-app card’s uppercase treatment');
 assert.match(nextWaveView,

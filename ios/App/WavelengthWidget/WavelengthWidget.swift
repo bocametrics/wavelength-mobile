@@ -282,14 +282,17 @@ private struct WavelengthWidgetView: View {
 
     private func nextWaveView(_ nextWave: SnapshotNextWave) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            widgetSectionHeader("YOUR NEXT WAVE", alignment: .leading)
-
             Spacer(minLength: 4)
 
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: 14) {
                 Text(nextWave.icon)
-                    .font(.system(size: 28))
-                    .frame(width: 30, alignment: .leading)
+                    .font(.system(size: 20))
+                    .frame(width: 44, height: 44)
+                    .background(
+                        accentColor.opacity(0.12),
+                        in: RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    )
+                    .widgetAccentable()
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 0) {
@@ -355,8 +358,6 @@ private struct WavelengthWidgetView: View {
 
     private var nextWaveUnavailableView: some View {
         VStack(alignment: .leading, spacing: 6) {
-            widgetSectionHeader("YOUR NEXT WAVE", alignment: .leading)
-
             Spacer(minLength: 0)
 
             Image(systemName: "arrow.up.forward.app")
@@ -370,6 +371,8 @@ private struct WavelengthWidgetView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
+
+            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .multilineTextAlignment(.leading)

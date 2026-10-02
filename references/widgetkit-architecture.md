@@ -65,7 +65,7 @@ The first visible widget shows today’s completed/total count inside a circular
 
 ## Implemented `systemMedium` widget
 
-The medium widget renders the current app-authored Next Wave presentation model. The extension does not repeat scheduling, weather, habit-selection, or recommendation logic. It keeps the left-aligned **YOUR NEXT WAVE** header in the same shared type treatment as the small widget’s **TODAY’S HABITS** header. Beneath it, the vertically balanced main block mirrors the in-app card with the habit emoji on the left and a right-hand stack: uppercase eyebrow, stable habit title plus an optional `·` target, detail, and final 40-point-high action affordance.
+The medium widget renders the current app-authored Next Wave presentation model. The extension does not repeat scheduling, weather, habit-selection, or recommendation logic. Because iOS already labels the widget **Wavelength**, the medium surface omits a redundant internal header and vertically centers its recommendation. The main block mirrors the in-app card with a 44-point rounded-square accent tile for the habit emoji on the left and a right-hand stack: uppercase eyebrow, stable habit title plus an optional `·` target, detail, and final 40-point-high action affordance.
 
 - The schema-v1 `nextWave` object is required and is decoded only into its allowlisted state, eyebrow, habit ID, habit emoji, title, target label, detail, action label, and `freshUntil` fields. A missing or malformed object invalidates the whole snapshot.
 - `freshUntil` must not exceed either `nextRefreshAt` or `expiresAt`. A recommendation is current only while `freshUntil` is later than the timeline date.

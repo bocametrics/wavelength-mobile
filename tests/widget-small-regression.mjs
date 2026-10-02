@@ -52,7 +52,7 @@ assert.doesNotMatch(widgetSource, /Text\("TODAY"\)/,
   'today is implicit in the widget and must not replace the progress meaning');
 assert.match(widgetSource,
   /private func widgetSectionHeader\(_ title:\s*String,\s*alignment:\s*Alignment\)[\s\S]*?Text\(title\)[\s\S]*?\.font\(\.system\(size:\s*9,\s*weight:\s*\.semibold\)\)[\s\S]*?\.tracking\(0\.7\)/,
-  'small and medium content headers must share one exact typography treatment');
+  'both small-widget states must share one exact header typography treatment');
 assert.equal((widgetSource.match(/widgetSectionHeader\("TODAY’S HABITS",\s*alignment:\s*\.center\)/g) || []).length, 2,
   'the small-widget progress and recovery headers must both use the shared centered treatment');
 assert.doesNotMatch(widgetSource, /Text\("WAVELENGTH"\)|wave\.3\.right/,
