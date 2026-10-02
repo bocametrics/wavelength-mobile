@@ -68,7 +68,7 @@ for (const [label, htmlPath] of builds) {
 
   const suggestion = {
     reason:'forecast-conditions', icon:'🌊', eyebrow:'Suggested now', habitId:'daily',
-    title:'Daily habit', targetLabel:'', detail:'Rain chance 60%',
+    title:'Daily habit', targetLabel:'', detail:'Rain chance 60%', action:'View habit',
   };
   Object.defineProperty(suggestion, 'forecastEvidence', { value:{ acquiredAt:now.getTime() }, enumerable:false });
   const snapshot = context.publishWidgetSnapshot(now, suggestion);
@@ -81,6 +81,8 @@ for (const [label, htmlPath] of builds) {
   assert.equal(snapshot.expiresAt, '2026-10-01T04:00:00.000Z');
   assert.equal(snapshot.nextRefreshAt, '2026-09-30T16:15:00.000Z');
   assert.equal(snapshot.nextWave.state, 'forecast-conditions');
+  assert.equal(snapshot.nextWave.icon, '🌊');
+  assert.equal(snapshot.nextWave.action, 'View habit');
   assert.equal(snapshot.nextWave.freshUntil, '2026-09-30T16:15:00.000Z');
   assert.deepEqual(JSON.parse(JSON.stringify(snapshot.habits.map(habit => habit.id))), ['daily'], `${label}: only habits scheduled today are shared`);
 

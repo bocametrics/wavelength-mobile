@@ -3704,9 +3704,11 @@ function buildWidgetSnapshot(input) {
       state:suggestion.state,
       eyebrow:suggestion.eyebrow,
       habitId:suggestion.habitId,
+      icon:suggestion.icon,
       title:suggestion.title,
       targetLabel:suggestion.targetLabel,
       detail:suggestion.detail,
+      action:suggestion.action,
       freshUntil:suggestion.freshUntil,
     },
     habits:[
@@ -3777,9 +3779,11 @@ function publishWidgetSnapshot(now, suggestion, nativeBridge = window.Wavelength
     state:suggestion.reason || 'none',
     eyebrow:suggestion.eyebrow || '',
     habitId:suggestion.habitId || '',
+    icon:suggestion.icon || '○',
     title:suggestion.title || '',
     targetLabel:suggestion.targetLabel || '',
     detail:suggestion.detail || '',
+    action:suggestion.action || '',
     freshUntil:getWidgetSuggestionFreshUntil(suggestion, rhythmWeatherData, expiresAt, nextRefreshAt),
   };
   const snapshot = buildWidgetSnapshot({

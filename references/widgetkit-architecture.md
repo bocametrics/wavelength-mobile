@@ -33,7 +33,7 @@ The top-level fields are:
 - `expiresAt`: local midnight. The entire snapshot fails closed after this time.
 - `nextRefreshAt`: the earliest known decision boundary, including active 15-minute completion cues and 60-minute progress-pause cues, capped at `expiresAt`. Persisting cue deadlines makes the widget fail closed even when iOS suspends the containing app before its JavaScript expiry timer runs.
 - `progress`: completed and total scheduled-habit counts.
-- `nextWave`: allowlisted presentation fields only: state, eyebrow, habit ID, title, target label, detail, and `freshUntil`.
+- `nextWave`: allowlisted presentation fields only: state, eyebrow, habit ID, habit emoji, title, target label, detail, action label, and `freshUntil`.
 - `habits`: today's scheduled habits in canonical user order, stable-partitioned with incomplete rows before completed rows. Each row contains only identity, presentation, completion, and optional measured-progress fields.
 
 Raw LocalStorage, history, location, weather payloads, category definitions, user profile data, and recommendation evidence are never copied into the shared snapshot. Environmental copy expires at the earliest applicable recommendation boundary, source-freshness boundary, or local midnight.
@@ -65,15 +65,15 @@ The first visible widget shows today’s completed/total count inside a circular
 
 ## Implemented `systemMedium` widget
 
-The medium widget renders the current app-authored Next Wave presentation model. The extension does not repeat scheduling, weather, habit-selection, or recommendation logic. It displays the snapshot’s eyebrow, stable habit title, optional target label, and detail under a left-aligned **YOUR NEXT WAVE** header.
+The medium widget renders the current app-authored Next Wave presentation model. The extension does not repeat scheduling, weather, habit-selection, or recommendation logic. It keeps the left-aligned **YOUR NEXT WAVE** header, then mirrors the in-app card with the habit emoji on the left and a compact right-hand stack: uppercase eyebrow, stable habit title plus optional target, detail, and final button-like action label.
 
-- The schema-v1 `nextWave` object is required and is decoded only into its allowlisted state, eyebrow, habit ID, title, target label, detail, and `freshUntil` fields. A missing or malformed object invalidates the whole snapshot.
+- The schema-v1 `nextWave` object is required and is decoded only into its allowlisted state, eyebrow, habit ID, habit emoji, title, target label, detail, action label, and `freshUntil` fields. A missing or malformed object invalidates the whole snapshot.
 - `freshUntil` must not exceed either `nextRefreshAt` or `expiresAt`. A recommendation is current only while `freshUntil` is later than the timeline date.
 - Recommendation staleness does not invalidate valid same-day progress. At `freshUntil`, the medium timeline fails closed to an **Open Wavelength** recovery state while retaining progress for the small family; the whole snapshot still fails closed at `expiresAt`.
 - Reload policy considers `nextRefreshAt`, `freshUntil`, and `expiresAt`, so the app’s earliest known boundary remains authoritative even when iOS delays a reload.
 - Placeholder and gallery snapshots provide representative content for both implemented families without introducing a second decision engine.
 - Long copy is bounded with line limits and scaling. Primary and secondary semantic styles, widget accenting, and container backgrounds adapt to full-color, accented/tinted, and vibrant rendering modes.
-- Recommendation content is privacy-sensitive. The widget remains read-only: it has no controls, direct completion, App Intent, weather lookup, or independent shared-state mutation.
+- Recommendation content is privacy-sensitive. The final action is a visual launch affordance rather than a completion control; the widget remains read-only, with no direct completion, App Intent, weather lookup, or independent shared-state mutation.
 - When the recommendation is stale or unavailable, the medium surface asks the user to open Wavelength and refresh for a current suggestion rather than presenting expired guidance.
 
 ## Widget families and limitations

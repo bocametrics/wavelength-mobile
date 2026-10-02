@@ -17,18 +17,22 @@ private struct SnapshotNextWave: Decodable, Equatable {
     let state: String
     let eyebrow: String
     let habitId: String
+    let icon: String
     let title: String
     let targetLabel: String
     let detail: String
+    let action: String
     let freshUntil: Date
 
     private enum CodingKeys: String, CodingKey {
         case state
         case eyebrow
         case habitId
+        case icon
         case title
         case targetLabel
         case detail
+        case action
         case freshUntil
     }
 }
@@ -158,11 +162,13 @@ private struct WavelengthProvider: TimelineProvider {
             progress: SnapshotProgress(completed: 3, total: 5),
             nextWave: SnapshotNextWave(
                 state: "available",
-                eyebrow: "A good fit right now",
+                eyebrow: "Ideal now",
                 habitId: "movement",
+                icon: "🚶",
                 title: "Outdoor walk or movement",
                 targetLabel: "20+ min",
-                detail: "A short movement break can fit into your day.",
+                detail: "This is a good time for it.",
+                action: "View habit",
                 freshUntil: Date().addingTimeInterval(WavelengthWidgetConstants.retryInterval)
             )
         )
@@ -266,41 +272,65 @@ private struct WavelengthWidgetView: View {
     }
 
     private func nextWaveView(_ nextWave: SnapshotNextWave) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 7) {
             Text("YOUR NEXT WAVE")
                 .font(.system(size: 9, weight: .semibold))
                 .tracking(0.7)
                 .foregroundStyle(accentColor)
                 .widgetAccentable()
 
-            Spacer(minLength: 0)
+            HStack(alignment: .top, spacing: 10) {
+                Text(nextWave.icon)
+                    .font(.system(size: 28))
+                    .frame(width: 30, alignment: .leading)
+                    .accessibilityHidden(true)
 
-            Text(nextWave.eyebrow)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(accentColor)
-                .widgetAccentable()
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(nextWave.eyebrow)
+                        .font(.caption2.weight(.semibold))
+                        .textCase(.uppercase)
+                        .tracking(0.45)
+                        .foregroundStyle(accentColor)
+                        .widgetAccentable()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
 
-            Text(nextWave.title)
-                .font(.headline)
-                .foregroundStyle(.primary)
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text(nextWave.title)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .layoutPriority(1)
 
-            if !nextWave.targetLabel.isEmpty {
-                Text(nextWave.targetLabel)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                        if !nextWave.targetLabel.isEmpty {
+                            Text(nextWave.targetLabel)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                    }
+
+                    Text(nextWave.detail)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+
+                    if !nextWave.action.isEmpty {
+                        Text(nextWave.action)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(accentColor)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4)
+                            .background(accentColor.opacity(0.12), in: Capsule())
+                            .widgetAccentable()
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-
-            Text(nextWave.detail)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .multilineTextAlignment(.leading)
