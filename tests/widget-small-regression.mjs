@@ -33,9 +33,9 @@ assert.match(widgetSource, /Timeline\(entries:\s*\[currentEntry,\s*expiryEntry\]
   'timeline must include a fail-closed entry at local-midnight expiry');
 assert.match(widgetSource, /expiryEntry\s*=.*date:\s*snapshot\.expiresAt/s);
 assert.match(widgetSource, /supportedFamilies\(\[\.systemSmall,\s*\.systemMedium\]\)/,
-  'Phase 3 must preserve systemSmall while adding systemMedium');
+  'the final supported family set must preserve systemSmall and systemMedium');
 assert.doesNotMatch(widgetSource, /\.systemLarge/,
-  'systemLarge remains out of Phase 3 scope');
+  'the intentionally excluded systemLarge family must not be exposed');
 
 assert.match(widgetSource, /@Environment\(\\\.widgetRenderingMode\)/);
 assert.match(widgetSource, /case \.fullColor:/);

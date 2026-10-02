@@ -37,9 +37,9 @@ assert.match(widgetSource, /snapshot\.nextRefreshAt,\s*snapshot\.nextWave\.fresh
 assert.match(widgetSource, /@Environment\(\\\.widgetFamily\)/);
 assert.match(widgetSource, /case \.systemMedium:/);
 assert.match(widgetSource, /supportedFamilies\(\[\.systemSmall,\s*\.systemMedium\]\)/,
-  'Phase 3 must expose small and medium without exposing large');
+  'the final supported family set must expose small and medium only');
 assert.doesNotMatch(widgetSource, /\.systemLarge/,
-  'systemLarge remains out of Phase 3 scope');
+  'the intentionally excluded systemLarge family must not be exposed');
 
 assert.doesNotMatch(widgetSource, /Text\("YOUR NEXT WAVE"\)|widgetSectionHeader\("YOUR NEXT WAVE"/,
   'the external Wavelength label makes an internal medium-widget header redundant');

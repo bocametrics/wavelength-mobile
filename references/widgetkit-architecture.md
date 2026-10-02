@@ -2,7 +2,7 @@
 
 ## Status
 
-Phase 1 established the shared-data boundary. Phase 2 added the read-only `systemSmall` progress widget. Phase 3 adds the read-only `systemMedium` Next Wave widget. The large family remains a future phase.
+Phase 1 established the shared-data boundary. Phase 2 added the read-only `systemSmall` progress widget. Phase 3 added the read-only `systemMedium` Next Wave widget. These two families are the complete supported set: a read-only `systemLarge` surface would duplicate the ordered habits already available after one tap into Wavelength without adding enough glanceable value.
 
 The Capacitor app remains the source of truth for habit state and Next Wave decisions. Whenever Home renders an authoritative Next Wave result, the native app publishes one compact snapshot to the shared App Group. WidgetKit decodes that snapshot and renders it in SwiftUI; it does not inspect the WebView DOM or read WebKit LocalStorage.
 
@@ -76,10 +76,20 @@ The medium widget renders the current app-authored Next Wave presentation model.
 - Recommendation content is privacy-sensitive. The final action is a visual launch affordance rather than a completion control; the widget remains read-only, with no direct completion, App Intent, weather lookup, or independent shared-state mutation.
 - When the recommendation is stale or unavailable, the medium surface asks the user to open Wavelength and refresh for a current suggestion rather than presenting expired guidance.
 
-## Widget families and limitations
+## Supported families and limitations
 
 1. `systemSmall`: today’s completion indicator — implemented in Phase 2.
 2. `systemMedium`: current Next Wave recommendation — implemented in Phase 3.
-3. `systemLarge`: Next Wave plus several ordered habits — planned.
+3. `systemLarge`: intentionally not supported. The two compact widgets already provide progress and recommendation entry points, while the full app remains the better place to browse or complete ordered habits.
 
 Both implemented widgets are read-only. Taps open Wavelength; direct completion through App Intents remains deferred until shared-state reconciliation is proven reliable. The extension depends on the containing app to publish fresh snapshots, and WidgetKit controls the exact reload time, so stale guidance always falls back rather than being recomputed in the extension.
+
+## Final appearance verification
+
+The final simulator matrix covers both supported families in light and dark system appearances:
+
+- Ordinary Home Screen rendering was exercised with the system’s full-color appearance.
+- The simulator’s real Home Screen customization was switched to its tinted appearance, exercising WidgetKit’s accented rendering mode and the production `.widgetAccentable()` grouping.
+- The explicit `.vibrant` source branch was compiled and rendered through a QA-only forced-mode build in both color schemes. This verifies Wavelength’s semantic colors, clear background branch, hierarchy, and geometry; the actual desaturation and material effect remain system-controlled in the Lock Screen and low-light StandBy contexts where iOS selects vibrant rendering.
+
+The QA-only snapshot, family, Home Screen customization, appearance, and forced rendering-mode changes are never committed. Verification restores the production snapshot, the original `systemSmall` Home Screen placement, the original customization archive, dark appearance, and the exact production widget source and artifact.
