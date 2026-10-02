@@ -32,10 +32,10 @@ assert.match(widgetSource, /data\.count\s*<=\s*maximumSnapshotBytes/);
 assert.match(widgetSource, /Timeline\(entries:\s*\[currentEntry,\s*expiryEntry\]/,
   'timeline must include a fail-closed entry at local-midnight expiry');
 assert.match(widgetSource, /expiryEntry\s*=.*date:\s*snapshot\.expiresAt/s);
-assert.match(widgetSource, /supportedFamilies\(\[\.systemSmall\]\)/,
-  'Phase 2 must expose only systemSmall');
-assert.doesNotMatch(widgetSource, /\.systemMedium|\.systemLarge/,
-  'later widget families are out of Phase 2 scope');
+assert.match(widgetSource, /supportedFamilies\(\[\.systemSmall,\s*\.systemMedium\]\)/,
+  'Phase 3 must preserve systemSmall while adding systemMedium');
+assert.doesNotMatch(widgetSource, /\.systemLarge/,
+  'systemLarge remains out of Phase 3 scope');
 
 assert.match(widgetSource, /@Environment\(\\\.widgetRenderingMode\)/);
 assert.match(widgetSource, /case \.fullColor:/);

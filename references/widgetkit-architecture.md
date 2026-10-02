@@ -2,7 +2,7 @@
 
 ## Status
 
-Phase 1 established the shared-data boundary. Phase 2 adds the first visible surface: a read-only `systemSmall` progress widget. The medium and large families remain future phases.
+Phase 1 established the shared-data boundary. Phase 2 added the read-only `systemSmall` progress widget. Phase 3 adds the read-only `systemMedium` Next Wave widget. The large family remains a future phase.
 
 The Capacitor app remains the source of truth for habit state and Next Wave decisions. Whenever Home renders an authoritative Next Wave result, the native app publishes one compact snapshot to the shared App Group. WidgetKit decodes that snapshot and renders it in SwiftUI; it does not inspect the WebView DOM or read WebKit LocalStorage.
 
@@ -53,7 +53,7 @@ The Swift bridge rejects unsupported schemas, non-JSON payloads, oversized snaps
 
 The first visible widget shows today’s completed/total count inside a circular progress treatment. The extension:
 
-- Supports only `.systemSmall`; medium and large are intentionally not exposed yet.
+- Preserves the `.systemSmall` progress presentation alongside the separately rendered `.systemMedium` family; large is intentionally not exposed.
 - Reads at most 64 KiB from the shared snapshot file and accepts schema version 1 only.
 - Rejects malformed JSON, invalid progress bounds, unavailable App Group storage, expired snapshots, and snapshots for a different local day.
 - Uses the snapshot’s valid IANA time zone when checking `dayKey`, otherwise the device time zone.
@@ -63,10 +63,23 @@ The first visible widget shows today’s completed/total count inside a circular
 - Uses semantic foregrounds, `containerBackground(for: .widget)`, `widgetRenderingMode`, and `widgetAccentable()` to adapt across full-color, accented/tinted, and vibrant contexts.
 - Marks progress as privacy-sensitive and remains read-only; tapping the widget uses WidgetKit’s default app-launch behavior.
 
-## Planned widget families
+## Implemented `systemMedium` widget
+
+The medium widget renders the current app-authored Next Wave presentation model. The extension does not repeat scheduling, weather, habit-selection, or recommendation logic. It displays the snapshot’s eyebrow, stable habit title, optional target label, and detail under a left-aligned **YOUR NEXT WAVE** header.
+
+- The schema-v1 `nextWave` object is required and is decoded only into its allowlisted state, eyebrow, habit ID, title, target label, detail, and `freshUntil` fields. A missing or malformed object invalidates the whole snapshot.
+- `freshUntil` must not exceed either `nextRefreshAt` or `expiresAt`. A recommendation is current only while `freshUntil` is later than the timeline date.
+- Recommendation staleness does not invalidate valid same-day progress. At `freshUntil`, the medium timeline fails closed to an **Open Wavelength** recovery state while retaining progress for the small family; the whole snapshot still fails closed at `expiresAt`.
+- Reload policy considers `nextRefreshAt`, `freshUntil`, and `expiresAt`, so the app’s earliest known boundary remains authoritative even when iOS delays a reload.
+- Placeholder and gallery snapshots provide representative content for both implemented families without introducing a second decision engine.
+- Long copy is bounded with line limits and scaling. Primary and secondary semantic styles, widget accenting, and container backgrounds adapt to full-color, accented/tinted, and vibrant rendering modes.
+- Recommendation content is privacy-sensitive. The widget remains read-only: it has no controls, direct completion, App Intent, weather lookup, or independent shared-state mutation.
+- When the recommendation is stale or unavailable, the medium surface asks the user to open Wavelength and refresh for a current suggestion rather than presenting expired guidance.
+
+## Widget families and limitations
 
 1. `systemSmall`: today’s completion indicator — implemented in Phase 2.
-2. `systemMedium`: current Next Wave recommendation — planned.
+2. `systemMedium`: current Next Wave recommendation — implemented in Phase 3.
 3. `systemLarge`: Next Wave plus several ordered habits — planned.
 
-The first widget release is read-only. Taps open Wavelength; direct completion through App Intents remains deferred until shared-state reconciliation is proven reliable.
+Both implemented widgets are read-only. Taps open Wavelength; direct completion through App Intents remains deferred until shared-state reconciliation is proven reliable. The extension depends on the containing app to publish fresh snapshots, and WidgetKit controls the exact reload time, so stale guidance always falls back rather than being recomputed in the extension.

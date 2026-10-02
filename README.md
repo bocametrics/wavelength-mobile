@@ -10,7 +10,7 @@ This folder is the iPhone-first, installable version of Wavelength and the sole 
 - Standalone/full-screen presentation when installed
 - Offline app shell via service worker
 - Capacitor 8 iOS shell with official Local Notifications and Geolocation bridges, a Wavelength app icon, and a branded launch screen
-- Native WidgetKit support: the app exports a compact, versioned snapshot through `group.com.bocametrics.wavelength`, and the read-only `systemSmall` widget renders today’s completion progress from atomic App Group storage with full-color, accented/tinted, and vibrant adaptation
+- Native WidgetKit support: the app exports a compact, versioned snapshot through `group.com.bocametrics.wavelength`; the read-only `systemSmall` widget renders today’s completion progress, and the implemented `systemMedium` Next Wave widget renders the app-authored current suggestion, both with full-color, accented/tinted, and vibrant adaptation
 - Fixed **Home / Insights / Settings** dock with iPhone safe-area clearance
 - First Name, Appearance, Backup/Share, and Import controls on the dedicated **Settings** page
 - Full-screen **Categories → Manage Category → Edit Habit** navigation, with per-habit Monday–Sunday schedules and all seven days selected by default
@@ -213,7 +213,7 @@ Inside Capacitor, Wavelength requests approximate location through the official 
 
 The iPhone simulator acceptance pass compiles and launches the app with Xcode, verifies native location context without a website prompt, exercises real notification permission, background delivery, and tap-to-Home routing, and confirms the embedded `WavelengthWidget` extension can read the shared App Group snapshot. The delivered reminder remains generic and privacy-preserving. Physical-device signing, lock-screen delivery, and final widget appearance acceptance remain later release gates.
 
-Wavelength does not request calendar or HealthKit access. Its first WidgetKit surface is a read-only `systemSmall` progress widget; `systemMedium` Next Wave, `systemLarge` ordered habits, and App Intent interactions remain separate phases.
+Wavelength does not request calendar or HealthKit access. Its WidgetKit surfaces are the read-only `systemSmall` progress widget and read-only `systemMedium` Next Wave widget. The `systemLarge` ordered-habits surface and App Intent interactions remain separate future phases.
 
 This Windows/WSL checkout can generate and synchronize the Xcode project, run native-bridge regression coverage, and run the 390px mock-bridge browser flows in `tests/browser/native-geolocation-e2e.cjs` and `tests/browser/native-notifications-e2e.cjs`. Building and simulator testing require macOS and Xcode. Physical-device testing, archiving, and App Store submission also require Apple Developer signing.
 

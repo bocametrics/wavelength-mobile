@@ -13,6 +13,26 @@ private struct SnapshotProgress: Decodable, Equatable {
     let total: Int
 }
 
+private struct SnapshotNextWave: Decodable, Equatable {
+    let state: String
+    let eyebrow: String
+    let habitId: String
+    let title: String
+    let targetLabel: String
+    let detail: String
+    let freshUntil: Date
+
+    private enum CodingKeys: String, CodingKey {
+        case state
+        case eyebrow
+        case habitId
+        case title
+        case targetLabel
+        case detail
+        case freshUntil
+    }
+}
+
 private struct WidgetSnapshot: Decodable {
     let schemaVersion: Int
     let revision: Int64
@@ -22,6 +42,7 @@ private struct WidgetSnapshot: Decodable {
     let expiresAt: Date
     let nextRefreshAt: Date
     let progress: SnapshotProgress
+    let nextWave: SnapshotNextWave
 
     private enum CodingKeys: String, CodingKey {
         case schemaVersion
@@ -32,6 +53,7 @@ private struct WidgetSnapshot: Decodable {
         case expiresAt
         case nextRefreshAt
         case progress
+        case nextWave
     }
 }
 
@@ -64,6 +86,8 @@ private enum SnapshotReader {
         guard snapshot.generatedAt <= now,
               snapshot.revision == expectedRevision,
               snapshot.nextRefreshAt <= snapshot.expiresAt,
+              snapshot.nextWave.freshUntil <= snapshot.nextRefreshAt,
+              snapshot.nextWave.freshUntil <= snapshot.expiresAt,
               snapshot.expiresAt > now else {
             return nil
         }
@@ -124,22 +148,41 @@ private enum SnapshotReader {
 private struct WavelengthEntry: TimelineEntry {
     let date: Date
     let progress: SnapshotProgress?
+    let nextWave: SnapshotNextWave?
 }
 
 private struct WavelengthProvider: TimelineProvider {
     func placeholder(in context: Context) -> WavelengthEntry {
-        WavelengthEntry(date: Date(), progress: SnapshotProgress(completed: 3, total: 5))
+        WavelengthEntry(
+            date: Date(),
+            progress: SnapshotProgress(completed: 3, total: 5),
+            nextWave: SnapshotNextWave(
+                state: "available",
+                eyebrow: "A good fit right now",
+                habitId: "movement",
+                title: "Outdoor walk or movement",
+                targetLabel: "20+ min",
+                detail: "A short movement break can fit into your day.",
+                freshUntil: Date().addingTimeInterval(WavelengthWidgetConstants.retryInterval)
+            )
+        )
     }
 
     func getSnapshot(in context: Context, completion: @escaping (WavelengthEntry) -> Void) {
         let now = Date()
-        completion(WavelengthEntry(date: now, progress: SnapshotReader.load(now: now)?.progress))
+        guard let snapshot = SnapshotReader.load(now: now) else {
+            completion(WavelengthEntry(date: now, progress: nil, nextWave: nil))
+            return
+        }
+
+        let currentNextWave = snapshot.nextWave.freshUntil > now ? snapshot.nextWave : nil
+        completion(WavelengthEntry(date: now, progress: snapshot.progress, nextWave: currentNextWave))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<WavelengthEntry>) -> Void) {
         let now = Date()
         guard let snapshot = SnapshotReader.load(now: now) else {
-            let unavailableEntry = WavelengthEntry(date: now, progress: nil)
+            let unavailableEntry = WavelengthEntry(date: now, progress: nil, nextWave: nil)
             completion(Timeline(
                 entries: [unavailableEntry],
                 policy: .after(now.addingTimeInterval(WavelengthWidgetConstants.retryInterval))
@@ -147,35 +190,148 @@ private struct WavelengthProvider: TimelineProvider {
             return
         }
 
-        let currentEntry = WavelengthEntry(date: now, progress: snapshot.progress)
-        let expiryEntry = WavelengthEntry(date: snapshot.expiresAt, progress: nil)
-        let futureRefreshDates = [snapshot.nextRefreshAt, snapshot.expiresAt]
-            .compactMap { $0 }
+        let currentNextWave = snapshot.nextWave.freshUntil > now ? snapshot.nextWave : nil
+        let currentEntry = WavelengthEntry(
+            date: now,
+            progress: snapshot.progress,
+            nextWave: currentNextWave
+        )
+        let recommendationExpiryEntry = WavelengthEntry(
+            date: snapshot.nextWave.freshUntil,
+            progress: snapshot.progress,
+            nextWave: nil
+        )
+        let expiryEntry = WavelengthEntry(
+            date: snapshot.expiresAt,
+            progress: nil,
+            nextWave: nil
+        )
+        let futureRefreshDates = [
+            snapshot.nextRefreshAt,
+            snapshot.nextWave.freshUntil,
+            snapshot.expiresAt
+        ]
             .filter { $0 > now }
         let refreshDate = futureRefreshDates.min()
             ?? now.addingTimeInterval(WavelengthWidgetConstants.retryInterval)
 
-        completion(Timeline(entries: [currentEntry, expiryEntry], policy: .after(refreshDate)))
+        if context.family == .systemMedium,
+           snapshot.nextWave.freshUntil > now,
+           snapshot.nextWave.freshUntil < snapshot.expiresAt {
+            completion(Timeline(
+                entries: [currentEntry, recommendationExpiryEntry, expiryEntry],
+                policy: .after(refreshDate)
+            ))
+        } else {
+            completion(Timeline(entries: [currentEntry, expiryEntry], policy: .after(refreshDate)))
+        }
     }
 }
 
 private struct WavelengthWidgetView: View {
     @Environment(\.widgetRenderingMode) private var renderingMode
+    @Environment(\.widgetFamily) private var widgetFamily
 
     let entry: WavelengthEntry
 
     var body: some View {
         Group {
-            if let progress = entry.progress {
-                progressView(progress)
-                    .privacySensitive()
-            } else {
-                unavailableView
+            switch widgetFamily {
+            case .systemMedium:
+                if let nextWave = entry.nextWave {
+                    nextWaveView(nextWave)
+                        .privacySensitive()
+                } else {
+                    nextWaveUnavailableView
+                }
+            case .systemSmall:
+                smallWidgetView
+            default:
+                smallWidgetView
             }
         }
         .containerBackground(for: .widget) {
             backgroundColor
         }
+    }
+
+    @ViewBuilder
+    private var smallWidgetView: some View {
+        if let progress = entry.progress {
+            progressView(progress)
+                .privacySensitive()
+        } else {
+            unavailableView
+        }
+    }
+
+    private func nextWaveView(_ nextWave: SnapshotNextWave) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("YOUR NEXT WAVE")
+                .font(.system(size: 9, weight: .semibold))
+                .tracking(0.7)
+                .foregroundStyle(accentColor)
+                .widgetAccentable()
+
+            Spacer(minLength: 0)
+
+            Text(nextWave.eyebrow)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(accentColor)
+                .widgetAccentable()
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+
+            Text(nextWave.title)
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+
+            if !nextWave.targetLabel.isEmpty {
+                Text(nextWave.targetLabel)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+
+            Text(nextWave.detail)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .multilineTextAlignment(.leading)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var nextWaveUnavailableView: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("YOUR NEXT WAVE")
+                .font(.system(size: 9, weight: .semibold))
+                .tracking(0.7)
+                .foregroundStyle(accentColor)
+                .widgetAccentable()
+
+            Spacer(minLength: 0)
+
+            Image(systemName: "arrow.up.forward.app")
+                .font(.title2)
+                .foregroundStyle(accentColor)
+                .widgetAccentable()
+            Text("Open Wavelength")
+                .font(.headline)
+                .foregroundStyle(.primary)
+            Text("Refresh in the app for a current suggestion.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .multilineTextAlignment(.leading)
+        .accessibilityElement(children: .combine)
     }
 
     private func progressView(_ progress: SnapshotProgress) -> some View {
@@ -290,7 +446,7 @@ struct WavelengthWidget: Widget {
             WavelengthWidgetView(entry: entry)
         }
         .configurationDisplayName("Today’s Wavelength")
-        .description("See today’s habit progress at a glance.")
-        .supportedFamilies([.systemSmall])
+        .description("See today’s habit progress or current Next Wave suggestion at a glance.")
+        .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
