@@ -93,3 +93,11 @@ The final simulator matrix covers both supported families in light and dark syst
 - The explicit `.vibrant` source branch was compiled and rendered through a QA-only forced-mode build in both color schemes. This verifies Wavelength’s semantic colors, clear background branch, hierarchy, and geometry; the actual desaturation and material effect remain system-controlled in the Lock Screen and low-light StandBy contexts where iOS selects vibrant rendering.
 
 The QA-only snapshot, family, Home Screen customization, appearance, and forced rendering-mode changes are never committed. Verification restores the production snapshot, the original `systemSmall` Home Screen placement, the original customization archive, dark appearance, and the exact production widget source and artifact.
+
+## Physical-device acceptance
+
+The signed production build was installed in place on the physical iPhone without uninstalling the existing app. An immediate pre/post-install comparison proved that installation preserved the WebKit LocalStorage contents. After launch, all non-telemetry values remained identical; the only semantic change was expected prospective Next Wave recommendation evidence recorded by the running app.
+
+Both supported families were then added to the physical Home Screen and accepted in the production full-color appearance. The small widget rendered its centered **TODAY’S HABITS** hierarchy, completion fraction, **COMPLETED** caption, and progress ring. The medium widget rendered its rounded-square habit tile, eyebrow, title and target, detail, and **View habit** affordance. Both retained the external **Wavelength** system label, showed current content without clipping, truncation, or overlap, and opened Wavelength when tapped.
+
+During the first refresh, the medium widget briefly displayed its honest open-app recovery state before the containing app republished a current snapshot; it then returned to the full recommendation and remained current during acceptance. This is the intended fail-closed behavior rather than stale-guidance rendering.
