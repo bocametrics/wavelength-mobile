@@ -69,6 +69,7 @@ for (const [label, htmlPath] of builds) {
   const suggestion = {
     reason:'forecast-conditions', icon:'🌊', eyebrow:'Suggested now', habitId:'daily',
     title:'Daily habit', targetLabel:'', detail:'Rain chance 60%', action:'View habit',
+    recommendationBoundaryAt:Date.parse('2026-09-30T18:00:00.000Z'),
   };
   Object.defineProperty(suggestion, 'forecastEvidence', { value:{ acquiredAt:now.getTime() }, enumerable:false });
   const snapshot = context.publishWidgetSnapshot(now, suggestion);
@@ -83,8 +84,44 @@ for (const [label, htmlPath] of builds) {
   assert.equal(snapshot.nextWave.state, 'forecast-conditions');
   assert.equal(snapshot.nextWave.icon, '🌊');
   assert.equal(snapshot.nextWave.action, 'View habit');
-  assert.equal(snapshot.nextWave.freshUntil, '2026-09-30T16:15:00.000Z');
+  assert.equal(snapshot.nextWave.freshUntil, '2026-09-30T17:30:00.000Z',
+    `${label}: a soft refresh boundary must not replace forecast-safe guidance before its 90-minute hard deadline`);
+  assert.ok(Date.parse(snapshot.nextWave.freshUntil) > Date.parse(snapshot.nextRefreshAt),
+    `${label}: stable guidance must not fail closed at the routine refresh boundary itself`);
+  assert.equal(Object.hasOwn(snapshot.nextWave, 'recommendationBoundaryAt'), false,
+    `${label}: internal semantic-boundary metadata must not expand the schema-v1 snapshot allowlist`);
   assert.deepEqual(JSON.parse(JSON.stringify(snapshot.habits.map(habit => habit.id))), ['daily'], `${label}: only habits scheduled today are shared`);
+
+  const quietSnapshot = context.publishWidgetSnapshot(now, {
+    reason:'not-timely', icon:'○', eyebrow:'A quiet moment', habitId:'',
+    title:'Nothing stands out right now.', targetLabel:'', detail:'You still have 1 habit open today.', action:'',
+    recommendationBoundaryAt:Date.parse('2026-09-30T18:30:00.000Z'),
+  });
+  assert.equal(quietSnapshot.nextRefreshAt, '2026-09-30T16:15:00.000Z');
+  assert.equal(quietSnapshot.nextWave.freshUntil, '2026-09-30T18:30:00.000Z',
+    `${label}: Quiet Moment remains current until the next actual habit-eligibility transition`);
+
+  const sourceSensitiveQuiet = {
+    reason:'not-timely', icon:'○', eyebrow:'A quiet moment', habitId:'',
+    title:'Nothing stands out right now.', targetLabel:'', detail:'You still have 1 habit open today.', action:'',
+    recommendationBoundaryAt:Date.parse('2026-09-30T18:30:00.000Z'),
+  };
+  Object.defineProperty(sourceSensitiveQuiet, 'recommendationSourceFreshUntil', {
+    value:Date.parse('2026-09-30T17:00:00.000Z'), enumerable:false,
+  });
+  const sourceSensitiveSnapshot = context.publishWidgetSnapshot(now, sourceSensitiveQuiet);
+  assert.equal(sourceSensitiveSnapshot.nextWave.freshUntil, '2026-09-30T17:00:00.000Z',
+    `${label}: internal source freshness hard-caps guidance that depends on environmental eligibility`);
+  assert.equal(Object.hasOwn(sourceSensitiveSnapshot.nextWave, 'recommendationSourceFreshUntil'), false,
+    `${label}: internal source freshness does not expand the schema-v1 nextWave allowlist`);
+
+  const urgentSnapshot = context.publishWidgetSnapshot(now, {
+    reason:'window-closing', icon:'🍽️', eyebrow:'Window closing', habitId:'daily',
+    title:'Daily habit', targetLabel:'', detail:'This habit’s useful window is closing.', action:'View habit',
+    recommendationBoundaryAt:Date.parse('2026-09-30T17:00:00.000Z'),
+  });
+  assert.equal(urgentSnapshot.nextWave.freshUntil, '2026-09-30T17:00:00.000Z',
+    `${label}: urgent guidance remains current only until its app-authored closing boundary`);
 
   context.getNextWaveRefreshDelay = () => 2 * 60 * 60 * 1000;
   context.recentCompletionCue = {
@@ -95,6 +132,7 @@ for (const [label, htmlPath] of builds) {
   const completionCueSnapshot = context.publishWidgetSnapshot(now, {
     reason:'completion-cue', eyebrow:'An easy next step', habitId:'daily',
     title:'Daily habit', targetLabel:'', detail:'Meal is done. Choose a helpful next step.',
+    recommendationBoundaryAt:Date.parse('2026-09-30T16:10:00.000Z'),
   });
   assert.equal(completionCueSnapshot.nextRefreshAt, '2026-09-30T16:10:00.000Z',
     `${label}: persisted refresh metadata expires with the 15-minute completion cue`);
@@ -107,9 +145,18 @@ for (const [label, htmlPath] of builds) {
     dateKey:'2026-09-30',
     actedAt:now.getTime() - 30 * 60 * 1000,
   };
+  const rotatedProgressSnapshot = context.publishWidgetSnapshot(now, {
+    reason:'available-now', eyebrow:'Available now', habitId:'daily',
+    title:'Daily habit', targetLabel:'', detail:'This still fits today.',
+    recommendationBoundaryAt:Date.parse('2026-09-30T20:00:00.000Z'),
+  });
+  assert.equal(rotatedProgressSnapshot.nextWave.freshUntil, '2026-09-30T16:30:00.000Z',
+    `${label}: guidance selected while another habit cools down expires when that transient exclusion ends`);
+
   const progressCueSnapshot = context.publishWidgetSnapshot(now, {
     reason:'progress-pause', eyebrow:'Progress made', habitId:'',
     title:'Nice work taking a step.', targetLabel:'', detail:'Give it some room before the next nudge.',
+    recommendationBoundaryAt:Date.parse('2026-09-30T16:30:00.000Z'),
   });
   assert.equal(progressCueSnapshot.nextRefreshAt, '2026-09-30T16:30:00.000Z',
     `${label}: persisted refresh metadata expires with the 60-minute progress cue`);
@@ -118,7 +165,7 @@ for (const [label, htmlPath] of builds) {
 
   const browserResult = context.publishWidgetSnapshot(now, suggestion, { isNative:false, widgets:null });
   assert.equal(browserResult, null, `${label}: browser/PWA publication is a no-op`);
-  assert.equal(calls.length, 3, `${label}: browser/PWA does not touch native storage`);
+  assert.equal(calls.length, 7, `${label}: browser/PWA does not touch native storage`);
 }
 
 console.log('widget live publication regression checks passed');

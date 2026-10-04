@@ -20,8 +20,8 @@ for (const field of ['state', 'eyebrow', 'habitId', 'icon', 'title', 'targetLabe
 assert.match(widgetSource, /let freshUntil:\s*Date/);
 assert.match(widgetSource, /let nextWave:\s*SnapshotNextWave/,
   'the widget snapshot must require its schema-v1 Next Wave object');
-assert.match(widgetSource, /snapshot\.nextWave\.freshUntil\s*<=\s*snapshot\.nextRefreshAt/,
-  'recommendation freshness must not outlive the app-provided refresh boundary');
+assert.match(widgetSource, /snapshot\.nextWave\.freshUntil\s*>=\s*snapshot\.nextRefreshAt/,
+  'the app-provided refresh boundary may precede the hard recommendation freshness deadline');
 assert.match(widgetSource, /snapshot\.nextWave\.freshUntil\s*<=\s*snapshot\.expiresAt/,
   'recommendation freshness must not outlive the local-day snapshot');
 assert.match(widgetSource, /snapshot\.nextWave\.freshUntil\s*>\s*now/,
@@ -64,6 +64,8 @@ assert.match(nextWaveView,
   'the emoji must mirror the in-app 44-point rounded-square accent tile');
 assert.match(nextWaveView, /Text\(nextWave\.eyebrow\)[\s\S]*?\.textCase\(\.uppercase\)/,
   'the eyebrow must retain the in-app card’s uppercase treatment');
+assert.doesNotMatch(nextWaveView, /nextWave\.state\s*==|switch\s+nextWave\.state/,
+  'Quiet Moment must use the same medium-card layout as every app-authored Next Wave state');
 assert.match(nextWaveView,
   /HStack\(alignment:\s*\.firstTextBaseline,\s*spacing:\s*7\)[\s\S]*?Text\(nextWave\.title\)[\s\S]*?Text\("·"\)[\s\S]*?Text\(nextWave\.targetLabel\)[\s\S]*?\.font\(\.system\(size:\s*13,\s*weight:\s*\.semibold\)\)/,
   'the title row must mirror the in-app card with a middle dot and a larger semibold target');
@@ -76,8 +78,17 @@ assert.match(nextWaveView,
   'View habit must finish the stack at the in-app card’s height and spacing');
 assert.match(widgetSource, /nextWaveView\(nextWave\)[\s\S]*?\.privacySensitive\(\)/,
   'recommendation content must be privacy-sensitive');
-assert.match(widgetSource, /current suggestion/,
+assert.match(widgetSource, /Open the app for an updated suggestion\./,
   'a stale or unavailable recommendation must render an honest recovery message');
+const unavailableView = widgetSource.slice(
+  widgetSource.indexOf('private var nextWaveUnavailableView'),
+  widgetSource.indexOf('private func progressView'),
+);
+assert.match(unavailableView,
+  /VStack\(alignment:\s*\.leading,\s*spacing:\s*0\)[\s\S]*?Spacer\(minLength:\s*4\)[\s\S]*?HStack\(alignment:\s*\.top,\s*spacing:\s*14\)[\s\S]*?Image\(systemName:\s*"arrow\.up\.forward\.app"\)[\s\S]*?\.frame\(width:\s*44,\s*height:\s*44\)[\s\S]*?RoundedRectangle\(cornerRadius:\s*13,\s*style:\s*\.continuous\)[\s\S]*?VStack\(alignment:\s*\.leading,\s*spacing:\s*0\)[\s\S]*?Text\("Open Wavelength"\)[\s\S]*?\.font\(\.headline\)[\s\S]*?Text\("Open the app for an updated suggestion\."\)[\s\S]*?\.font\(\.caption\)[\s\S]*?Spacer\(minLength:\s*4\)/,
+  'recovery must use the approved accurate copy while mirroring the Next Wave tile-and-content composition');
+assert.doesNotMatch(unavailableView, /\.font\(\.title2\)/,
+  'the recovery icon must live inside the shared 44-point tile rather than act as a standalone title icon');
 assert.match(widgetSource, /case \.fullColor:/);
 assert.match(widgetSource, /case \.accented:/);
 assert.match(widgetSource, /case \.vibrant:/);

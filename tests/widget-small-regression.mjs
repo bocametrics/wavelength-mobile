@@ -51,12 +51,24 @@ assert.match(widgetSource, /Text\("COMPLETED"\)/,
 assert.doesNotMatch(widgetSource, /Text\("TODAY"\)/,
   'today is implicit in the widget and must not replace the progress meaning');
 assert.match(widgetSource,
-  /private func widgetSectionHeader\(_ title:\s*String,\s*alignment:\s*Alignment\)[\s\S]*?Text\(title\)[\s\S]*?\.font\(\.system\(size:\s*9,\s*weight:\s*\.semibold\)\)[\s\S]*?\.tracking\(0\.7\)/,
-  'both small-widget states must share one exact header typography treatment');
+  /private func widgetSectionHeader\(_ title:\s*String,\s*alignment:\s*Alignment\)[\s\S]*?Text\(title\)[\s\S]*?\.font\(\.caption2\.weight\(\.semibold\)\)[\s\S]*?\.tracking\(0\.7\)/,
+  'both small-widget states must use an 11-point-at-default Dynamic Type header treatment');
 assert.equal((widgetSource.match(/widgetSectionHeader\("TODAY’S HABITS",\s*alignment:\s*\.center\)/g) || []).length, 2,
   'the small-widget progress and recovery headers must both use the shared centered treatment');
 assert.doesNotMatch(widgetSource, /Text\("WAVELENGTH"\)|wave\.3\.right/,
   'the system app label already identifies Wavelength beneath the widget');
+const progressView = widgetSource.slice(
+  widgetSource.indexOf('private func progressView'),
+  widgetSource.indexOf('private var unavailableView'),
+);
+assert.match(progressView,
+  /Text\("\\\(progress\.completed\)\/\\\(progress\.total\)"\)[\s\S]*?\.font\(\.title3\.weight\(\.bold\)\.monospacedDigit\(\)\)/,
+  'the progress fraction must step down to the Dynamic Type-aware 20-point default title style');
+assert.match(progressView,
+  /Text\("COMPLETED"\)[\s\S]*?\.font\(\.caption2\.weight\(\.semibold\)\)/,
+  'the progress caption must retain an 11-point-at-default Dynamic Type floor');
+assert.match(progressView, /Circle\(\)[\s\S]*?lineWidth:\s*9[\s\S]*?Circle\(\)[\s\S]*?lineWidth:\s*9/,
+  'the typography-first refinement must preserve the accepted progress-ring geometry');
 assert.match(widgetSource, /progress\.total\s*==\s*1\s*\?\s*"habit"\s*:\s*"habits"/,
   'VoiceOver progress copy must use singular and plural habit grammar');
 assert.match(widgetSource, /Open Wavelength/,

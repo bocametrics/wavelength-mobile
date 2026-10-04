@@ -90,7 +90,7 @@ private enum SnapshotReader {
         guard snapshot.generatedAt <= now,
               snapshot.revision == expectedRevision,
               snapshot.nextRefreshAt <= snapshot.expiresAt,
-              snapshot.nextWave.freshUntil <= snapshot.nextRefreshAt,
+              snapshot.nextWave.freshUntil >= snapshot.nextRefreshAt,
               snapshot.nextWave.freshUntil <= snapshot.expiresAt,
               snapshot.expiresAt > now else {
             return nil
@@ -273,7 +273,7 @@ private struct WavelengthWidgetView: View {
 
     private func widgetSectionHeader(_ title: String, alignment: Alignment) -> some View {
         Text(title)
-            .font(.system(size: 9, weight: .semibold))
+            .font(.caption2.weight(.semibold))
             .tracking(0.7)
             .frame(maxWidth: .infinity, alignment: alignment)
             .foregroundStyle(accentColor)
@@ -357,22 +357,36 @@ private struct WavelengthWidgetView: View {
     }
 
     private var nextWaveUnavailableView: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Spacer(minLength: 0)
+        VStack(alignment: .leading, spacing: 0) {
+            Spacer(minLength: 4)
 
-            Image(systemName: "arrow.up.forward.app")
-                .font(.title2)
-                .foregroundStyle(accentColor)
-                .widgetAccentable()
-            Text("Open Wavelength")
-                .font(.headline)
-                .foregroundStyle(.primary)
-            Text("Refresh in the app for a current suggestion.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: "arrow.up.forward.app")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(accentColor)
+                    .frame(width: 44, height: 44)
+                    .background(
+                        accentColor.opacity(0.12),
+                        in: RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    )
+                    .widgetAccentable()
+                    .accessibilityHidden(true)
 
-            Spacer(minLength: 0)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Open Wavelength")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                    Text("Open the app for an updated suggestion.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .padding(.top, 5)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Spacer(minLength: 4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .multilineTextAlignment(.leading)
@@ -399,7 +413,7 @@ private struct WavelengthWidgetView: View {
 
                 VStack(spacing: 0) {
                     Text("\(progress.completed)/\(progress.total)")
-                        .font(.title2.weight(.bold).monospacedDigit())
+                        .font(.title3.weight(.bold).monospacedDigit())
                         .foregroundStyle(.primary)
                         .minimumScaleFactor(0.75)
                     Text("COMPLETED")

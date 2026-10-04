@@ -161,11 +161,16 @@ for (const [label, htmlPath] of builds) {
   );
 
   const earlyEvening = atTime(19, 21);
+  const earlyEveningSuggestion = getNextWaveSuggestion(
+    contextualHabits, doneFor(earlyEvening, ['beach']), {}, earlyEvening, { isDay:1 },
+  );
   assert.equal(
-    getNextWaveSuggestion(contextualHabits, doneFor(earlyEvening, ['beach']), {}, earlyEvening, { isDay:1 })?.habitId,
+    earlyEveningSuggestion?.habitId,
     'meditate',
     `${label}: a fitting Mind habit outranks an Evening habit whose window has not opened`,
   );
+  assert.equal(earlyEveningSuggestion.recommendationBoundaryAt, atTime(20, 30).getTime(),
+    `${label}: ordinary guidance expires at the earliest open-habit phase transition, not only the selected habit’s boundary`);
 
   const progressNow = atTime(9);
   const progressKey = dateKey(progressNow);
@@ -227,8 +232,11 @@ for (const [label, htmlPath] of builds) {
     `${label}: rendering passes the progress cooldown into Next Wave selection`);
 
   const bedtimeWindow = atTime(21, 15);
+  const bedtimeSuggestion = getNextWaveSuggestion(contextualHabits, doneFor(bedtimeWindow, ['beach']), {}, bedtimeWindow, { isDay:0 });
+  assert.equal(bedtimeSuggestion.recommendationBoundaryAt, atTime(21, 30).getTime(),
+    `${label}: an ideal recommendation carries its next actual phase transition as internal freshness metadata`);
   assert.deepEqual(
-    plain(getNextWaveSuggestion(contextualHabits, doneFor(bedtimeWindow, ['beach']), {}, bedtimeWindow, { isDay:0 })),
+    plain(bedtimeSuggestion),
     {
       habitId:'winddown', category:'evening', icon:'🌙', reason:'ideal-now', eyebrow:'Ideal now',
       title:'Wind down', detail:'Your wind-down window before bed is open.', action:'View habit', targetLabel:'',
@@ -237,8 +245,13 @@ for (const [label, htmlPath] of builds) {
   );
 
   const dinnerClosing = atTime(18, 10);
+  const dinnerClosingSuggestion = getNextWaveSuggestion(
+    [contextualHabits[0], dinner], doneFor(dinnerClosing, []), {}, dinnerClosing, { aqi:43, isDay:1 },
+  );
+  assert.equal(dinnerClosingSuggestion.recommendationBoundaryAt, atTime(19).getTime(),
+    `${label}: closing guidance carries the actual end of its useful window rather than a routine refresh check`);
   assert.deepEqual(
-    plain(getNextWaveSuggestion([contextualHabits[0], dinner], doneFor(dinnerClosing, []), {}, dinnerClosing, { aqi:43, isDay:1 })),
+    plain(dinnerClosingSuggestion),
     {
       habitId:'dinner', category:'fuel', icon:'🍳', reason:'window-closing', eyebrow:'Window closing',
       title:'Finish dinner', detail:'Your dinner window is closing.', action:'View habit', targetLabel:'',
@@ -293,13 +306,53 @@ for (const [label, htmlPath] of builds) {
 
   const tooEarly = atTime(19, 21);
   const quiet = getNextWaveSuggestion([winddown], doneFor(tooEarly, []), {}, tooEarly, { isDay:1 });
+  assert.equal(quiet.recommendationBoundaryAt, atTime(20, 30).getTime(),
+    `${label}: Quiet Moment remains current until an open habit actually becomes eligible`);
   assert.deepEqual(
     plain(quiet),
     {
       habitId:null, category:null, icon:'○', reason:'not-timely', eyebrow:'A quiet moment',
-      title:'Nothing is especially timely right now.', detail:'You still have 1 habit open today.', action:null,
+      title:'Nothing stands out right now.', detail:'You still have 1 habit open today.', action:null,
     },
     `${label}: no-fit state is honest instead of forcing an untimely recommendation`,
+  );
+
+  const solarData = { isDay:0, sunrise:'6:58 AM', sunset:'7:30 PM' };
+  const daylightBeforeSunrise = {
+    id:'sunrise-walk', cat:'movement', icon:'🌅', text:'Morning outdoor light', note:'Step outside',
+    context:{ start:360, end:720, setting:'outdoor', daylight:'required', duration:20 },
+  };
+  const beforeSunrise = atTime(6, 30);
+  assert.deepEqual(
+    plain(getHabitRecommendationFit(daylightBeforeSunrise, beforeSunrise, solarData)),
+    { eligible:false, reason:'dark', phase:'unavailable', nextBoundary:418 },
+    `${label}: a daylight-required habit whose window is open carries sunrise as its actual eligibility boundary`,
+  );
+  const sunriseQuiet = getNextWaveSuggestion(
+    [daylightBeforeSunrise], doneFor(beforeSunrise, []), {}, beforeSunrise, solarData,
+  );
+  assert.equal(sunriseQuiet.recommendationBoundaryAt, atTime(6, 58).getTime(),
+    `${label}: pre-sunrise Quiet Moment expires when the daylight-required habit becomes eligible`);
+
+  const weatherObservedAt = atTime(4, 30).getTime();
+  const sourceSensitiveQuiet = getNextWaveSuggestion(
+    [daylightBeforeSunrise], doneFor(atTime(4, 30), []), {}, atTime(4, 30),
+    { ...solarData, weatherObservedAt },
+  );
+  assert.equal(sourceSensitiveQuiet.recommendationSourceFreshUntil, atTime(6).getTime(),
+    `${label}: daylight-dependent selection carries the observed weather source’s 90-minute hard deadline`);
+  assert.equal(Object.keys(sourceSensitiveQuiet).includes('recommendationSourceFreshUntil'), false,
+    `${label}: source-freshness metadata remains internal to snapshot authoring`);
+
+  const daylightAfterSunrise = {
+    ...daylightBeforeSunrise,
+    id:'later-walk',
+    context:{ ...daylightBeforeSunrise.context, start:450 },
+  };
+  assert.deepEqual(
+    plain(getHabitRecommendationFit(daylightAfterSunrise, atTime(6, 15), solarData)),
+    { eligible:false, reason:'early', phase:'unavailable', nextBoundary:450 },
+    `${label}: a daylight-required habit whose configured start follows sunrise expires at that later opening`,
   );
 
   const tooLate = atTime(23);

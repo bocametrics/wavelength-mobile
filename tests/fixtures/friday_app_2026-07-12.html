@@ -3724,8 +3724,13 @@ function getWidgetSnapshotExpiry(now) {
   return expiry.toISOString();
 }
 
-function getWidgetSuggestionFreshUntil(suggestion, data, expiresAt, nextRefreshAt) {
-  const deadlines = [Date.parse(expiresAt), Date.parse(nextRefreshAt)].filter(Number.isFinite);
+function getWidgetSuggestionFreshUntil(suggestion, data, expiresAt, transientCueDeadline) {
+  const deadlines = [
+    Date.parse(expiresAt),
+    suggestion?.recommendationBoundaryAt,
+    suggestion?.recommendationSourceFreshUntil,
+    transientCueDeadline,
+  ].filter(Number.isFinite);
   const forecastAcquiredAt = suggestion?.forecastEvidence?.acquiredAt;
   if (Number.isFinite(forecastAcquiredAt)) deadlines.push(forecastAcquiredAt + FORECAST_COPY_MAX_AGE_MS);
   const observedAtByReason = {
@@ -3771,7 +3776,8 @@ function publishWidgetSnapshot(now, suggestion, nativeBridge = window.Wavelength
   const refreshDelay = getNextWaveRefreshDelay(HABITS, now, rhythmWeatherData, getPreferenceWindowsMap(HABITS));
   const refreshAt = Number.isFinite(refreshDelay) ? now.getTime() + Math.max(0, refreshDelay) : Date.parse(expiresAt);
   const transientCueDeadline = getWidgetTransientCueDeadline(now, recentCompletionCue, recentNextWaveProgressCue);
-  const refreshDeadlines = [refreshAt, Date.parse(expiresAt), transientCueDeadline].filter(Number.isFinite);
+  const freshUntil = getWidgetSuggestionFreshUntil(suggestion, rhythmWeatherData, expiresAt, transientCueDeadline);
+  const refreshDeadlines = [refreshAt, Date.parse(expiresAt), transientCueDeadline, Date.parse(freshUntil)].filter(Number.isFinite);
   const nextRefreshAt = new Date(Math.min(...refreshDeadlines)).toISOString();
   let timeZone = '';
   try { timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
@@ -3784,7 +3790,7 @@ function publishWidgetSnapshot(now, suggestion, nativeBridge = window.Wavelength
     targetLabel:suggestion.targetLabel || '',
     detail:suggestion.detail || '',
     action:suggestion.action || '',
-    freshUntil:getWidgetSuggestionFreshUntil(suggestion, rhythmWeatherData, expiresAt, nextRefreshAt),
+    freshUntil,
   };
   const snapshot = buildWidgetSnapshot({
     habits:scheduledHabits,
@@ -4799,7 +4805,12 @@ function getHabitRecommendationFit(habit, date, data, preferenceWindow = null) {
   const minute = date.getHours() * 60 + date.getMinutes();
   const start = Number.isInteger(context.start) ? context.start : null;
   const end = Number.isInteger(context.end) ? context.end : null;
-  if (start !== null && minute < start) return { eligible:false, reason:'early', phase:'unavailable', nextBoundary:start };
+  const sunrise = context.daylight === 'required' ? parseDisplayClockMinutes(snapshot.sunrise) : null;
+  const futureSunrise = sunrise !== null && sunrise > minute ? sunrise : null;
+  if (start !== null && minute < start) {
+    const nextBoundary = futureSunrise === null ? start : Math.max(start, futureSunrise);
+    return { eligible:false, reason:'early', phase:'unavailable', nextBoundary };
+  }
   if (end !== null && minute >= end) return { eligible:false, reason:'late', phase:'unavailable', nextBoundary:null };
   const rhythm = normalizeRhythmConfig(habit?.rhythm);
   const aqi = Number.isFinite(snapshot.aqi) && snapshot.aqi >= 0 ? snapshot.aqi : null;
@@ -4816,7 +4827,7 @@ function getHabitRecommendationFit(habit, date, data, preferenceWindow = null) {
   }
   const isDay = getDaylightState(date, snapshot);
   if (context.daylight === 'required' && isDay === false) {
-    return { eligible:false, reason:'dark', phase:'unavailable', nextBoundary:null };
+    return { eligible:false, reason:'dark', phase:'unavailable', nextBoundary:futureSunrise };
   }
   const sunset = parseDisplayClockMinutes(snapshot.sunset);
   const duration = Number.isInteger(context.duration) && context.duration > 0 ? context.duration : null;
@@ -4836,7 +4847,14 @@ function getHabitRecommendationFit(habit, date, data, preferenceWindow = null) {
     : lateStart !== null && minute >= lateStart ? 'late'
     : idealStart !== null && minute >= idealStart && (idealEnd === null || minute < idealEnd) ? 'ideal'
     : idealEnd !== null && minute >= idealEnd ? 'flexible' : 'available';
-  const boundaries = [idealStart, idealEnd, lateStart, urgencyStart, end].filter(value => value !== null && value > minute);
+  const daylightEnd = context.daylight === 'required' && sunset !== null
+    ? sunset - (duration || 0)
+    : null;
+  const daylightClosingStart = context.daylightClosing === true && daylightEnd !== null
+    ? daylightEnd - 15
+    : null;
+  const boundaries = [idealStart, idealEnd, lateStart, urgencyStart, end, daylightClosingStart, daylightEnd]
+    .filter(value => value !== null && value > minute);
   return {
     eligible:true,
     reason:daylightClosing ? 'daylight-closing' : 'available',
@@ -4958,6 +4976,15 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
   const snapshot = typeof getFreshEnvironmentalSnapshot === 'function'
     ? getFreshEnvironmentalSnapshot(data, date)
     : data && typeof data === 'object' ? data : {};
+  const dayBoundary = new Date(date.getTime());
+  dayBoundary.setHours(24, 0, 0, 0);
+  const withRecommendationBoundary = (suggestion, boundaryAt = dayBoundary.getTime()) => {
+    Object.defineProperty(suggestion, 'recommendationBoundaryAt', {
+      value:Number.isFinite(boundaryAt) ? boundaryAt : dayBoundary.getTime(),
+      enumerable:false,
+    });
+    return suggestion;
+  };
   const incompleteHabits = scheduled.filter(habit => {
     const progress = getHabitProgress(dayDone, dayProgress, habit);
     return !isHabitProgressComplete(habit, progress);
@@ -4966,30 +4993,86 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
     ? progressCue.habitId
     : null;
   const openHabits = incompleteHabits.filter(habit => habit.id !== coolingDownHabitId);
-  const result = (habit, reason, eyebrow, detail) => ({
-    habitId:habit.id,
-    category:habit.cat,
-    icon:habit.icon,
-    reason,
-    eyebrow,
-    title:habit.text,
-    targetLabel:habit.targetLabel || '',
-    detail,
-    action:'View habit',
-  });
 
   if (scheduled.length === 0) {
-    return { habitId:null, category:null, icon:'○', reason:'none', eyebrow:'A quiet day', title:'No habits are scheduled today.', detail:'Use the space in whatever way feels restorative.', action:null };
+    return withRecommendationBoundary({ habitId:null, category:null, icon:'○', reason:'none', eyebrow:'A quiet day', title:'No habits are scheduled today.', detail:'Use the space in whatever way feels restorative.', action:null });
   }
   if (incompleteHabits.length === 0) {
-    return { habitId:null, category:null, icon:'✓', reason:'none', eyebrow:'You’re caught up', title:'Today’s habits are complete.', detail:'You followed through on every scheduled habit.', action:null };
+    return withRecommendationBoundary({ habitId:null, category:null, icon:'✓', reason:'none', eyebrow:'You’re caught up', title:'Today’s habits are complete.', detail:'You followed through on every scheduled habit.', action:null });
   }
   if (openHabits.length === 0) {
-    return { habitId:null, category:null, icon:'≈', reason:'progress-pause', eyebrow:'Progress made', title:'Nice work taking a step.', detail:'Give it some room before the next nudge.', action:null };
+    return withRecommendationBoundary(
+      { habitId:null, category:null, icon:'≈', reason:'progress-pause', eyebrow:'Progress made', title:'Nice work taking a step.', detail:'Give it some room before the next nudge.', action:null },
+      Number(progressCue?.actedAt) + 60 * 60 * 1000,
+    );
   }
 
   const fitById = new Map(openHabits.map(habit => [habit.id,
     getHabitRecommendationFit(habit, date, snapshot, preferenceWindows?.[habit.id])]));
+  const currentMinute = date.getHours() * 60 + date.getMinutes();
+  const boundaryAtMinute = boundary => {
+    if (!Number.isInteger(boundary) || boundary <= currentMinute) return null;
+    const boundaryDate = new Date(date.getTime());
+    boundaryDate.setHours(Math.floor(boundary / 60), boundary % 60, 0, 0);
+    return boundaryDate.getTime();
+  };
+  const boundaryForHabit = habit => {
+    const fit = fitById.get(habit.id);
+    const fitBoundary = boundaryAtMinute(fit?.nextBoundary);
+    if (Number.isFinite(fitBoundary)) return fitBoundary;
+    const context = getEffectiveRecommendationContext(habit, preferenceWindows?.[habit.id]);
+    return boundaryAtMinute(context?.end);
+  };
+  const futureHabitBoundaries = openHabits.map(boundaryForHabit).filter(Number.isFinite);
+  const globalHabitBoundary = futureHabitBoundaries.length
+    ? Math.min(...futureHabitBoundaries)
+    : dayBoundary.getTime();
+  const sourceFreshnessWindow = typeof FORECAST_COPY_MAX_AGE_MS === 'number'
+    ? FORECAST_COPY_MAX_AGE_MS
+    : 90 * 60 * 1000;
+  const sourceDeadlines = [];
+  const hasObservedDaylight = Number.isFinite(snapshot.weatherObservedAt) &&
+    (snapshot.isDay === true || snapshot.isDay === false || snapshot.isDay === 1 || snapshot.isDay === 0 ||
+      parseDisplayClockMinutes(snapshot.sunrise) !== null || parseDisplayClockMinutes(snapshot.sunset) !== null);
+  const daylightAffectsOpenHabit = hasObservedDaylight && openHabits.some(habit => {
+    const context = getEffectiveRecommendationContext(habit, preferenceWindows?.[habit.id]);
+    if (!context || context.recommend === false || context.daylight !== 'required') return false;
+    return !Number.isInteger(context.end) || currentMinute < context.end;
+  });
+  if (daylightAffectsOpenHabit) sourceDeadlines.push(snapshot.weatherObservedAt + sourceFreshnessWindow);
+  const hasObservedAqi = Number.isFinite(snapshot.aqiObservedAt) && Number.isFinite(snapshot.aqi) && snapshot.aqi >= 0;
+  const aqiAffectsOpenHabit = hasObservedAqi && openHabits.some(habit => {
+    const context = getEffectiveRecommendationContext(habit, preferenceWindows?.[habit.id]);
+    const rhythm = normalizeRhythmConfig(habit?.rhythm);
+    if (!context || context.recommend === false || context.setting !== 'outdoor' || rhythm?.type !== 'aqi-below') return false;
+    return !Number.isInteger(context.end) || currentMinute < context.end;
+  });
+  if (aqiAffectsOpenHabit) sourceDeadlines.push(snapshot.aqiObservedAt + sourceFreshnessWindow);
+  const recommendationSourceFreshUntil = sourceDeadlines.length ? Math.min(...sourceDeadlines) : null;
+  const withPostFitMetadata = (suggestion, boundaryAt = globalHabitBoundary, includeGlobalBoundary = true) => {
+    const applicableBoundaries = [boundaryAt, includeGlobalBoundary ? globalHabitBoundary : null].filter(Number.isFinite);
+    withRecommendationBoundary(suggestion,
+      applicableBoundaries.length ? Math.min(...applicableBoundaries) : dayBoundary.getTime());
+    if (Number.isFinite(recommendationSourceFreshUntil)) {
+      Object.defineProperty(suggestion, 'recommendationSourceFreshUntil', {
+        value:recommendationSourceFreshUntil,
+        enumerable:false,
+      });
+    }
+    return suggestion;
+  };
+  const result = (habit, reason, eyebrow, detail, boundaryAt = boundaryForHabit(habit)) =>
+    withPostFitMetadata({
+      habitId:habit.id,
+      category:habit.cat,
+      icon:habit.icon,
+      reason,
+      eyebrow,
+      title:habit.text,
+      targetLabel:habit.targetLabel || '',
+      detail,
+      action:'View habit',
+    }, boundaryAt, reason !== 'window-closing' && reason !== 'daylight-closing');
   const eligibleHabits = openHabits.filter(habit => fitById.get(habit.id).eligible);
   const cueAge = date.getTime() - Number(completionCue?.completedAt);
   const completionCueHabit = completionCue && completionCue.dateKey === key &&
@@ -5009,7 +5092,8 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
     const detail = typeof cueConfig.detail === 'string'
       ? cueConfig.detail.replace('{source}', sourceLabel)
       : `${sourceLabel} is done. Choose a helpful next step.`;
-    return result(completionCueHabit, 'completion-cue', eyebrow, detail);
+    return result(completionCueHabit, 'completion-cue', eyebrow, detail,
+      Number(completionCue.completedAt) + 15 * 60 * 1000);
   };
   const adaptiveCandidates = openHabits.map(habit => ({
     habit,
@@ -5045,7 +5129,10 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
   if (eligibleHabits.length === 0) {
     if (fallbackAdaptation) return adaptiveResult(fallbackAdaptation);
     const noun = openHabits.length === 1 ? 'habit' : 'habits';
-    return { habitId:null, category:null, icon:'○', reason:'not-timely', eyebrow:'A quiet moment', title:'Nothing is especially timely right now.', detail:`You still have ${openHabits.length} ${noun} open today.`, action:null };
+    return withPostFitMetadata(
+      { habitId:null, category:null, icon:'○', reason:'not-timely', eyebrow:'A quiet moment', title:'Nothing stands out right now.', detail:`You still have ${openHabits.length} ${noun} open today.`, action:null },
+      globalHabitBoundary,
+    );
   }
 
   const openById = id => eligibleHabits.find(habit => habit.id === id);
