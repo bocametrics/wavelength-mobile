@@ -38,6 +38,9 @@ function extractFunction(source, name) {
 function loadTrendFunctions(html) {
   const names = [
     'dateKey',
+    'isValidDateKey',
+    'isHabitActiveOnDate',
+    'getHabitsActiveOnDate',
     'normalizeMeasurementConfig',
     'getHabitProgress',
     'isHabitProgressComplete',
@@ -93,6 +96,48 @@ for (const [label, htmlPath] of builds) {
   assert.equal(trend.totalDone, 4, `${label}: future stored records are excluded from the rolling window`);
   assert.equal(trend.totalPossible, 16, `${label}: only elapsed tracked dates contribute to the denominator`);
 
+  const lifecycleState = {
+    schemaVersion:1,
+    customDefinitions:[],
+    status:[{
+      habitId:'walk',
+      initialActive:true,
+      changes:[
+        { date:'2026-08-29', active:false },
+        { date:'2026-08-31', active:true },
+      ],
+    }],
+  };
+  const lifecycleDone = {
+    '2026-08-28': { wake:true },
+    '2026-08-29': { wake:true, walk:true },
+    '2026-08-30': { wake:true },
+    '2026-08-31': { wake:true, walk:true },
+  };
+  const lifecycleCreatedAt = new Date(2026, 7, 28, 8).getTime();
+  const lifecycleTrend = fns.getLast30DayTrend(
+    lifecycleDone,
+    habits,
+    now,
+    {},
+    lifecycleCreatedAt,
+    lifecycleState,
+  );
+  assert.equal(lifecycleTrend.points.find(point => point.key === '2026-08-28').pct, 50,
+    `${label}: pre-archive reporting still includes the habit in that date's denominator`);
+  assert.equal(lifecycleTrend.points.find(point => point.key === '2026-08-29').pct, 100,
+    `${label}: archive-date reporting excludes the archived habit and its retained completion`);
+  assert.equal(lifecycleTrend.points.find(point => point.key === '2026-08-30').pct, 100,
+    `${label}: the archived interval uses only habits active on each historical date`);
+  assert.equal(lifecycleTrend.points.find(point => point.key === '2026-08-31').pct, 100,
+    `${label}: restoring today reuses the retained completion without rewriting history`);
+  assert.equal(lifecycleTrend.totalDone, 5,
+    `${label}: historical totals count completions only while their habits were active`);
+  assert.equal(lifecycleTrend.totalPossible, 6,
+    `${label}: historical totals derive a date-effective denominator for every day`);
+  assert.equal(lifecycleTrend.averagePct, 83,
+    `${label}: the rolling average remains weighted across date-effective denominators`);
+
   const createdAt = new Date(2026, 7, 24, 8).getTime();
   const noFirstDayCompletion = fns.getLast30DayTrend(
     { '2026-08-25': { wake:true } }, habits, now, {}, createdAt,
@@ -110,8 +155,8 @@ for (const [label, htmlPath] of builds) {
     `${label}: Last 30 Days follows the unchanged weekly card`);
   assert.match(html, /<svg[^>]*id="last30Chart"[^>]*role="img"[^>]*aria-labelledby="last30ChartTitle"/,
     `${label}: the trend chart has an accessible text alternative`);
-  assert.match(html, /function updateWeekly\(now = new Date\(\)\)[\s\S]*getElapsedWeekSummary\(state\.done \|\| \{\}, HABITS, now, state\.progress \|\| \{\}\)/,
-    `${label}: weekly display uses the elapsed-day summary helper`);
+  assert.match(html, /function updateWeekly\(now = new Date\(\)\)[\s\S]*getHabitsActiveOnDate\(ALL_HABITS, habitCatalogState, [^)]+\)[\s\S]*getElapsedWeekSummary\(state\.done \|\| \{\}, ALL_HABITS, now, state\.progress \|\| \{\}, habitCatalogState\)/,
+    `${label}: weekly display resolves the active catalog separately for each rendered date`);
   assert.match(html, /<text class="trend-axis-label"[^>]*>\$\{pct\}%<\/text>/,
     `${label}: Y-axis labels identify completion percentages explicitly`);
   assert.match(html, /\.trend-average-line\s*\{[^}]*stroke-dasharray:[^}]*opacity:/,
@@ -124,6 +169,8 @@ for (const [label, htmlPath] of builds) {
     `${label}: faint baseline renders behind the primary data line and points`);
   assert.match(html, /function renderLast30Days\(now = new Date\(\)\)/,
     `${label}: the 30-day card has a dedicated renderer`);
+  assert.match(html, /function renderLast30Days\(now = new Date\(\)\)[\s\S]*getLast30DayTrend\(state\.done \|\| \{\}, ALL_HABITS, now, state\.progress \|\| \{\}, state\.created, habitCatalogState\)/,
+    `${label}: the 30-day renderer passes complete catalog and lifecycle state for historical denominators`);
   assert.match(html, /renderLast30Days\(now\)/,
     `${label}: the trend refreshes with the same captured render timestamp`);
 }

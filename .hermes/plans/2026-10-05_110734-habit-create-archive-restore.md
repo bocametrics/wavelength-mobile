@@ -17,9 +17,9 @@
 Render the action group after incomplete habit cards and before `Completed · N`:
 
 - Primary card: **Add a new habit**
-- Secondary action: **Restore an archived habit**
+- Secondary action: **Add an archived habit**
 - Primary icon: visual plus, `aria-hidden="true"`; accessible name contains no spoken “plus.”
-- Secondary icon: restore arrow, not another plus.
+- Secondary icon: restore arrow, not another plus. “Add” is the entry-point language because the App Store catalog may include inactive system habits that the person has never tracked; the underlying lifecycle operation remains restore/reactivate.
 - Sentence case; no ellipses.
 - The action group never contributes to habit counts, completion percentages, canonical order, or drag targets.
 - If no habit is scheduled today, keep the existing calm empty-state message and render the action group beneath it.

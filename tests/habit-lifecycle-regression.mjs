@@ -103,6 +103,23 @@ function loadLifecycleFunctions(source) {
   return context.exports;
 }
 
+function loadStoredStateFunctions(source) {
+  const names = [
+    'isValidDateKey',
+    'normalizeMeasurementConfig',
+    'normalizeProgressByDate',
+    'normalizeStoredState',
+  ];
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(
+    `${names.map(name => extractFunction(source, name)).join('\n')}\n` +
+    `globalThis.exports = { ${names.join(', ')} };`,
+    context,
+  );
+  return context.exports;
+}
+
 const plain = value => JSON.parse(JSON.stringify(value));
 const migrationDate = '2026-10-05';
 const activeCategoryIds = ['morning', 'movement', 'mind', 'fuel', 'hygiene', 'evening'];
@@ -125,6 +142,7 @@ for (const [label, htmlPath] of builds) {
   const html = fs.readFileSync(htmlPath, 'utf8');
   const defaults = extractDefaultHabits(html);
   const byId = Object.fromEntries(defaults.map(habit => [habit.id, habit]));
+  const { normalizeStoredState } = loadStoredStateFunctions(html);
   const {
     HABIT_CATALOG_SCHEMA_VERSION,
     HABIT_CATALOG_KEY,
@@ -409,6 +427,48 @@ for (const [label, htmlPath] of builds) {
   assert.deepEqual(restored.customDefinitions, customCatalog.customDefinitions,
     `${label}: restore does not duplicate or rewrite custom definitions`);
 
+  const retainedCompletionState = {
+    done:{ '2026-10-07':{ medication:true } },
+    progress:{},
+    streak:4,
+    longestStreak:9,
+    week:{},
+    created:1,
+  };
+  const retainedSnapshot = plain(retainedCompletionState);
+  setHabitActiveOnDate(customCatalog, 'medication', true, '2026-10-07', allHabits);
+  assert.deepEqual(retainedCompletionState, retainedSnapshot,
+    `${label}: restoring a habit never deletes or rewrites its stored completion`);
+
+  const archivedAmountDefinition = customDefinition({
+    id:'habit_55555555-5555-4555-8555-555555555555',
+    measurement:'amount',
+    target:64,
+    step:8,
+    unit:'oz',
+  });
+  const completeWithArchivedAmount = plain(buildCompleteHabitCatalog(defaults, {}, {
+    schemaVersion:1,
+    customDefinitions:[archivedAmountDefinition],
+    status:[{
+      habitId:archivedAmountDefinition.id,
+      initialActive:true,
+      changes:[{ date:migrationDate, active:false }],
+    }],
+  }));
+  const normalizedRetainedState = plain(normalizeStoredState({
+    done:{ [migrationDate]:{ medication:true } },
+    progress:{ [migrationDate]:{ [archivedAmountDefinition.id]:24 } },
+    streak:1,
+    longestStreak:2,
+    week:{},
+    created:1,
+  }, completeWithArchivedAmount, true));
+  assert.equal(normalizedRetainedState.done[migrationDate].medication, true,
+    `${label}: completion normalization retains archived shipped-habit IDs`);
+  assert.equal(normalizedRetainedState.progress[migrationDate][archivedAmountDefinition.id], 24,
+    `${label}: progress normalization retains archived custom-habit IDs`);
+
   const sameDayFinal = plain(setHabitActiveOnDate(restored, 'medication', false, '2026-10-07', allHabits));
   assert.deepEqual(sameDayFinal.status, initial.status,
     `${label}: same-day archive after restore collapses to the final archived state`);
@@ -479,6 +539,12 @@ for (const [label, htmlPath] of builds) {
     `${label}: runtime retains a distinct current active catalog`);
   assert.match(html, /HABITS\s*=\s*getHabitsActiveOnDate\(ALL_HABITS,\s*habitCatalogState,\s*[^)]+\)/,
     `${label}: current behavior derives active habits from the complete catalog`);
+  assert.match(html, /state = loadState\(ALL_HABITS\)/,
+    `${label}: completion and progress state validate against archived as well as active habits`);
+  assert.match(html, /loadInsightHistory\(ALL_HABITS, state\)/,
+    `${label}: prospective evidence loads against the complete habit catalog`);
+  assert.match(extractFunction(html, 'saveInsightHistory'), /normalizeInsightHistory\(insightHistory, ALL_HABITS\.length \? ALL_HABITS : DEFAULT_HABITS, false\)/,
+    `${label}: saving prospective evidence cannot drop records for archived habits`);
 }
 
 console.log('habit lifecycle model regression tests passed for mobile and desktop');

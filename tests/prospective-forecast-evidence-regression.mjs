@@ -758,13 +758,13 @@ test('backup v8 accepts versions 1 through 7 and migrates v1 insight history', (
   const importer = extractFunction(html, 'importBackupFile');
   assert.match(importer, /\[1,\s*2,\s*3,\s*4,\s*5,\s*6,\s*7,\s*BACKUP_VERSION\]\.includes\(payload\.version\)/,
     'version 1 through version 7 backups remain accepted by v8');
-  assert.match(importer, /normalizeInsightHistory\(payload\.insightHistory,\s*importedHabits,\s*true\)/,
-    'legacy schema-v1 insight histories pass through deterministic migration');
+  assert.match(importer, /normalizeInsightHistory\(payload\.insightHistory,\s*importedAllHabits,\s*true\)/,
+    'legacy schema-v1 insight histories migrate against active and archived identities');
 });
 
 test('malformed v8 backup evidence is rejected before the atomic storage commit', () => {
   const importer = extractFunction(html, 'importBackupFile');
-  const validation = importer.indexOf('normalizeInsightHistory(payload.insightHistory, importedHabits, true)');
+  const validation = importer.indexOf('normalizeInsightHistory(payload.insightHistory, importedAllHabits, true)');
   const commit = importer.indexOf('commitStorageSnapshot(localStorage, importedSnapshot)');
   assert.ok(validation >= 0, 'v8 strictly validates insight history');
   assert.ok(commit > validation, 'all v8 evidence validation completes before the one atomic storage commit');

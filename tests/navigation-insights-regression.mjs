@@ -340,12 +340,12 @@ for (const [label, htmlPath] of builds) {
     assert.match(html, /function createBackupPayload\(\)[\s\S]*normalizeInsightHistoryAgainstState\([\s\S]*state, false\)/,
       `${label}: backup export repairs contradictory local evidence before serializing it`);
     assert.match(html, /const BACKUP_VERSION = 8;/, `${label}: personalized backups identify the version-8 evidence schema`);
-    assert.match(html, /const backupInsightHistory = normalizeInsightHistory\(insightHistory, HABITS, false\)[\s\S]*insightHistory:\s*backupInsightHistory/,
-      `${label}: version-8 backups carry validated prospective evidence`);
+    assert.match(html, /const backupInsightHistory = normalizeInsightHistory\(insightHistory, ALL_HABITS, false\)[\s\S]*insightHistory:\s*backupInsightHistory/,
+      `${label}: version-8 backups retain validated evidence for active and archived habits`);
     assert.match(html, /!\[1, 2, 3, 4, 5, 6, 7, BACKUP_VERSION\]\.includes\(payload\.version\)/,
       `${label}: version-1 through version-7 backups remain importable`);
-    assert.match(html, /payload\.version === 1 && !payload\.insightHistory\s*\?\s*normalizeInsightHistory\(null, importedHabits\)\s*:\s*normalizeInsightHistory\(payload\.insightHistory, importedHabits, true\)/,
-      `${label}: evidence-free v1 imports remain empty while v1 evidence documents migrate`);
+    assert.match(html, /payload\.version === 1 && !payload\.insightHistory\s*\?\s*normalizeInsightHistory\(null, importedAllHabits\)\s*:\s*normalizeInsightHistory\(payload\.insightHistory, importedAllHabits, true\)/,
+      `${label}: evidence-free v1 imports remain empty while active and archived evidence documents migrate`);
     assert.match(html, /normalizeInsightHistoryAgainstState\(importedInsightHistory, importedState, true\)/,
       `${label}: backup evidence is cross-checked against imported completion history before writes`);
   }

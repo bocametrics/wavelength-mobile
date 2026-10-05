@@ -3490,6 +3490,12 @@ function getHabitsActiveOnDate(allHabits, habitCatalogState, date) {
     .filter(habit => isHabitActiveOnDate(habitCatalogState, habit.id, date));
 }
 
+function getCategoryValidationCatalogs(now = new Date()) {
+  const completeHabits = buildCompleteHabitCatalog(DEFAULT_HABITS, loadCustomHabits() || {}, habitCatalogState);
+  const activeHabits = getHabitsActiveOnDate(completeHabits, habitCatalogState, dateKey(now));
+  return { completeHabits, activeHabits };
+}
+
 function setHabitActiveOnDate(habitCatalogState, habitId, active, date, allHabits) {
   if (!(allHabits || []).some(habit => habit?.id === habitId)) throw new Error('Cannot change lifecycle state for an unknown habit.');
   if (typeof active !== 'boolean' || !isValidDateKey(date)) throw new Error('A valid lifecycle date and active state are required.');
@@ -3566,11 +3572,11 @@ function saveCustomHabits(overrides) {
 
 function reloadHabits(now = new Date()) {
   const overrides = loadCustomHabits();
-  HABITS = applyCategoryStateToHabits(buildRuntimeHabits(DEFAULT_HABITS, overrides || {}), categoryState);
-  const activeCategoryIds = categoryState.definitions.map(category => category.id);
-  habitCatalogState = loadHabitCatalogState(DEFAULT_HABITS, activeCategoryIds, dateKey(now));
+  const categoryIds = categoryState.definitions.map(category => category.id);
+  habitCatalogState = loadHabitCatalogState(DEFAULT_HABITS, categoryIds, dateKey(now));
   const completeCatalog = buildCompleteHabitCatalog(DEFAULT_HABITS, overrides || {}, habitCatalogState);
-  categoryState = normalizeCategoryState(categoryState, completeCatalog, false);
+  const activeCatalog = getHabitsActiveOnDate(completeCatalog, habitCatalogState, dateKey(now));
+  categoryState = normalizeCategoryState(categoryState, completeCatalog, false, activeCatalog);
   ALL_HABITS = applyCategoryStateToHabits(completeCatalog, categoryState);
   HABITS = getHabitsActiveOnDate(ALL_HABITS, habitCatalogState, dateKey(now));
   userOrder = reconcileCompleteHabitOrder(userOrder, ALL_HABITS);
@@ -3625,7 +3631,7 @@ function createDefaultCategoryState() {
   };
 }
 
-function normalizeCategoryState(raw, habits, strict = false) {
+function normalizeCategoryState(raw, habits, strict = false, activeHabits = habits) {
   const fallback = () => createDefaultCategoryState();
   const invalid = message => {
     if (strict) throw new Error(message);
@@ -3705,7 +3711,12 @@ function normalizeCategoryState(raw, habits, strict = false) {
     return fallback();
   }
   const habitList = Array.isArray(habits) ? habits : [];
+  const activeHabitList = Array.isArray(activeHabits) ? activeHabits : habitList;
   const habitById = new Map(habitList.map(habit => [habit.id, habit]));
+  if (activeHabitList.some(habit => !habit || !habitById.has(habit.id))) {
+    invalid('Active habits must belong to the complete habit catalog.');
+    return fallback();
+  }
   const definitionById = new Map(definitions.map(category => [category.id, category]));
   const assignments = [];
   const assignedHabitIds = new Set();
@@ -3724,8 +3735,8 @@ function normalizeCategoryState(raw, habits, strict = false) {
     }
     const habit = habitById.get(value.habitId);
     const category = definitionById.get(value.categoryId);
-    if (!habit || !category || category.archived || assignedHabitIds.has(value.habitId) || value.categoryId === 'all') {
-      invalid('Category assignments must reference unique habits and active real categories.');
+    if (!habit || !category || assignedHabitIds.has(value.habitId) || value.categoryId === 'all') {
+      invalid('Category assignments must reference unique known habits and real categories.');
       return fallback();
     }
     assignedHabitIds.add(value.habitId);
@@ -3735,15 +3746,16 @@ function normalizeCategoryState(raw, habits, strict = false) {
   for (const habit of habitList) {
     const effectiveId = assignmentMap.get(habit.id) || habit.cat;
     const category = definitionById.get(effectiveId);
-    if (!category || category.archived) {
-      invalid('Every habit must belong to an active real category.');
+    if (!category) {
+      invalid('Every retained habit must belong to a known real category.');
       return fallback();
     }
   }
-  for (const category of definitions) {
-    if (!category.archived) continue;
-    if (habitList.some(habit => (assignmentMap.get(habit.id) || habit.cat) === category.id)) {
-      invalid('A category must be empty before it can be archived.');
+  for (const habit of activeHabitList) {
+    const effectiveId = assignmentMap.get(habit.id) || habit.cat;
+    const category = definitionById.get(effectiveId);
+    if (!category || category.archived) {
+      invalid('Every active habit must belong to an active real category; reassign it before restoring or archiving its category.');
       return fallback();
     }
   }
@@ -3779,26 +3791,26 @@ function applyCategoryStateToHabits(habits, state) {
   }));
 }
 
-function setHabitCategoryAssignment(state, habitId, categoryId, habits) {
-  const safe = normalizeCategoryState(state, habits, true);
+function setHabitCategoryAssignment(state, habitId, categoryId, habits, activeHabits = habits) {
+  const safe = normalizeCategoryState(state, habits, true, activeHabits);
   const habit = (habits || []).find(value => value.id === habitId);
   const category = safe.definitions.find(value => value.id === categoryId && !value.archived);
   if (!habit || !category || categoryId === 'all') throw new Error('Choose an active real category.');
   const assignments = safe.assignments.filter(value => value.habitId !== habitId);
   if (habit.cat !== categoryId) assignments.push({ habitId, categoryId });
-  return normalizeCategoryState({ ...safe, assignments }, habits, true);
+  return normalizeCategoryState({ ...safe, assignments }, habits, true, activeHabits);
 }
 
-function moveCategoryInOrder(state, movedId, beforeId) {
-  const safe = normalizeCategoryState(state, [], true);
+function moveCategoryInOrder(state, movedId, beforeId, habits = [], activeHabits = habits) {
+  const safe = normalizeCategoryState(state, habits, true, activeHabits);
   if (movedId === beforeId || !safe.order.includes(movedId) || !safe.order.includes(beforeId)) return safe;
   const order = safe.order.filter(id => id !== movedId);
   order.splice(order.indexOf(beforeId), 0, movedId);
   return { ...safe, definitions:order.map(id => safe.definitions.find(category => category.id === id)), order };
 }
 
-function reorderActiveCategoryIds(state, reorderedIds, habits) {
-  const safe = normalizeCategoryState(state, habits, true);
+function reorderActiveCategoryIds(state, reorderedIds, habits, activeHabits = habits) {
+  const safe = normalizeCategoryState(state, habits, true, activeHabits);
   const activeIds = safe.order.filter(id => !safe.definitions.find(category => category.id === id)?.archived);
   if (!Array.isArray(reorderedIds) || reorderedIds.length !== activeIds.length ||
       new Set(reorderedIds).size !== reorderedIds.length ||
@@ -3829,21 +3841,21 @@ function reorderHabitIdsWithinCategory(order, habits, categoryId, reorderedIds) 
   return currentOrder.map(id => byId.get(id)?.cat === categoryId ? reorderedIds[index++] : id);
 }
 
-function setCategoryArchived(state, categoryId, archived, habits) {
-  const safe = normalizeCategoryState(state, habits, true);
+function setCategoryArchived(state, categoryId, archived, habits, activeHabits = habits) {
+  const safe = normalizeCategoryState(state, habits, true, activeHabits);
   const category = safe.definitions.find(value => value.id === categoryId);
   if (!category || categoryId === 'all') throw new Error('Choose a real category.');
-  if (archived && (habits || []).some(habit => getEffectiveCategoryId(habit, safe) === categoryId)) {
+  if (archived && (activeHabits || []).some(habit => getEffectiveCategoryId(habit, safe) === categoryId)) {
     throw new Error('A category must be empty before it can be archived.');
   }
   const definitions = safe.definitions.map(value => value.id === categoryId
     ? { ...value, archived:!!archived }
     : { ...value });
-  return normalizeCategoryState({ ...safe, definitions }, habits, true);
+  return normalizeCategoryState({ ...safe, definitions }, habits, true, activeHabits);
 }
 
-function addCategoryDefinition(state, categoryId, name, iconKey, habits, emoji = '') {
-  const safe = normalizeCategoryState(state, habits, true);
+function addCategoryDefinition(state, categoryId, name, iconKey, habits, emoji = '', activeHabits = habits) {
+  const safe = normalizeCategoryState(state, habits, true, activeHabits);
   const normalizedEmoji = normalizeCategoryEmoji(emoji);
   if (emoji && !normalizedEmoji) throw new Error('Choose exactly one emoji for a custom icon.');
   const candidate = {
@@ -3857,11 +3869,11 @@ function addCategoryDefinition(state, categoryId, name, iconKey, habits, emoji =
     ...safe,
     definitions:[...safe.definitions.map(category => ({ ...category })), candidate],
     order:[...safe.order, categoryId],
-  }, habits, true);
+  }, habits, true, activeHabits);
 }
 
-function updateCategoryDefinition(state, categoryId, name, iconKey, habits, emoji = '') {
-  const safe = normalizeCategoryState(state, habits, true);
+function updateCategoryDefinition(state, categoryId, name, iconKey, habits, emoji = '', activeHabits = habits) {
+  const safe = normalizeCategoryState(state, habits, true, activeHabits);
   if (!safe.definitions.some(category => category.id === categoryId) || categoryId === 'all') {
     throw new Error('Choose a real category.');
   }
@@ -3877,11 +3889,11 @@ function updateCategoryDefinition(state, categoryId, name, iconKey, habits, emoj
       const { emoji:removedEmoji, ...withoutEmoji } = category;
       return withoutEmoji;
     }),
-  }, habits, true);
+  }, habits, true, activeHabits);
 }
 
-function deleteCategoryDefinition(state, categoryId, habits) {
-  const safe = normalizeCategoryState(state, habits, true);
+function deleteCategoryDefinition(state, categoryId, habits, activeHabits = habits) {
+  const safe = normalizeCategoryState(state, habits, true, activeHabits);
   const shippedIds = new Set(DEFAULT_CATEGORY_DEFINITIONS.map(category => category.id));
   const category = safe.definitions.find(value => value.id === categoryId);
   if (!category || shippedIds.has(categoryId)) throw new Error('Choose a custom category.');
@@ -3893,21 +3905,21 @@ function deleteCategoryDefinition(state, categoryId, habits) {
     definitions:safe.definitions.filter(value => value.id !== categoryId),
     order:safe.order.filter(id => id !== categoryId),
     assignments:safe.assignments.filter(value => value.categoryId !== categoryId),
-  }, habits, true);
+  }, habits, true, activeHabits);
 }
 
-function loadCategoryState(habits, storage = localStorage) {
+function loadCategoryState(habits, storage = localStorage, activeHabits = habits) {
   try {
     const raw = storage.getItem(CATEGORY_STATE_KEY);
     if (!raw) return createDefaultCategoryState();
-    return normalizeCategoryState(JSON.parse(raw), habits, false);
+    return normalizeCategoryState(JSON.parse(raw), habits, false, activeHabits);
   } catch (error) {
     return createDefaultCategoryState();
   }
 }
 
-function saveCategoryState(state, habits, storage = localStorage) {
-  const normalized = normalizeCategoryState(state, habits, true);
+function saveCategoryState(state, habits, storage = localStorage, activeHabits = habits) {
+  const normalized = normalizeCategoryState(state, habits, true, activeHabits);
   storage.setItem(CATEGORY_STATE_KEY, JSON.stringify(normalized));
   return normalized;
 }
@@ -3973,8 +3985,9 @@ const initialHabitCatalogDate = dateKey(new Date());
 const initialActiveCategoryIds = loadHabitCatalogCategoryIds();
 let habitCatalogState = loadHabitCatalogState(DEFAULT_HABITS, initialActiveCategoryIds, initialHabitCatalogDate);
 const initialCompleteHabitCatalog = buildCompleteHabitCatalog(DEFAULT_HABITS, loadCustomHabits() || {}, habitCatalogState);
-let categoryState = loadCategoryState(DEFAULT_HABITS);
-categoryState = loadCategoryState(initialCompleteHabitCatalog);
+let categoryState;
+const initialActiveHabitCatalog = getHabitsActiveOnDate(initialCompleteHabitCatalog, habitCatalogState, initialHabitCatalogDate);
+categoryState = loadCategoryState(initialCompleteHabitCatalog, localStorage, initialActiveHabitCatalog);
 ALL_HABITS = applyCategoryStateToHabits(initialCompleteHabitCatalog, categoryState);
 HABITS = getHabitsActiveOnDate(ALL_HABITS, habitCatalogState, initialHabitCatalogDate);
 
@@ -7123,13 +7136,16 @@ function getWeekDates(now = new Date()) {
   return dates;
 }
 
-function getElapsedWeekSummary(doneByDate, habits, now = new Date(), progressByDate = null) {
+function getElapsedWeekSummary(doneByDate, habits, now = new Date(), progressByDate = null, habitCatalogState = null) {
   const todayKey = dateKey(now);
   const elapsedDates = getWeekDates(now).filter(date => dateKey(date) <= todayKey);
   let doneCount = 0;
   let scheduledCount = 0;
   elapsedDates.forEach(date => {
-    const stats = getDailyHabitStats(doneByDate || {}, habits, date, 5, progressByDate || {});
+    const dayHabits = habitCatalogState
+      ? getHabitsActiveOnDate(habits, habitCatalogState, dateKey(date))
+      : habits;
+    const stats = getDailyHabitStats(doneByDate || {}, dayHabits, date, 5, progressByDate || {});
     doneCount += stats.doneCount;
     scheduledCount += stats.scheduledCount;
   });
@@ -7141,7 +7157,7 @@ function getElapsedWeekSummary(doneByDate, habits, now = new Date(), progressByD
   };
 }
 
-function getLast30DayTrend(doneByDate, habits, now = new Date(), progressByDate = null, trackingStartedAt = null) {
+function getLast30DayTrend(doneByDate, habits, now = new Date(), progressByDate = null, trackingStartedAt = null, habitCatalogState = null) {
   const todayKey = dateKey(now);
   const knownKeys = [
     ...Object.keys(doneByDate || {}),
@@ -7157,7 +7173,10 @@ function getLast30DayTrend(doneByDate, habits, now = new Date(), progressByDate 
   for (let offset = 29; offset >= 0; offset--) {
     const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - offset, 12);
     const key = dateKey(date);
-    const stats = getDailyHabitStats(doneByDate || {}, habits, date, 5, progressByDate || {});
+    const dayHabits = habitCatalogState
+      ? getHabitsActiveOnDate(habits, habitCatalogState, key)
+      : habits;
+    const stats = getDailyHabitStats(doneByDate || {}, dayHabits, date, 5, progressByDate || {});
     const tracked = key >= trackingStartKey && key <= todayKey && stats.scheduledCount > 0;
     const pct = tracked ? stats.pct : null;
     points.push({ key, date, pct });
@@ -7504,8 +7523,13 @@ function renderCategoriesPage() {
   archivedList.replaceChildren(...archived.map(makeArchivedCategoryRow));
   attachGripReorder(list, '.category-row[data-category-id]', '.category-grip', rows => {
     const reorderedIds = rows.map(row => row.dataset.categoryId);
-    categoryState = reorderActiveCategoryIds(categoryState, reorderedIds, DEFAULT_HABITS);
-    categoryState = saveCategoryState(categoryState, DEFAULT_HABITS);
+    const categoryCatalogs = getCategoryValidationCatalogs();
+    categoryState = reorderActiveCategoryIds(
+      categoryState, reorderedIds, categoryCatalogs.completeHabits, categoryCatalogs.activeHabits,
+    );
+    categoryState = saveCategoryState(
+      categoryState, categoryCatalogs.completeHabits, localStorage, categoryCatalogs.activeHabits,
+    );
     renderCategoryTabs();
     renderCategoriesPage();
   });
@@ -7590,16 +7614,30 @@ function renderCategoryOptions() {
   const category = getCategoryDefinition(managedCategoryId);
   if (!category || category.archived) return false;
   const isShippedCategory = DEFAULT_CATEGORY_DEFINITIONS.some(value => value.id === category.id);
-  const habitCount = HABITS.filter(habit => habit.cat === category.id).length;
+  const activeHabitCount = HABITS.filter(habit => habit.cat === category.id).length;
+  const retainedHabitCount = ALL_HABITS.filter(habit => habit.cat === category.id).length;
+  const archivedHabitCount = retainedHabitCount - activeHabitCount;
   const removal = document.getElementById('categoryRemovalOption');
   removal.textContent = isShippedCategory ? 'Archive category' : 'Delete category';
   removal.classList.toggle('danger', !isShippedCategory);
-  removal.disabled = habitCount !== 0;
-  document.getElementById('categoryOptionsGuidance').textContent = habitCount
-    ? `Move ${habitCount} ${habitCount === 1 ? 'habit' : 'habits'} first`
-    : isShippedCategory
+  removal.disabled = isShippedCategory
+    ? activeHabitCount !== 0
+    : retainedHabitCount !== 0;
+  let guidance;
+  if (isShippedCategory && activeHabitCount > 0) {
+    guidance = `Move ${activeHabitCount} active ${activeHabitCount === 1 ? 'habit' : 'habits'} first`;
+  } else if (!isShippedCategory && activeHabitCount > 0 && archivedHabitCount > 0) {
+    guidance = `Move ${activeHabitCount} active and reassign ${archivedHabitCount} archived habits first`;
+  } else if (!isShippedCategory && activeHabitCount > 0) {
+    guidance = `Move ${activeHabitCount} active ${activeHabitCount === 1 ? 'habit' : 'habits'} first`;
+  } else if (!isShippedCategory && archivedHabitCount > 0) {
+    guidance = `Reassign ${archivedHabitCount} archived ${archivedHabitCount === 1 ? 'habit' : 'habits'} before deleting`;
+  } else {
+    guidance = isShippedCategory
       ? 'Archive hides this empty category until you restore it.'
       : 'Delete permanently removes this empty custom category.';
+  }
+  document.getElementById('categoryOptionsGuidance').textContent = guidance;
   return true;
 }
 
@@ -7612,8 +7650,9 @@ function openCategoryOptions() {
 
 function openCategoryRemovalDialog() {
   const category = getCategoryDefinition(managedCategoryId);
-  if (!category || HABITS.some(habit => habit.cat === category.id)) return false;
-  const isShippedCategory = DEFAULT_CATEGORY_DEFINITIONS.some(value => value.id === category.id);
+  const isShippedCategory = DEFAULT_CATEGORY_DEFINITIONS.some(value => value.id === category?.id);
+  const blockers = isShippedCategory ? HABITS : ALL_HABITS;
+  if (!category || blockers.some(habit => habit.cat === category.id)) return false;
   document.getElementById('categoryRemovalHeading').textContent = isShippedCategory
     ? `Archive ${category.name}?`
     : `Delete '${category.name}'?`;
@@ -7634,7 +7673,13 @@ function archiveManagedCategory() {
   if (!category || !isShippedCategory) return false;
   const habits = HABITS.filter(habit => habit.cat === managedCategoryId);
   if (habits.length !== 0) return false;
-  categoryState = saveCategoryState(setCategoryArchived(categoryState, category.id, true, DEFAULT_HABITS), DEFAULT_HABITS);
+  const categoryCatalogs = getCategoryValidationCatalogs();
+  categoryState = setCategoryArchived(
+    categoryState, category.id, true, categoryCatalogs.completeHabits, categoryCatalogs.activeHabits,
+  );
+  categoryState = saveCategoryState(
+    categoryState, categoryCatalogs.completeHabits, localStorage, categoryCatalogs.activeHabits,
+  );
   if (currentCat === category.id) currentCat = 'all';
   reloadHabits();
   renderCategoryTabs();
@@ -7647,8 +7692,13 @@ function archiveManagedCategory() {
 function deleteManagedCategory() {
   const category = getCategoryDefinition(managedCategoryId);
   if (!category) return false;
-  categoryState = deleteCategoryDefinition(categoryState, category.id, DEFAULT_HABITS);
-  categoryState = saveCategoryState(categoryState, DEFAULT_HABITS);
+  const categoryCatalogs = getCategoryValidationCatalogs();
+  categoryState = deleteCategoryDefinition(
+    categoryState, category.id, categoryCatalogs.completeHabits, categoryCatalogs.activeHabits,
+  );
+  categoryState = saveCategoryState(
+    categoryState, categoryCatalogs.completeHabits, localStorage, categoryCatalogs.activeHabits,
+  );
   if (currentCat === category.id) currentCat = 'all';
   reloadHabits();
   renderCategoryTabs();
@@ -7846,16 +7896,25 @@ function saveCategoryEditor() {
   }
   const name = input.value.normalize('NFKC').trim().replace(/\s+/g, ' ');
   const emoji = normalizeCategoryEmoji(emojiInput.value);
+  const categoryCatalogs = getCategoryValidationCatalogs();
   try {
     if (editingCategoryId) {
-      categoryState = updateCategoryDefinition(categoryState, editingCategoryId, name, selectedCategoryIconKey, DEFAULT_HABITS, emoji);
+      categoryState = updateCategoryDefinition(
+        categoryState, editingCategoryId, name, selectedCategoryIconKey,
+        categoryCatalogs.completeHabits, emoji, categoryCatalogs.activeHabits,
+      );
     } else {
       const categoryId = createCustomCategoryId();
-      categoryState = addCategoryDefinition(categoryState, categoryId, name, selectedCategoryIconKey, DEFAULT_HABITS, emoji);
+      categoryState = addCategoryDefinition(
+        categoryState, categoryId, name, selectedCategoryIconKey,
+        categoryCatalogs.completeHabits, emoji, categoryCatalogs.activeHabits,
+      );
       editingCategoryId = categoryId;
       managedCategoryId = categoryId;
     }
-    categoryState = saveCategoryState(categoryState, DEFAULT_HABITS);
+    categoryState = saveCategoryState(
+      categoryState, categoryCatalogs.completeHabits, localStorage, categoryCatalogs.activeHabits,
+    );
   } catch (error) {
     input.focus();
     showToast(error.message || 'Choose a different category name');
@@ -7891,8 +7950,13 @@ function makeArchivedCategoryRow(category) {
 }
 
 function restoreArchivedCategory(categoryId) {
-  categoryState = setCategoryArchived(categoryState, categoryId, false, DEFAULT_HABITS);
-  categoryState = saveCategoryState(categoryState, DEFAULT_HABITS);
+  const categoryCatalogs = getCategoryValidationCatalogs();
+  categoryState = setCategoryArchived(
+    categoryState, categoryId, false, categoryCatalogs.completeHabits, categoryCatalogs.activeHabits,
+  );
+  categoryState = saveCategoryState(
+    categoryState, categoryCatalogs.completeHabits, localStorage, categoryCatalogs.activeHabits,
+  );
   reloadHabits();
   renderCategoryTabs();
   renderCategoriesPage();
@@ -8390,7 +8454,7 @@ function updateGreeting(now = new Date()) {
   greet.textContent = `${text}, ${name} ${icon}`;
 }
 
-function calculateLongestScheduledStreak(doneByDate, habits, throughDate = new Date(), baseTarget = 5, progressByDate) {
+function calculateLongestScheduledStreak(doneByDate, habits, throughDate = new Date(), baseTarget = 5, progressByDate, habitCatalogState = null) {
   progressByDate = progressByDate || {};
   const throughKey = dateKey(throughDate);
   const keys = [...new Set([...Object.keys(doneByDate || {}), ...Object.keys(progressByDate)])]
@@ -8405,7 +8469,10 @@ function calculateLongestScheduledStreak(doneByDate, habits, throughDate = new D
   let run = 0;
 
   while (cursor <= end) {
-    const stats = getDailyHabitStats(doneByDate, habits, cursor, baseTarget, progressByDate);
+    const dayHabits = habitCatalogState
+      ? getHabitsActiveOnDate(habits, habitCatalogState, dateKey(cursor))
+      : habits;
+    const stats = getDailyHabitStats(doneByDate, dayHabits, cursor, baseTarget, progressByDate);
     if (stats.target > 0) {
       if (stats.doneCount >= stats.target) {
         run++;
@@ -8420,14 +8487,16 @@ function calculateLongestScheduledStreak(doneByDate, habits, throughDate = new D
 }
 
 function calculateLongestStreak(now = new Date()) {
-  return calculateLongestScheduledStreak(state.done || {}, HABITS, now, 5, state.progress || {});
+  return calculateLongestScheduledStreak(
+    state.done || {}, ALL_HABITS, now, 5, state.progress || {}, habitCatalogState,
+  );
 }
 
 function resolveLongestStreak(historicalBest, currentStreak) {
   return Math.max(historicalBest, currentStreak);
 }
 
-function calculateCurrentStreak(doneByDate, habits, today, baseTarget = 5, progressByDate) {
+function calculateCurrentStreak(doneByDate, habits, today, baseTarget = 5, progressByDate, habitCatalogState = null) {
   progressByDate = progressByDate || {};
   const historyKeys = [...new Set([...Object.keys(doneByDate || {}), ...Object.keys(progressByDate)])]
     .filter(key => /^\d{4}-\d{2}-\d{2}$/.test(key))
@@ -8435,7 +8504,13 @@ function calculateCurrentStreak(doneByDate, habits, today, baseTarget = 5, progr
   if (historyKeys.length === 0) return 0;
   const earliestKey = historyKeys[0];
   const cursor = new Date(today);
-  const todayStats = getDailyHabitStats(doneByDate, habits, cursor, baseTarget, progressByDate);
+  const getStats = date => {
+    const dayHabits = habitCatalogState
+      ? getHabitsActiveOnDate(habits, habitCatalogState, dateKey(date))
+      : habits;
+    return getDailyHabitStats(doneByDate, dayHabits, date, baseTarget, progressByDate);
+  };
+  const todayStats = getStats(cursor);
   // Pending and rest days preserve the active chain through the previous
   // scheduled day instead of prematurely showing zero.
   if (todayStats.target === 0 || todayStats.doneCount < todayStats.target) {
@@ -8444,7 +8519,7 @@ function calculateCurrentStreak(doneByDate, habits, today, baseTarget = 5, progr
 
   let streak = 0;
   while (dateKey(cursor) >= earliestKey) {
-    const stats = getDailyHabitStats(doneByDate, habits, cursor, baseTarget, progressByDate);
+    const stats = getStats(cursor);
     if (stats.target === 0) {
       cursor.setDate(cursor.getDate() - 1);
       continue;
@@ -8473,7 +8548,9 @@ function getStreakStatusCopy(streak, todayCount, target = 5) {
 
 function updateStreak(now = new Date()) {
   const todayStats = getDailyHabitStats(state.done || {}, HABITS, now, 5, state.progress || {});
-  const streak = calculateCurrentStreak(state.done || {}, HABITS, now, 5, state.progress || {});
+  const streak = calculateCurrentStreak(
+    state.done || {}, ALL_HABITS, now, 5, state.progress || {}, habitCatalogState,
+  );
 
   document.getElementById('streakCount').textContent = streak;
   document.getElementById('streakEmoji').textContent = streak >= 7 ? '🔥' : streak >= 3 ? '🌊' : '💧';
@@ -8507,7 +8584,8 @@ function updateWeekly(now = new Date()) {
     const key = dateKey(d);
     const isToday = key === todayKey;
     const dayHabits = state.done[key] || {};
-    const stats = getDailyHabitStats(state.done || {}, HABITS, d, 5, state.progress || {});
+    const activeHabits = getHabitsActiveOnDate(ALL_HABITS, habitCatalogState, key);
+    const stats = getDailyHabitStats(state.done || {}, activeHabits, d, 5, state.progress || {});
     const cnt = stats.doneCount;
     const pct = stats.pct;
 
@@ -8527,15 +8605,16 @@ function updateWeekly(now = new Date()) {
     `;
   }).join('');
 
-  const weekSummary = getElapsedWeekSummary(state.done || {}, HABITS, now, state.progress || {});
+  const weekSummary = getElapsedWeekSummary(state.done || {}, ALL_HABITS, now, state.progress || {}, habitCatalogState);
   document.getElementById('weekStats').textContent = `${weekSummary.pct}% completion`;
 
   // Top category
   const catCounts = {};
-  CATS.forEach(c => { if (c !== 'all') catCounts[c] = 0; });
+  categoryState.definitions.forEach(category => { catCounts[category.id] = 0; });
   dates.forEach(d => {
-    const completedIds = new Set(getDailyHabitStats(state.done || {}, HABITS, d, 5, state.progress || {}).completedIds);
-    getScheduledHabits(HABITS, d).forEach(h => {
+    const dateHabits = getHabitsActiveOnDate(ALL_HABITS, habitCatalogState, dateKey(d));
+    const completedIds = new Set(getDailyHabitStats(state.done || {}, dateHabits, d, 5, state.progress || {}).completedIds);
+    getScheduledHabits(dateHabits, d).forEach(h => {
       if (completedIds.has(h.id)) catCounts[h.cat] = (catCounts[h.cat] || 0) + 1;
     });
   });
@@ -8550,7 +8629,7 @@ function updateWeekly(now = new Date()) {
 }
 
 function renderLast30Days(now = new Date()) {
-  const trend = getLast30DayTrend(state.done || {}, HABITS, now, state.progress || {}, state.created);
+  const trend = getLast30DayTrend(state.done || {}, ALL_HABITS, now, state.progress || {}, state.created, habitCatalogState);
   const dayWord = trend.trackedDays === 1 ? 'day' : 'days';
   document.getElementById('last30Stats').textContent = `${trend.averagePct}% average · ${trend.trackedDays} ${dayWord}`;
 
@@ -8877,6 +8956,10 @@ function saveHabitEditorForm() {
   const visibleOverrides = {};
   const visibleIds = [];
   const existingOverrides = loadCustomHabits() || {};
+  const completeCategoryCatalog = buildCompleteHabitCatalog(DEFAULT_HABITS, existingOverrides, habitCatalogState);
+  const activeCategoryCatalog = getHabitsActiveOnDate(
+    completeCategoryCatalog, habitCatalogState, dateKey(new Date()),
+  );
   const previousHabits = HABITS.map(habit => ({ ...habit }));
   const allDays = normalizeHabitDays(undefined);
   let nextCategoryState = categoryState;
@@ -8895,7 +8978,9 @@ function saveHabitEditorForm() {
     const def = DEFAULT_HABITS.find(h => h.id === id);
     if (!def) continue;
     const categoryId = row.querySelector('.eh-category').value;
-    nextCategoryState = setHabitCategoryAssignment(nextCategoryState, id, categoryId, DEFAULT_HABITS);
+    nextCategoryState = setHabitCategoryAssignment(
+      nextCategoryState, id, categoryId, completeCategoryCatalog, activeCategoryCatalog,
+    );
     const originalNote = (previousHabits.find(habit => habit.id === id)?.note || '').trim();
     if (note.length > HABIT_CARD_NOTE_MAX && note !== originalNote) {
       row.classList.add('note-error');
@@ -9027,7 +9112,7 @@ function saveHabitEditorForm() {
     if (Object.keys(changes).length > 0) visibleOverrides[id] = changes;
   }
   const overrides = mergeVisibleManageOverrides(existingOverrides, visibleOverrides, visibleIds);
-  nextCategoryState = normalizeCategoryState(nextCategoryState, DEFAULT_HABITS, true);
+  nextCategoryState = normalizeCategoryState(nextCategoryState, completeCategoryCatalog, true, activeCategoryCatalog);
   commitStorageSnapshot(localStorage, {
     [CUSTOM_HABITS_KEY]:Object.keys(overrides).length ? JSON.stringify(overrides) : null,
     [CATEGORY_STATE_KEY]:JSON.stringify(nextCategoryState),
@@ -9104,8 +9189,9 @@ function setupOfflineStatus() {
 }
 
 function createBackupPayload() {
-  const backupInsightHistory = normalizeInsightHistory(insightHistory, HABITS, false);
+  const backupInsightHistory = normalizeInsightHistory(insightHistory, ALL_HABITS, false);
   normalizeInsightHistoryAgainstState(backupInsightHistory, state, false);
+  const categoryCatalogs = getCategoryValidationCatalogs();
   return {
     app: 'wavelength',
     version: BACKUP_VERSION,
@@ -9114,7 +9200,7 @@ function createBackupPayload() {
     order: userOrder,
     firstName: firstName,
     customHabits: loadCustomHabits() || {},
-    categoryState:normalizeCategoryState(categoryState, DEFAULT_HABITS, true),
+    categoryState:normalizeCategoryState(categoryState, categoryCatalogs.completeHabits, true, categoryCatalogs.activeHabits),
     insightHistory: backupInsightHistory
   };
 }
@@ -9156,11 +9242,7 @@ async function importBackupFile(file) {
       throw new Error('This is not a compatible Wavelength backup.');
     }
 
-    const importedOrder = normalizeImportedHabitOrder(payload.order, DEFAULT_HABITS);
     const importedFirstName = normalizeFirstName(payload.firstName);
-    const importedCategoryState = payload.version >= 6
-      ? normalizeCategoryState(payload.categoryState, DEFAULT_HABITS, true)
-      : createDefaultCategoryState();
     const rawCustomHabits = payload.customHabits || {};
     if (payload.version <= 5 && payload.preferenceWindows && typeof payload.preferenceWindows === 'object' && !Array.isArray(payload.preferenceWindows)) {
       for (const [hid, pw] of Object.entries(payload.preferenceWindows)) {
@@ -9169,13 +9251,23 @@ async function importBackupFile(file) {
       }
     }
     const customHabits = normalizeCustomHabitOverrides(rawCustomHabits, DEFAULT_HABITS, true);
-    const importedHabits = applyCategoryStateToHabits(buildRuntimeHabits(DEFAULT_HABITS, customHabits), importedCategoryState);
-    const importedState = normalizeStoredState(payload.state, importedHabits, true);
     const importDate = new Date();
+    const importedCompleteHabits = buildCompleteHabitCatalog(DEFAULT_HABITS, customHabits, habitCatalogState);
+    const importedActiveHabits = getHabitsActiveOnDate(importedCompleteHabits, habitCatalogState, dateKey(importDate));
+    const importedCategoryState = payload.version >= 6
+      ? normalizeCategoryState(payload.categoryState, importedCompleteHabits, true, importedActiveHabits)
+      : createDefaultCategoryState();
+    const importedAllHabits = applyCategoryStateToHabits(importedCompleteHabits, importedCategoryState);
+    const importedHabits = getHabitsActiveOnDate(importedAllHabits, habitCatalogState, dateKey(importDate));
+    const importedOrder = normalizeImportedHabitOrder(
+      payload.order,
+      payload.version === BACKUP_VERSION ? importedCompleteHabits : DEFAULT_HABITS,
+    );
+    const importedState = normalizeStoredState(payload.state, importedAllHabits, true);
     reconcileMeasuredDay(importedState.done, importedState.progress, importedHabits, importDate);
     const importedInsightHistory = payload.version === 1 && !payload.insightHistory
-      ? normalizeInsightHistory(null, importedHabits)
-      : normalizeInsightHistory(payload.insightHistory, importedHabits, true);
+      ? normalizeInsightHistory(null, importedAllHabits)
+      : normalizeInsightHistory(payload.insightHistory, importedAllHabits, true);
     normalizeInsightHistoryAgainstState(importedInsightHistory, importedState, true);
 
     const importedSnapshot = {
@@ -9194,9 +9286,10 @@ async function importBackupFile(file) {
     updateGreeting(importDate);
     state = loadState();
     userOrder = loadOrder();
-    categoryState = loadCategoryState(DEFAULT_HABITS);
-    reloadHabits();
-    insightHistory = loadInsightHistory(HABITS, state);
+    categoryState = importedCategoryState;
+    reloadHabits(importDate);
+    state = loadState(ALL_HABITS);
+    insightHistory = loadInsightHistory(ALL_HABITS, state);
     renderHabits(importDate);
     renderCategoryTabs();
     if (document.documentElement.dataset.managementOpen === 'true') renderCategoriesPage();

@@ -66,6 +66,7 @@ function loadCategoryFunctions(html) {
     'deleteCategoryDefinition',
     'loadCategoryState',
     'saveCategoryState',
+    'loadHabitCatalogCategoryIds',
     'commitStorageSnapshot',
     'recoverStorageSnapshot',
   ];
@@ -101,6 +102,7 @@ for (const [label, htmlPath] of builds) {
     deleteCategoryDefinition,
     loadCategoryState,
     saveCategoryState,
+    loadHabitCatalogCategoryIds,
     commitStorageSnapshot,
     recoverStorageSnapshot,
     CATEGORY_ICON_MAP,
@@ -202,6 +204,47 @@ for (const [label, htmlPath] of builds) {
     `${label}: archived categories can be restored with the same ID`,
   );
 
+  const fuelAssignment = plain(setHabitCategoryAssignment(defaults, 'affirm', 'fuel', defaultHabitCats));
+  const inactiveFuelHabits = defaultHabitCats.filter(habit => !['affirm','breakfast'].includes(habit.id));
+  const archivedFuelWithRetainedHabits = plain(setCategoryArchived(
+    fuelAssignment,
+    'fuel',
+    true,
+    defaultHabitCats,
+    inactiveFuelHabits,
+  ));
+  assert.equal(
+    archivedFuelWithRetainedHabits.definitions.find(category => category.id === 'fuel').archived,
+    true,
+    `${label}: archived habits do not block reversible archive of a shipped category`,
+  );
+  assert.deepEqual(
+    archivedFuelWithRetainedHabits.assignments,
+    [{ habitId:'affirm', categoryId:'fuel' }],
+    `${label}: archiving a category retains sparse assignments for archived habits`,
+  );
+  assert.deepEqual(
+    plain(normalizeCategoryState(archivedFuelWithRetainedHabits, defaultHabitCats, true, inactiveFuelHabits)),
+    archivedFuelWithRetainedHabits,
+    `${label}: category normalization permits archived habits to retain an archived category`,
+  );
+  assert.deepEqual(
+    plain(normalizeCategoryState({
+      ...archivedFuelWithRetainedHabits,
+      assignments:[
+        ...archivedFuelWithRetainedHabits.assignments,
+        { habitId:'breakfast', categoryId:'fuel' },
+      ],
+    }, defaultHabitCats, true, inactiveFuelHabits)).assignments,
+    [{ habitId:'affirm', categoryId:'fuel' }],
+    `${label}: archived habits do not retain redundant assignments to their catalog category`,
+  );
+  assert.throws(
+    () => normalizeCategoryState(archivedFuelWithRetainedHabits, defaultHabitCats, true, defaultHabitCats),
+    /active real category|reassign|archived category/i,
+    `${label}: reactivating a habit in an archived category requires an active-category reassignment`,
+  );
+
   const added = plain(addCategoryDefinition(defaults, 'cat_12345678', 'Recovery', 'recovery', defaultHabitCats));
   assert.deepEqual(added.definitions.at(-1),
     { id:'cat_12345678', name:'Recovery', iconKey:'recovery', archived:false },
@@ -247,11 +290,46 @@ for (const [label, htmlPath] of builds) {
   const customWithHabit = plain(setHabitCategoryAssignment(added, 'affirm', 'cat_12345678', defaultHabitCats));
   assert.throws(() => deleteCategoryDefinition(customWithHabit, 'cat_12345678', defaultHabitCats), /must be empty/,
     `${label}: a custom category must be empty before deletion`);
+  assert.throws(
+    () => deleteCategoryDefinition(
+      customWithHabit,
+      'cat_12345678',
+      defaultHabitCats,
+      defaultHabitCats.filter(habit => habit.id !== 'affirm'),
+    ),
+    /empty|archived habit/i,
+    `${label}: an archived habit still blocks permanent deletion of its custom category`,
+  );
   const deleted = plain(deleteCategoryDefinition(added, 'cat_12345678', defaultHabitCats));
   assert.equal(deleted.definitions.some(category => category.id === 'cat_12345678'), false,
     `${label}: deleting an empty custom category removes its definition`);
   assert.equal(deleted.order.includes('cat_12345678'), false,
     `${label}: deleting an empty custom category removes its ordering slot`);
+
+  const assignmentPreservingOperations = [
+    reorderActiveCategoryIds(fuelAssignment, ['evening','morning','movement','mind','fuel','hygiene'], defaultHabitCats),
+    updateCategoryDefinition(fuelAssignment, 'fuel', 'Fuel & Nutrition', 'fuel', defaultHabitCats),
+    addCategoryDefinition(fuelAssignment, 'cat_abcdef12', 'Recovery', 'recovery', defaultHabitCats),
+    setCategoryArchived(
+      fuelAssignment,
+      'evening',
+      true,
+      defaultHabitCats,
+      defaultHabitCats.filter(habit => habit.id !== 'sleep'),
+    ),
+    deleteCategoryDefinition(
+      addCategoryDefinition(fuelAssignment, 'cat_abcdef12', 'Recovery', 'recovery', defaultHabitCats),
+      'cat_abcdef12',
+      defaultHabitCats,
+    ),
+  ];
+  assignmentPreservingOperations.forEach((result, index) => {
+    assert.deepEqual(
+      plain(result.assignments),
+      [{ habitId:'affirm', categoryId:'fuel' }],
+      `${label}: category management operation ${index + 1} preserves a non-default assignment`,
+    );
+  });
 
   const writes = [];
   const emptyStorage = {
@@ -265,6 +343,28 @@ for (const [label, htmlPath] of builds) {
   assert.equal(writes[0][0], 'wavelength_categories_v1', `${label}: categories use an isolated storage key`);
   assert.deepEqual(JSON.parse(writes[0][1]), renamed, `${label}: persisted categories round-trip exactly`);
 
+  const archivedValues = new Map();
+  const archivedStorage = {
+    getItem:key => archivedValues.get(key) ?? null,
+    setItem:(key, value) => archivedValues.set(key, value),
+  };
+  saveCategoryState(
+    archivedFuelWithRetainedHabits,
+    defaultHabitCats,
+    archivedStorage,
+    inactiveFuelHabits,
+  );
+  assert.deepEqual(
+    plain(loadCategoryState(defaultHabitCats, archivedStorage, inactiveFuelHabits)),
+    archivedFuelWithRetainedHabits,
+    `${label}: persisted category state retains archived-habit assignments across reload`,
+  );
+  assert.deepEqual(
+    plain(loadHabitCatalogCategoryIds(archivedStorage)),
+    defaults.order,
+    `${label}: lifecycle definitions validate against complete category IDs, including archived categories`,
+  );
+
   let malformedWrites = 0;
   const malformedStorage = {
     getItem:key => '{"schemaVersion":1,"definitions":"broken"}',
@@ -277,18 +377,37 @@ for (const [label, htmlPath] of builds) {
     `${label}: malformed raw category data is preserved rather than silently overwritten`);
   assert.match(html, /const CATEGORY_STATE_KEY = 'wavelength_categories_v1';/,
     `${label}: category persistence stays separate from habit overrides`);
-  assert.match(html, /let categoryState = loadCategoryState\(DEFAULT_HABITS\);/,
-    `${label}: runtime category state loads independently of habit overrides`);
-  assert.match(html, /HABITS = applyCategoryStateToHabits\(buildRuntimeHabits\(DEFAULT_HABITS, overrides \|\| \{\}\), categoryState\);/,
-    `${label}: runtime habits receive navigation assignments after habit/context construction`);
+  assert.match(html, /categoryState = loadCategoryState\(initialCompleteHabitCatalog, localStorage, initialActiveHabitCatalog\)/,
+    `${label}: runtime category state loads against complete and date-effective active catalogs`);
+  assert.match(html, /const completeCatalog = buildCompleteHabitCatalog[\s\S]*const activeCatalog = getHabitsActiveOnDate[\s\S]*normalizeCategoryState\(categoryState, completeCatalog, false, activeCatalog\)[\s\S]*ALL_HABITS = applyCategoryStateToHabits[\s\S]*HABITS = getHabitsActiveOnDate/,
+    `${label}: runtime applies retained assignments before deriving current categorized habits`);
   assert.match(html, /const BACKUP_VERSION = 8;/,
     `${label}: portable backup schema v8 retains arbitrary category emoji`);
-  assert.match(html, /categoryState:normalizeCategoryState\(categoryState, DEFAULT_HABITS, true\)/,
-    `${label}: v7 backups contain one normalized category document`);
+  assert.match(html, /const categoryCatalogs = getCategoryValidationCatalogs\(\)[\s\S]*categoryState:normalizeCategoryState\(categoryState, categoryCatalogs\.completeHabits, true, categoryCatalogs\.activeHabits\)/,
+    `${label}: v8 backups preserve active and archived assignments using uncategorized validation catalogs`);
   assert.match(html, /payload\.version >= 6 && !payload\.categoryState/,
     `${label}: v6+ imports require category state while older backups migrate defaults`);
-  assert.match(html, /const importedCategoryState = payload\.version >= 6[\s\S]*normalizeCategoryState\(payload\.categoryState, DEFAULT_HABITS, true\)[\s\S]*createDefaultCategoryState\(\)/,
-    `${label}: legacy v1-v5 backups receive deterministic shipped categories`);
+  assert.match(html, /const importedCompleteHabits = buildCompleteHabitCatalog\(DEFAULT_HABITS, customHabits, habitCatalogState\)[\s\S]*const importedActiveHabits = getHabitsActiveOnDate\(importedCompleteHabits, habitCatalogState, dateKey\(importDate\)\)[\s\S]*const importedCategoryState = payload\.version >= 6[\s\S]*normalizeCategoryState\(payload\.categoryState, importedCompleteHabits, true, importedActiveHabits\)[\s\S]*createDefaultCategoryState\(\)[\s\S]*const importedAllHabits = applyCategoryStateToHabits\(importedCompleteHabits, importedCategoryState\)[\s\S]*const importedHabits = getHabitsActiveOnDate\(importedAllHabits, habitCatalogState, dateKey\(importDate\)\)/,
+    `${label}: version-8 category imports use complete and date-effective active catalogs while legacy v1-v5 backups receive deterministic categories`);
+  assert.match(html, /const importedOrder = normalizeImportedHabitOrder\(\s*payload\.order,\s*payload\.version === BACKUP_VERSION \? importedCompleteHabits : DEFAULT_HABITS,?\s*\)/,
+    `${label}: version-8 self-import retains complete-catalog order, including archived identities`);
+
+  assert.match(html, /function getCategoryValidationCatalogs\(now = new Date\(\)\)[\s\S]*buildCompleteHabitCatalog\(DEFAULT_HABITS, loadCustomHabits\(\) \|\| \{\}, habitCatalogState\)[\s\S]*getHabitsActiveOnDate\(completeHabits, habitCatalogState, dateKey\(now\)\)/,
+    `${label}: category writes derive validation contexts from the uncategorized lifecycle catalog`);
+  for (const functionName of [
+    'renderCategoriesPage',
+    'archiveManagedCategory',
+    'deleteManagedCategory',
+    'saveCategoryEditor',
+    'restoreArchivedCategory',
+    'createBackupPayload',
+  ]) {
+    const functionSource = extractFunction(html, functionName);
+    assert.match(functionSource, /getCategoryValidationCatalogs\(/,
+      `${label}: ${functionName} uses uncategorized complete and active validation catalogs`);
+    assert.doesNotMatch(functionSource, /(?:normalizeCategoryState|saveCategoryState|setCategoryArchived|deleteCategoryDefinition|reorderActiveCategoryIds|addCategoryDefinition|updateCategoryDefinition)\([^;]*\bALL_HABITS\b/,
+      `${label}: ${functionName} never re-normalizes category assignments against categorized runtime habits`);
+  }
 
   const makeStorage = (initial, failAt = null) => {
     const values = new Map(Object.entries(initial));
@@ -347,16 +466,25 @@ for (const [label, htmlPath] of builds) {
     `${label}: selecting a habit renders one focused full-page form`);
   assert.match(html, /function saveHabitEditorPage\(\)[\s\S]*saveHabitEditorForm\(\)[\s\S]*renderManageCategoryPage\(\)/,
     `${label}: focused Save applies the draft before returning to the scoped list`);
-  assert.match(html, /setHabitCategoryAssignment\(nextCategoryState, id, categoryId, DEFAULT_HABITS\)/,
-    `${label}: habit moves are persisted in the isolated category document`);
+  assert.match(html, /setHabitCategoryAssignment\(\s*nextCategoryState, id, categoryId, completeCategoryCatalog, activeCategoryCatalog,?\s*\)/,
+    `${label}: habit moves persist against complete and date-effective active catalogs`);
   assert.match(html, /id="categoryEditorView"[^>]*hidden[^>]*inert/, `${label}: category creation and editing use a focused full-screen page`);
   assert.match(html, /id="archivedCategoriesGroup"[^>]*hidden[\s\S]*id="archivedCategoriesList"/,
     `${label}: archived categories remain recoverable from an inline hidden-when-empty partition`);
   assert.match(html, /id="categoryNameInput"[^>]*maxlength="24"/, `${label}: category names enforce the reviewed mobile limit`);
   assert.match(html, /function saveCategoryEditor\(\)[\s\S]*updateCategoryDefinition[\s\S]*addCategoryDefinition[\s\S]*saveCategoryState/,
     `${label}: category create and rename/icon edits use validated category operations`);
-  assert.match(extractFunction(html, 'renderCategoryOptions'), /removal\.disabled = habitCount !== 0[\s\S]*Move .* first/,
-    `${label}: category archive or deletion remains unavailable until every habit has moved out`);
+  const categoryOptionsSource = extractFunction(html, 'renderCategoryOptions');
+  assert.match(categoryOptionsSource, /HABITS/,
+    `${label}: shipped-category archive availability considers current active habits`);
+  assert.match(categoryOptionsSource, /ALL_HABITS/,
+    `${label}: custom-category deletion availability considers every retained habit`);
+  assert.match(categoryOptionsSource, /removal\.disabled = isShippedCategory\s*\?/,
+    `${label}: category options choose archive versus delete blockers by category type`);
+  assert.match(extractFunction(html, 'archiveManagedCategory'), /setCategoryArchived\(\s*categoryState, category\.id, true, categoryCatalogs\.completeHabits, categoryCatalogs\.activeHabits,?\s*\)[\s\S]*saveCategoryState\(\s*categoryState, categoryCatalogs\.completeHabits, localStorage, categoryCatalogs\.activeHabits,?\s*\)/,
+    `${label}: shipped-category archive passes uncategorized complete and active catalogs through persistence`);
+  assert.match(extractFunction(html, 'deleteManagedCategory'), /deleteCategoryDefinition\(\s*categoryState, category\.id, categoryCatalogs\.completeHabits, categoryCatalogs\.activeHabits,?\s*\)[\s\S]*saveCategoryState\(\s*categoryState, categoryCatalogs\.completeHabits, localStorage, categoryCatalogs\.activeHabits,?\s*\)/,
+    `${label}: custom-category deletion checks every retained uncategorized habit identity`);
   assert.match(html, /function restoreArchivedCategory\(categoryId\)[\s\S]*setCategoryArchived[\s\S]*saveCategoryState/,
     `${label}: archived categories restore with their stable IDs`);
   assert.doesNotMatch(html, /Move all habits to:/, `${label}: category archive never offers a misleading bulk move`);

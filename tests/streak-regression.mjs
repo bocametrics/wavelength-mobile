@@ -56,6 +56,9 @@ function loadStreakFunctions(htmlPath) {
   const html = fs.readFileSync(htmlPath, 'utf8');
   const source = [
     extractFunction(html, 'dateKey'),
+    extractFunction(html, 'isValidDateKey'),
+    extractFunction(html, 'isHabitActiveOnDate'),
+    extractFunction(html, 'getHabitsActiveOnDate'),
     extractFunction(html, 'normalizeMeasurementConfig'),
     extractFunction(html, 'getHabitProgress'),
     extractFunction(html, 'isHabitProgressComplete'),
@@ -63,9 +66,10 @@ function loadStreakFunctions(htmlPath) {
     extractFunction(html, 'isHabitScheduledOn'),
     extractFunction(html, 'getScheduledHabits'),
     extractFunction(html, 'getDailyHabitStats'),
+    extractFunction(html, 'calculateLongestScheduledStreak'),
     extractFunction(html, 'calculateCurrentStreak'),
     extractFunction(html, 'getStreakStatusCopy'),
-    'globalThis.exports = { calculateCurrentStreak, getStreakStatusCopy };',
+    'globalThis.exports = { calculateLongestScheduledStreak, calculateCurrentStreak, getStreakStatusCopy };',
   ].join('\n');
   const context = {};
   vm.createContext(context);
@@ -78,7 +82,7 @@ const completed = count => Object.fromEntries(ids.slice(0, count).map(id => [id,
 const today = new Date(2026, 7, 26, 12, 0, 0); // Wednesday, August 26
 
 for (const [label, htmlPath] of builds) {
-  const { calculateCurrentStreak, getStreakStatusCopy } = loadStreakFunctions(htmlPath);
+  const { calculateLongestScheduledStreak, calculateCurrentStreak, getStreakStatusCopy } = loadStreakFunctions(htmlPath);
 
   const pendingToday = {
     '2026-08-24': completed(8),
@@ -122,6 +126,32 @@ for (const [label, htmlPath] of builds) {
     getStreakStatusCopy(0, 3),
     'Complete 2 more habits today to start a streak',
     `${label}: zero-streak copy must not claim there is a streak to keep alive`,
+  );
+
+  const lifecycleHabits = Array.from({ length:6 }, (_, index) => ({ id:`life${index + 1}` }));
+  const lifecycleState = {
+    schemaVersion:1,
+    customDefinitions:[],
+    status:['life5','life6'].map(habitId => ({
+      habitId,
+      initialActive:true,
+      changes:[{ date:'2026-08-25', active:false }],
+    })),
+  };
+  const lifecycleDone = {
+    '2026-08-24': Object.fromEntries(lifecycleHabits.slice(0, 5).map(habit => [habit.id, true])),
+    '2026-08-25': Object.fromEntries(lifecycleHabits.slice(0, 4).map(habit => [habit.id, true])),
+    '2026-08-26': Object.fromEntries(lifecycleHabits.slice(0, 4).map(habit => [habit.id, true])),
+  };
+  assert.equal(
+    calculateCurrentStreak(lifecycleDone, lifecycleHabits, today, 5, {}, lifecycleState),
+    3,
+    `${label}: current streak resolves the active habit subset separately for each historical day`,
+  );
+  assert.equal(
+    calculateLongestScheduledStreak(lifecycleDone, lifecycleHabits, today, 5, {}, lifecycleState),
+    3,
+    `${label}: longest streak preserves qualifying days across archive transitions`,
   );
 }
 
