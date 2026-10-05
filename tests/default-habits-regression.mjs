@@ -147,7 +147,7 @@ for (const [label, htmlPath] of builds) {
   assert.throws(() => normalizeImportedHabitOrder(['wake', 'wake'], habits), /not compatible/i, `${label}: backup order rejects duplicate IDs`);
   assert.throws(() => normalizeImportedHabitOrder(['wake', 'future-id'], habits), /not compatible/i, `${label}: backup order rejects unknown IDs`);
   if (label === 'mobile') {
-    assert.match(html, /const importedOrder = normalizeImportedHabitOrder\(\s*payload\.order,\s*payload\.version === BACKUP_VERSION \? importedCompleteHabits : DEFAULT_HABITS,?\s*\)/, `${label}: backup import uses complete-catalog order for v8 and strict shipped-order migration for legacy backups`);
+    assert.match(html, /const importedOrder = normalizeImportedHabitOrder\(\s*payload\.order,\s*payload\.version === BACKUP_VERSION \? importedCompleteHabits : DEFAULT_HABITS,?\s*\)/, `${label}: backup import uses complete-catalog order for v9 and strict shipped-order migration for legacy backups`);
     assert.match(html, /\[ORDER_KEY\]:JSON\.stringify\(importedOrder\)[\s\S]*commitStorageSnapshot\(localStorage, importedSnapshot\)/, `${label}: backup import stages the reconciled order in its atomic snapshot`);
   }
 

@@ -407,6 +407,38 @@ for (const [label, htmlPath] of builds) {
     customDefinitions:[customDefinition()],
     status:initial.status,
   };
+  const archivedCustomCatalog = {
+    schemaVersion:1,
+    customDefinitions:[customDefinition()],
+    status:[{
+      habitId:customDefinition().id,
+      initialActive:true,
+      changes:[{ date:migrationDate, active:false }],
+    }],
+  };
+  assert.deepEqual(
+    plain(normalizeHabitCatalogState(
+      JSON.parse(JSON.stringify(archivedCustomCatalog)),
+      defaults,
+      activeCategoryIds,
+      migrationDate,
+      true,
+    )),
+    archivedCustomCatalog,
+    `${label}: a v9 JSON round trip preserves custom definitions and archived transitions exactly`,
+  );
+  const emptyArchiveCatalog = { ...restoredOnMigrationDate, status:[] };
+  assert.deepEqual(
+    plain(normalizeHabitCatalogState(
+      JSON.parse(JSON.stringify(emptyArchiveCatalog)),
+      defaults,
+      activeCategoryIds,
+      migrationDate,
+      true,
+    )).status,
+    [],
+    `${label}: an intentionally empty archived set remains empty after v9 normalization`,
+  );
   const allHabits = plain(buildCompleteHabitCatalog(defaults, {}, customCatalog));
   const beforeMigration = plain(getHabitsActiveOnDate(allHabits, customCatalog, '2026-10-04'));
   const onMigration = plain(getHabitsActiveOnDate(allHabits, customCatalog, migrationDate));

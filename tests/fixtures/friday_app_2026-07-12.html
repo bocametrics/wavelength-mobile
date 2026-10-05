@@ -9165,7 +9165,7 @@ function saveHabitEditorPage() {
 // ═══════════════════════════════════════════════════════════════════
 // OFFLINE AND DATA TRANSFER
 // ═══════════════════════════════════════════════════════════════════
-const BACKUP_VERSION = 8;
+const BACKUP_VERSION = 9;
 
 function setupOfflineStatus() {
   const pill = document.getElementById('offlinePill');
@@ -9189,17 +9189,23 @@ function setupOfflineStatus() {
 }
 
 function createBackupPayload() {
+  const exportDate = new Date();
+  const exportDateKey = dateKey(exportDate);
   const backupInsightHistory = normalizeInsightHistory(insightHistory, ALL_HABITS, false);
   normalizeInsightHistoryAgainstState(backupInsightHistory, state, false);
-  const categoryCatalogs = getCategoryValidationCatalogs();
+  const categoryCatalogs = getCategoryValidationCatalogs(exportDate);
+  const categoryIds = categoryState.definitions.map(category => category.id);
   return {
     app: 'wavelength',
     version: BACKUP_VERSION,
-    exportedAt: new Date().toISOString(),
+    exportedAt: exportDate.toISOString(),
     state,
     order: userOrder,
     firstName: firstName,
     customHabits: loadCustomHabits() || {},
+    habitCatalog:normalizeHabitCatalogState(
+      habitCatalogState, DEFAULT_HABITS, categoryIds, exportDateKey, true,
+    ),
     categoryState:normalizeCategoryState(categoryState, categoryCatalogs.completeHabits, true, categoryCatalogs.activeHabits),
     insightHistory: backupInsightHistory
   };
@@ -9235,10 +9241,11 @@ async function importBackupFile(file) {
   if (!file) return;
   try {
     const payload = JSON.parse(await file.text());
-    if (payload.app !== 'wavelength' || ![1, 2, 3, 4, 5, 6, 7, BACKUP_VERSION].includes(payload.version) || !payload.state || !Array.isArray(payload.order) ||
+    if (payload.app !== 'wavelength' || ![1, 2, 3, 4, 5, 6, 7, 8, BACKUP_VERSION].includes(payload.version) || !payload.state || !Array.isArray(payload.order) ||
         (payload.version >= 2 && !payload.insightHistory) ||
         (payload.version >= 4 && typeof payload.firstName !== 'string') ||
-        (payload.version >= 6 && !payload.categoryState)) {
+        (payload.version >= 6 && !payload.categoryState) ||
+        (payload.version === BACKUP_VERSION && !payload.habitCatalog)) {
       throw new Error('This is not a compatible Wavelength backup.');
     }
 
@@ -9252,13 +9259,30 @@ async function importBackupFile(file) {
     }
     const customHabits = normalizeCustomHabitOverrides(rawCustomHabits, DEFAULT_HABITS, true);
     const importDate = new Date();
-    const importedCompleteHabits = buildCompleteHabitCatalog(DEFAULT_HABITS, customHabits, habitCatalogState);
-    const importedActiveHabits = getHabitsActiveOnDate(importedCompleteHabits, habitCatalogState, dateKey(importDate));
+    const importedCategoryIds = payload.version >= 6
+      ? normalizeCategoryState({ ...payload.categoryState, assignments:[] }, [], true)
+        .definitions.map(category => category.id)
+      : DEFAULT_CATEGORY_DEFINITIONS.map(category => category.id);
+    const importedHabitCatalog = payload.version === BACKUP_VERSION
+      ? normalizeHabitCatalogState(payload.habitCatalog, DEFAULT_HABITS, importedCategoryIds, dateKey(importDate), true)
+      : createDefaultHabitCatalogState(dateKey(importDate));
+    const importedCompleteHabits = buildCompleteHabitCatalog(DEFAULT_HABITS, customHabits, importedHabitCatalog);
+    const importedActiveHabits = getHabitsActiveOnDate(importedCompleteHabits, importedHabitCatalog, dateKey(importDate));
     const importedCategoryState = payload.version >= 6
       ? normalizeCategoryState(payload.categoryState, importedCompleteHabits, true, importedActiveHabits)
       : createDefaultCategoryState();
     const importedAllHabits = applyCategoryStateToHabits(importedCompleteHabits, importedCategoryState);
-    const importedHabits = getHabitsActiveOnDate(importedAllHabits, habitCatalogState, dateKey(importDate));
+    const importedHabits = getHabitsActiveOnDate(
+      importedAllHabits, importedHabitCatalog, dateKey(importDate),
+    );
+    if (payload.version === BACKUP_VERSION) {
+      const completeIds = new Set(importedCompleteHabits.map(habit => habit.id));
+      if (payload.order.length !== importedCompleteHabits.length ||
+          payload.order.some(id => typeof id !== 'string' || !completeIds.has(id)) ||
+          new Set(payload.order).size !== payload.order.length) {
+        throw new Error('The backup habit list is not compatible with this version.');
+      }
+    }
     const importedOrder = normalizeImportedHabitOrder(
       payload.order,
       payload.version === BACKUP_VERSION ? importedCompleteHabits : DEFAULT_HABITS,
@@ -9277,6 +9301,7 @@ async function importBackupFile(file) {
       [INSIGHT_STORAGE_KEY]:JSON.stringify(importedInsightHistory),
       [CATEGORY_STATE_KEY]:JSON.stringify(importedCategoryState),
       [CUSTOM_HABITS_KEY]:Object.keys(customHabits).length ? JSON.stringify(customHabits) : null,
+      [HABIT_CATALOG_KEY]:JSON.stringify(importedHabitCatalog),
     };
     commitStorageSnapshot(localStorage, importedSnapshot);
 
@@ -9284,11 +9309,11 @@ async function importBackupFile(file) {
     const firstNameInput = document.getElementById('firstNameInput');
     if (firstNameInput) firstNameInput.value = firstName;
     updateGreeting(importDate);
-    state = loadState();
-    userOrder = loadOrder();
+    habitCatalogState = importedHabitCatalog;
     categoryState = importedCategoryState;
     reloadHabits(importDate);
     state = loadState(ALL_HABITS);
+    userOrder = loadOrder(ALL_HABITS);
     insightHistory = loadInsightHistory(ALL_HABITS, state);
     renderHabits(importDate);
     renderCategoryTabs();

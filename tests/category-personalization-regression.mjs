@@ -381,16 +381,17 @@ for (const [label, htmlPath] of builds) {
     `${label}: runtime category state loads against complete and date-effective active catalogs`);
   assert.match(html, /const completeCatalog = buildCompleteHabitCatalog[\s\S]*const activeCatalog = getHabitsActiveOnDate[\s\S]*normalizeCategoryState\(categoryState, completeCatalog, false, activeCatalog\)[\s\S]*ALL_HABITS = applyCategoryStateToHabits[\s\S]*HABITS = getHabitsActiveOnDate/,
     `${label}: runtime applies retained assignments before deriving current categorized habits`);
-  assert.match(html, /const BACKUP_VERSION = 8;/,
-    `${label}: portable backup schema v8 retains arbitrary category emoji`);
-  assert.match(html, /const categoryCatalogs = getCategoryValidationCatalogs\(\)[\s\S]*categoryState:normalizeCategoryState\(categoryState, categoryCatalogs\.completeHabits, true, categoryCatalogs\.activeHabits\)/,
-    `${label}: v8 backups preserve active and archived assignments using uncategorized validation catalogs`);
+  assert.match(html, /const BACKUP_VERSION = 9;/,
+    `${label}: portable backup schema v9 retains arbitrary category emoji`);
+  const backupExporter = extractFunction(html, 'createBackupPayload');
+  assert.match(backupExporter, /const categoryCatalogs = getCategoryValidationCatalogs\(exportDate\)[\s\S]*categoryState:normalizeCategoryState\(categoryState, categoryCatalogs\.completeHabits, true, categoryCatalogs\.activeHabits\)/,
+    `${label}: v9 backups preserve active and archived assignments using uncategorized validation catalogs`);
   assert.match(html, /payload\.version >= 6 && !payload\.categoryState/,
     `${label}: v6+ imports require category state while older backups migrate defaults`);
-  assert.match(html, /const importedCompleteHabits = buildCompleteHabitCatalog\(DEFAULT_HABITS, customHabits, habitCatalogState\)[\s\S]*const importedActiveHabits = getHabitsActiveOnDate\(importedCompleteHabits, habitCatalogState, dateKey\(importDate\)\)[\s\S]*const importedCategoryState = payload\.version >= 6[\s\S]*normalizeCategoryState\(payload\.categoryState, importedCompleteHabits, true, importedActiveHabits\)[\s\S]*createDefaultCategoryState\(\)[\s\S]*const importedAllHabits = applyCategoryStateToHabits\(importedCompleteHabits, importedCategoryState\)[\s\S]*const importedHabits = getHabitsActiveOnDate\(importedAllHabits, habitCatalogState, dateKey\(importDate\)\)/,
-    `${label}: version-8 category imports use complete and date-effective active catalogs while legacy v1-v5 backups receive deterministic categories`);
+  assert.match(html, /const importedCompleteHabits = buildCompleteHabitCatalog\(DEFAULT_HABITS, customHabits, importedHabitCatalog\)[\s\S]*const importedActiveHabits = getHabitsActiveOnDate\(importedCompleteHabits, importedHabitCatalog, dateKey\(importDate\)\)[\s\S]*const importedCategoryState = payload\.version >= 6[\s\S]*normalizeCategoryState\(payload\.categoryState, importedCompleteHabits, true, importedActiveHabits\)[\s\S]*createDefaultCategoryState\(\)[\s\S]*const importedAllHabits = applyCategoryStateToHabits\(importedCompleteHabits, importedCategoryState\)[\s\S]*const importedHabits = getHabitsActiveOnDate\(\s*importedAllHabits, importedHabitCatalog, dateKey\(importDate\),?\s*\)/,
+    `${label}: version-9 category imports use the imported complete and date-effective active catalogs while legacy v1-v5 backups receive deterministic categories`);
   assert.match(html, /const importedOrder = normalizeImportedHabitOrder\(\s*payload\.order,\s*payload\.version === BACKUP_VERSION \? importedCompleteHabits : DEFAULT_HABITS,?\s*\)/,
-    `${label}: version-8 self-import retains complete-catalog order, including archived identities`);
+    `${label}: version-9 self-import retains complete-catalog order, including archived identities`);
 
   assert.match(html, /function getCategoryValidationCatalogs\(now = new Date\(\)\)[\s\S]*buildCompleteHabitCatalog\(DEFAULT_HABITS, loadCustomHabits\(\) \|\| \{\}, habitCatalogState\)[\s\S]*getHabitsActiveOnDate\(completeHabits, habitCatalogState, dateKey\(now\)\)/,
     `${label}: category writes derive validation contexts from the uncategorized lifecycle catalog`);

@@ -635,7 +635,7 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /function resetHabitEditorDefaults\(\)[\s\S]*previousHabits[\s\S]*reconcileMeasurementTypeChanges[\s\S]*saveState\(\)[\s\S]*renderHabits\(resetDate\)/, `${label}: focused Reset defaults reconciles measured state and saves before rerendering`);
   assert.match(html, /getDailyHabitStats\(state\.done \|\| \{\}, HABITS, [^;]+state\.progress \|\| \{\}\)/, `${label}: rendered totals pass measured progress to shared calculations`);
   if (label === 'mobile') {
-    assert.match(html, /const importedAllHabits = applyCategoryStateToHabits\(importedCompleteHabits, importedCategoryState\)[\s\S]*const importedHabits = getHabitsActiveOnDate\(importedAllHabits, habitCatalogState, dateKey\(importDate\)\)/, `${label}: backup import builds complete and date-effective active habit catalogs before validating progress`);
+    assert.match(html, /const importedAllHabits = applyCategoryStateToHabits\(importedCompleteHabits, importedCategoryState\)[\s\S]*const importedHabits = getHabitsActiveOnDate\(\s*importedAllHabits, importedHabitCatalog, dateKey\(importDate\),?\s*\)/, `${label}: backup import builds complete and date-effective active habit catalogs before validating progress`);
     assert.match(html, /const importedState = normalizeStoredState\(payload\.state, importedAllHabits, true\)/, `${label}: backup import retains measured progress for active and archived habit identities`);
     assert.match(html, /reconcileMeasuredDay\(importedState\.done, importedState\.progress, importedHabits, importDate\);[\s\S]*commitStorageSnapshot\(localStorage, importedSnapshot\)/, `${label}: backup import reconciles today before its journaled storage commit`);
   }

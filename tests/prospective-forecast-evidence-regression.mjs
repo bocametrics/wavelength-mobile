@@ -748,26 +748,26 @@ test('daily evidence cap refuses new episodes instead of evicting prior evidence
   assert.deepEqual(plain(history), before, 'the cap cannot evict earlier evidence and change what the day proves');
 });
 
-test('backup schema v8 exports v2 evidence', () => {
-  assert.match(html, /const BACKUP_VERSION\s*=\s*8\s*;/, 'portable backup schema advances to version 8');
+test('backup schema v9 exports v2 evidence', () => {
+  assert.match(html, /const BACKUP_VERSION\s*=\s*9\s*;/, 'portable backup schema advances to version 9');
   assert.match(extractFunction(html, 'createBackupPayload'), /normalizeInsightHistory[\s\S]*insightHistory/,
-    'v8 export validates schema-v2 insight evidence');
+    'v9 export validates schema-v2 insight evidence');
 });
 
-test('backup v8 accepts versions 1 through 7 and migrates v1 insight history', () => {
+test('backup v9 accepts versions 1 through 8 and migrates v1 insight history', () => {
   const importer = extractFunction(html, 'importBackupFile');
-  assert.match(importer, /\[1,\s*2,\s*3,\s*4,\s*5,\s*6,\s*7,\s*BACKUP_VERSION\]\.includes\(payload\.version\)/,
-    'version 1 through version 7 backups remain accepted by v8');
+  assert.match(importer, /\[1,\s*2,\s*3,\s*4,\s*5,\s*6,\s*7,\s*8,\s*BACKUP_VERSION\]\.includes\(payload\.version\)/,
+    'version 1 through version 8 backups remain accepted by v9');
   assert.match(importer, /normalizeInsightHistory\(payload\.insightHistory,\s*importedAllHabits,\s*true\)/,
     'legacy schema-v1 insight histories migrate against active and archived identities');
 });
 
-test('malformed v8 backup evidence is rejected before the atomic storage commit', () => {
+test('malformed v9 backup evidence is rejected before the atomic storage commit', () => {
   const importer = extractFunction(html, 'importBackupFile');
   const validation = importer.indexOf('normalizeInsightHistory(payload.insightHistory, importedAllHabits, true)');
   const commit = importer.indexOf('commitStorageSnapshot(localStorage, importedSnapshot)');
-  assert.ok(validation >= 0, 'v8 strictly validates insight history');
-  assert.ok(commit > validation, 'all v8 evidence validation completes before the one atomic storage commit');
+  assert.ok(validation >= 0, 'v9 strictly validates insight history');
+  assert.ok(commit > validation, 'all v9 evidence validation completes before the one atomic storage commit');
 });
 
 test('full hourly timeline and location remain runtime-only', () => {
