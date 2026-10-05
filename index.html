@@ -63,7 +63,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   } catch (e) {}
 
   const themeColorMeta = document.getElementById('themeColorMeta');
-  if (themeColorMeta) themeColorMeta.content = effectiveTheme === 'dark' ? '#0b0f1a' : '#f3f7f8';
+  if (themeColorMeta) themeColorMeta.content = effectiveTheme === 'dark' ? '#0b0f1a' : '#eef3f5';
   const appleStatusBarMeta = document.getElementById('appleStatusBarMeta');
   if (appleStatusBarMeta) appleStatusBarMeta.content = effectiveTheme === 'dark' ? 'black-translucent' : 'default';
 })();
@@ -80,6 +80,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     --border: rgba(255,255,255,0.06);
     --border2: rgba(255,255,255,0.10);
     --border-strong: rgba(255,255,255,0.15);
+    --habit-border: var(--border);
     --surface-muted: rgba(255,255,255,0.05);
     --surface-hover: rgba(255,255,255,0.06);
     --text: #e4eaf5;
@@ -121,12 +122,13 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   html[data-theme="light"] {
     color-scheme: light;
-    --bg: #f3f7f8;
+    --bg: #eef3f5;
     --surface: #ffffff;
     --surface2: #e9f0f3;
     --border: rgba(28,53,68,0.10);
     --border2: rgba(28,53,68,0.17);
     --border-strong: rgba(28,53,68,0.24);
+    --habit-border: rgba(28,53,68,0.16);
     --surface-muted: rgba(28,53,68,0.06);
     --surface-hover: rgba(28,53,68,0.08);
     --text: #172b36;
@@ -400,7 +402,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     gap: 8px;
     padding: 10px 12px;
     background: var(--surface);
-    border: 1px solid var(--border);
+    border: 1px solid var(--habit-border);
     border-radius: var(--radius-sm);
     cursor: default;
     transition: all 0.2s ease;
@@ -409,11 +411,6 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     -webkit-touch-callout: none;
     position: relative;
     overflow: hidden;
-  }
-
-  .habit:hover {
-    border-color: var(--border-strong);
-    background: var(--surface2);
   }
 
   .habit.done {
@@ -457,8 +454,21 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     -webkit-touch-callout: none;
   }
 
-  .habit:hover .drag-handle {
-    opacity: 0.7;
+  @media (hover: hover) {
+    .habit:hover {
+      border-color: var(--border-strong);
+      background: var(--surface2);
+    }
+
+    .habit:hover .drag-handle { opacity: 0.7; }
+
+    .habit:hover .move-btn { opacity: 0.6; }
+
+    .move-btn:hover {
+      opacity: 1 !important;
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
   }
 
   .drag-handle.drag-press {
@@ -670,16 +680,6 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     opacity: 0.2;
     font-family: inherit;
     touch-action: manipulation;
-  }
-
-  .habit:hover .move-btn {
-    opacity: 0.6;
-  }
-
-  .move-btn:hover {
-    opacity: 1 !important;
-    color: var(--accent);
-    background: var(--accent-soft);
   }
 
   .move-btn:disabled {
@@ -1384,9 +1384,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     color: var(--accent);
   }
 
-  .home-icon-control svg,
-  .management-back svg,
-  .category-options-btn svg {
+  .home-icon-control svg {
     width: 22px;
     height: 22px;
     fill: none;
@@ -1395,6 +1393,18 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     stroke-linejoin: round;
     stroke-width: 1.8;
   }
+
+  .management-back svg,
+  .category-options-btn svg {
+    width: 26px;
+    height: 26px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .management-back svg { stroke-width: 2.4; }
 
   .management-view {
     min-height: calc(100vh - 60px);
@@ -1483,6 +1493,8 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     color: var(--accent);
     cursor: pointer;
   }
+
+  .category-options-btn[hidden] { display: none !important; }
 
   .category-list,
   .manage-habit-list,
@@ -1834,23 +1846,37 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   .category-option {
     width: 100%;
-    min-height: 48px;
+    min-height: 50px;
     padding: 0 14px;
     border: 1px solid var(--border2);
     border-radius: var(--radius-sm);
     background: var(--surface2);
     color: var(--text);
-    font: 600 0.9rem/1.2 inherit;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.2;
     cursor: pointer;
-    text-align: left;
+    text-align: center;
   }
 
   .category-option:disabled { opacity: 0.48; cursor: not-allowed; }
+  .category-option:active:not(:disabled) { transform: scale(0.985); }
+  .category-option:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .category-option.danger,
   .category-removal-confirm.danger { color: var(--rose); }
   .category-options-guidance,
   .category-removal-message { margin: 0; color: var(--text2); font-size: 0.875rem; line-height: 1.45; }
+  .category-options-guidance { padding: 0 4px; text-align: center; font-style: normal; }
+  .category-option-guidance-group { display: grid; gap: 4px; }
   .category-removal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  @media (hover: hover) {
+    .category-option:hover:not(:disabled) {
+      border-color: var(--border-strong);
+      background: var(--surface-hover);
+    }
+  }
 
   /* ── Responsive ── */
   @media (max-width: 480px) {
@@ -2848,7 +2874,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     <div class="management-header">
       <button class="management-back" id="manageCategoryBack" type="button" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
       <h1 id="manageCategoryHeading">Manage Habits</h1>
-      <button class="category-options-btn" id="categoryOptionsBtn" type="button" aria-label="Category options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none"/></svg></button>
+      <button class="category-options-btn" id="categoryOptionsBtn" type="button" aria-label="Category options"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.75" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.75" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.75" fill="currentColor" stroke="none"/></svg></button>
     </div>
     <div class="manage-habit-list" id="manageCategoryList"></div>
   </section>
@@ -2908,8 +2934,10 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   <div class="category-options-content">
     <h2 id="categoryOptionsHeading">Category options</h2>
     <button class="category-option" id="editCategoryOption" type="button">Edit category</button>
-    <button class="category-option" id="categoryRemovalOption" type="button">Archive category</button>
-    <p class="category-options-guidance" id="categoryOptionsGuidance"></p>
+    <div class="category-option-guidance-group">
+      <button class="category-option" id="categoryRemovalOption" type="button" aria-describedby="categoryOptionsGuidance">Archive category</button>
+      <p class="category-options-guidance" id="categoryOptionsGuidance"></p>
+    </div>
     <button class="category-option" id="categoryOptionsClose" type="button">Cancel</button>
   </div>
 </dialog>
@@ -5572,7 +5600,7 @@ function applyThemePreference(preference, persist = true) {
   root.style.colorScheme = effectiveTheme;
 
   const themeColorMeta = document.getElementById('themeColorMeta');
-  if (themeColorMeta) themeColorMeta.content = effectiveTheme === 'dark' ? '#0b0f1a' : '#f3f7f8';
+  if (themeColorMeta) themeColorMeta.content = effectiveTheme === 'dark' ? '#0b0f1a' : '#eef3f5';
   const appleStatusBarMeta = document.getElementById('appleStatusBarMeta');
   if (appleStatusBarMeta) appleStatusBarMeta.content = effectiveTheme === 'dark' ? 'black-translucent' : 'default';
 
@@ -6823,6 +6851,19 @@ let selectedCategoryIconKey = 'star';
 let selectedCategoryEmoji = '';
 const MANAGEMENT_HISTORY_KEY = 'wavelengthManagementRoute';
 let suppressNextManagementPop = false;
+const managementSessionId = (() => {
+  try {
+    if (typeof globalThis.crypto?.randomUUID === 'function') return globalThis.crypto.randomUUID();
+  } catch (error) {}
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+})();
+let managementFlowSequence = 0;
+let managementFlowId = null;
+
+function beginManagementFlow() {
+  managementFlowSequence += 1;
+  managementFlowId = `${managementSessionId}:${managementFlowSequence}`;
+}
 
 function getCategoryDefinition(categoryId) {
   return categoryState.definitions.find(category => category.id === categoryId) || null;
@@ -6863,6 +6904,7 @@ function renderCategoryTabs() {
 function getManagementRoute(viewId) {
   return {
     viewId,
+    flowId:managementFlowId,
     categoryId:managedCategoryId,
     habitId:editingHabitId,
     categoryEditorId:editingCategoryId,
@@ -7124,7 +7166,8 @@ function renderCategoriesPage() {
   });
 }
 
-function openCategoriesPage() {
+function openCategoriesPage(beginFlow = true) {
+  if (beginFlow) beginManagementFlow();
   managementOrigin = 'home';
   renderCategoriesPage();
   showManagementView('categoriesView');
@@ -7134,7 +7177,7 @@ function renderManageCategoryPage() {
   const isAll = managedCategoryId === 'all';
   const category = isAll ? null : getCategoryDefinition(managedCategoryId);
   if (!isAll && (!category || category.archived)) {
-    openCategoriesPage();
+    openCategoriesPage(false);
     return;
   }
   document.getElementById('manageCategoryHeading').textContent = isAll ? 'Manage All Habits' : `Manage ${category.name}`;
@@ -7277,6 +7320,7 @@ function confirmCategoryRemoval() {
 }
 
 function openManageCategoryPage(categoryId, origin = 'categories') {
+  if (origin === 'home') beginManagementFlow();
   managedCategoryId = categoryId;
   manageCategory = categoryId;
   managementOrigin = origin;
@@ -7309,6 +7353,10 @@ function requestLeaveHabitEditor() {
 
 function restoreManagementRoute(route) {
   if (!route) {
+    closeManagementFlow(true);
+    return;
+  }
+  if (route.flowId !== managementFlowId) {
     closeManagementFlow(true);
     return;
   }

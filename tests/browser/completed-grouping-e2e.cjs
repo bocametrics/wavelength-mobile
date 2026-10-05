@@ -167,10 +167,33 @@ function contrastRatio(foreground, background) {
   assert.ok(morning.activeIds.includes('wake'), 'unmarked check-once habit returns above divider');
 
   const firstOpenId = morning.activeIds.find(id => id !== 'wake' && id !== 'hydrate');
-  await page.click(`.habit[data-id="${firstOpenId}"]`);
+  const completionPoint = await page.$eval(`.habit[data-id="${firstOpenId}"]`, card => {
+    const rect = card.getBoundingClientRect();
+    return { x:rect.left + rect.width / 2, y:rect.top + rect.height / 2 };
+  });
+  await page.touchscreen.tap(completionPoint.x, completionPoint.y);
   await page.waitForFunction(id => document.querySelector(`.habit[data-id="${id}"]`).classList.contains('done'), {}, firstOpenId);
   morning = await snapshot();
   assert.ok(morning.completedIds.includes(firstOpenId), 'new completion moves below divider');
+  const postCompletionRest = await page.evaluate(point => {
+    const cardUnderPointer = document.elementFromPoint(point.x, point.y)?.closest('.habit:not(.done)') || null;
+    const restingCards = [...document.querySelectorAll('.habit:not(.done)')];
+    const reference = restingCards.find(card => card !== cardUnderPointer) || null;
+    const appearance = card => card ? {
+      backgroundColor:getComputedStyle(card).backgroundColor,
+      borderColor:getComputedStyle(card).borderColor,
+    } : null;
+    return {
+      cardUnderPointerId:cardUnderPointer?.dataset.id || null,
+      focusedHabitId:document.activeElement?.closest?.('.habit')?.dataset.id || null,
+      pointerAppearance:appearance(cardUnderPointer),
+      restingAppearance:appearance(reference),
+    };
+  }, completionPoint);
+  assert.equal(postCompletionRest.focusedHabitId, null,
+    'completion does not transfer keyboard or assistive-technology focus to another habit');
+  assert.deepEqual(postCompletionRest.pointerAppearance, postCompletionRest.restingAppearance,
+    `the next habit remains visually at rest after completion: ${JSON.stringify(postCompletionRest)}`);
   assert.equal(morning.storedOrder, originalStoredOrder, 'completion changes never rewrite canonical order');
   assert.ok(morning.documentWidth <= morning.viewportWidth, 'Morning view has no horizontal overflow');
   assert.deepEqual(runtimeErrors, []);
