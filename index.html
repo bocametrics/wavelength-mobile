@@ -2988,6 +2988,9 @@ const DEFAULT_HABITS = [
 ];
 
 const HABIT_CARD_NOTE_MAX = 42;
+const HABIT_CATALOG_SCHEMA_VERSION = 1;
+const HABIT_CATALOG_KEY = 'wavelength_habit_catalog_v1';
+const MAX_CUSTOM_HABITS = 100;
 
 const SYSTEM_HABIT_PARAMETER_DEFS = {
   wake:{ targetTime:{ type:'time', default:'06:30', min:'03:00', max:'12:00', label:'Wake time' } },
@@ -3227,6 +3230,320 @@ function buildRuntimeHabits(defaults, overrides = {}) {
   });
 }
 
+function createDefaultHabitCatalogState(migrationDate) {
+  if (!isValidDateKey(migrationDate)) throw new Error('A valid migration date is required.');
+  return {
+    schemaVersion:HABIT_CATALOG_SCHEMA_VERSION,
+    customDefinitions:[],
+    status:[{
+      habitId:'medication',
+      initialActive:true,
+      changes:[{ date:migrationDate, active:false }],
+    }],
+  };
+}
+
+function normalizeHabitIcon(value) {
+  return normalizeCategoryEmoji(value);
+}
+
+function normalizeCustomHabitDefinition(value, knownHabits, activeCategoryIds, strict = false) {
+  const fail = message => {
+    if (strict) throw new Error(message);
+    return null;
+  };
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return fail('A custom habit definition must be an object.');
+  }
+  const allowedFields = new Set([
+    'id','cat','icon','text','note','activeFrom','days','measurement','target','step','unit','rhythm','preferenceWindow',
+  ]);
+  if (Object.keys(value).some(key => !allowedFields.has(key))) {
+    return fail('A custom habit definition contains unsupported fields.');
+  }
+  const id = typeof value.id === 'string' ? value.id : '';
+  if (!/^habit_[a-f0-9-]{8,64}$/i.test(id)) return fail('A custom habit ID must use the opaque habit_ namespace.');
+  if ((knownHabits || []).some(habit => habit?.id === id)) return fail('A custom habit ID must be unique and cannot collide with another habit ID.');
+
+  const categories = new Set(Array.isArray(activeCategoryIds) ? activeCategoryIds : []);
+  if (typeof value.cat !== 'string' || value.cat === 'all' || !categories.has(value.cat)) {
+    return fail('Choose an active real category for the custom habit.');
+  }
+  const icon = normalizeHabitIcon(value.icon);
+  if (!icon || icon !== value.icon) return fail('A custom habit icon must be exactly one emoji.');
+
+  const rawText = typeof value.text === 'string' ? value.text : '';
+  const text = rawText.normalize('NFKC').trim().replace(/\s+/g, ' ');
+  if (!text || text.length > 48 || /[\u0000-\u001f\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]/.test(text)) {
+    return fail('A custom habit name is required and must contain at most 48 safe characters.');
+  }
+  const rawNote = value.note === undefined ? '' : value.note;
+  if (typeof rawNote !== 'string') return fail('A custom habit description must be text.');
+  const note = rawNote.normalize('NFKC').trim().replace(/\s+/g, ' ');
+  if (note.length > 42 || /[\u0000-\u001f\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]/.test(note)) {
+    return fail('A custom habit description must contain at most 42 safe characters.');
+  }
+  if (strict && (text !== rawText || note !== rawNote)) {
+    return fail('Custom habit text must already be normalized.');
+  }
+  if (!isValidDateKey(value.activeFrom)) return fail('A custom habit requires a valid active date.');
+  const days = normalizeHabitDays(value.days);
+  if (days.length === 0 || !Array.isArray(value.days) || days.length !== value.days.length ||
+      (strict && days.some((day, index) => day !== value.days[index]))) {
+    return fail('A custom habit schedule must contain unique valid days in canonical order.');
+  }
+
+  const measurement = value.measurement === undefined ? 'check' : value.measurement;
+  const result = { id, cat:value.cat, icon, text, note, activeFrom:value.activeFrom, days, measurement };
+  if (measurement === 'count') {
+    if (!Number.isInteger(value.target) || value.target < 1 || value.target > 999 ||
+        Object.hasOwn(value, 'step') || Object.hasOwn(value, 'unit')) {
+      return fail('Count measurement target must be a positive whole number.');
+    }
+    result.target = value.target;
+  } else if (measurement === 'amount') {
+    const config = normalizeMeasurementConfig(value);
+    if (config.type !== 'amount' || Object.hasOwn(value, 'target') === false || Object.hasOwn(value, 'step') === false ||
+        typeof value.unit !== 'string' || value.unit !== value.unit.trim()) {
+      return fail('Amount measurement requires a valid target, increment, and unit.');
+    }
+    result.target = config.target;
+    result.step = config.step;
+    result.unit = config.unit;
+  } else if (measurement !== 'check' || Object.hasOwn(value, 'target') || Object.hasOwn(value, 'step') || Object.hasOwn(value, 'unit')) {
+    return fail('Custom habit measurement is invalid.');
+  }
+
+  if (Object.hasOwn(value, 'rhythm')) {
+    const rhythm = normalizeRhythmConfig(value.rhythm, true);
+    if (!rhythm || Object.keys(value.rhythm).length !== Object.keys(rhythm).length ||
+        Object.keys(value.rhythm).some(key => !Object.hasOwn(rhythm, key) || value.rhythm[key] !== rhythm[key])) {
+      return fail('Custom habit rhythm must be a canonical supported anchor.');
+    }
+    result.rhythm = rhythm;
+  }
+  if (Object.hasOwn(value, 'preferenceWindow')) {
+    let preferenceWindow;
+    try {
+      preferenceWindow = normalizePreferenceWindow(value.preferenceWindow, true);
+    } catch (error) {
+      return fail(`Custom habit preference window is invalid: ${error.message}`);
+    }
+    if (!preferenceWindow || Object.keys(value.preferenceWindow).length !== Object.keys(preferenceWindow).length ||
+        Object.keys(value.preferenceWindow).some(key => !Object.hasOwn(preferenceWindow, key) || value.preferenceWindow[key] !== preferenceWindow[key])) {
+      return fail('Custom habit preference window must use canonical supported fields.');
+    }
+    result.preferenceWindow = preferenceWindow;
+  }
+  return result;
+}
+
+function normalizeHabitCatalogState(raw, defaults, activeCategoryIds, migrationDate, strict = false) {
+  const fallback = () => createDefaultHabitCatalogState(migrationDate);
+  const fail = message => {
+    if (strict) throw new Error(message);
+    return null;
+  };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    fail('Habit catalog must be an object.');
+    return fallback();
+  }
+  const allowedRoot = new Set(['schemaVersion','customDefinitions','status']);
+  if (Object.keys(raw).some(key => !allowedRoot.has(key)) ||
+      raw.schemaVersion !== HABIT_CATALOG_SCHEMA_VERSION ||
+      !Array.isArray(raw.customDefinitions) || !Array.isArray(raw.status)) {
+    fail('Habit catalog schema is invalid.');
+    return fallback();
+  }
+  if (raw.customDefinitions.length > MAX_CUSTOM_HABITS) {
+    fail(`Custom habit count exceeds the ${MAX_CUSTOM_HABITS} habit limit.`);
+    return fallback();
+  }
+
+  const customDefinitions = [];
+  const known = Array.isArray(defaults) ? [...defaults] : [];
+  const customIds = new Set();
+  for (const candidate of raw.customDefinitions) {
+    let normalized;
+    try {
+      normalized = normalizeCustomHabitDefinition(candidate, known, activeCategoryIds, true);
+    } catch (error) {
+      fail(error.message);
+      return fallback();
+    }
+    if (customIds.has(normalized.id)) {
+      fail('Custom habit IDs must be unique; duplicate ID found.');
+      return fallback();
+    }
+    customIds.add(normalized.id);
+    customDefinitions.push(normalized);
+    known.push(normalized);
+  }
+
+  const knownIds = new Set(known.map(habit => habit.id));
+  const seenStatusIds = new Set();
+  const status = [];
+  for (const candidate of raw.status) {
+    if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate) ||
+        Object.keys(candidate).some(key => !['habitId','initialActive','changes'].includes(key)) ||
+        typeof candidate.habitId !== 'string' || !knownIds.has(candidate.habitId) ||
+        seenStatusIds.has(candidate.habitId) || typeof candidate.initialActive !== 'boolean' ||
+        !Array.isArray(candidate.changes)) {
+      fail('Habit lifecycle status references an unknown or duplicate habit, or has an invalid shape.');
+      return fallback();
+    }
+    seenStatusIds.add(candidate.habitId);
+    const finalByDate = new Map();
+    for (const change of candidate.changes) {
+      if (!change || typeof change !== 'object' || Array.isArray(change) ||
+          Object.keys(change).some(key => !['date','active'].includes(key)) ||
+          !isValidDateKey(change.date) || typeof change.active !== 'boolean') {
+        fail('Habit lifecycle changes require a valid date and active state.');
+        return fallback();
+      }
+      finalByDate.set(change.date, change.active);
+    }
+    let current = candidate.initialActive;
+    const changes = [];
+    for (const [date, active] of [...finalByDate.entries()].sort(([left], [right]) => left.localeCompare(right))) {
+      if (active === current) continue;
+      changes.push({ date, active });
+      current = active;
+    }
+    if (changes.length > 0 || candidate.initialActive === false) {
+      status.push({ habitId:candidate.habitId, initialActive:candidate.initialActive, changes });
+    }
+  }
+  return { schemaVersion:HABIT_CATALOG_SCHEMA_VERSION, customDefinitions, status };
+}
+
+function loadHabitCatalogState(defaults, activeCategoryIds, migrationDate, storage = localStorage) {
+  let raw;
+  try {
+    raw = storage.getItem(HABIT_CATALOG_KEY);
+  } catch (error) {
+    return createDefaultHabitCatalogState(migrationDate);
+  }
+  if (raw === null) {
+    const initial = createDefaultHabitCatalogState(migrationDate);
+    try {
+      storage.setItem(HABIT_CATALOG_KEY, JSON.stringify(initial));
+    } catch (error) {}
+    return initial;
+  }
+  try {
+    return normalizeHabitCatalogState(JSON.parse(raw), defaults, activeCategoryIds, migrationDate, true);
+  } catch (error) {
+    return createDefaultHabitCatalogState(migrationDate);
+  }
+}
+
+function saveHabitCatalogState(state, defaults, activeCategoryIds, migrationDate, storage = localStorage) {
+  const normalized = normalizeHabitCatalogState(state, defaults, activeCategoryIds, migrationDate, true);
+  storage.setItem(HABIT_CATALOG_KEY, JSON.stringify(normalized));
+  return normalized;
+}
+
+function createCustomHabitId(knownHabits, tokenFactory) {
+  const knownIds = new Set((knownHabits || []).map(habit => habit?.id));
+  const makeToken = typeof tokenFactory === 'function'
+    ? tokenFactory
+    : () => globalThis.crypto?.randomUUID?.() || `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
+  for (let attempt = 0; attempt < 1000; attempt += 1) {
+    const token = String(makeToken() || '').trim();
+    const candidate = `habit_${token}`;
+    if (/^habit_[a-f0-9-]{8,64}$/i.test(candidate) && !knownIds.has(candidate)) return candidate;
+  }
+  throw new Error('Unable to create a unique opaque habit ID.');
+}
+
+function buildCompleteHabitCatalog(defaults, overrides, catalogState) {
+  const shipped = buildRuntimeHabits(Array.isArray(defaults) ? defaults : [], overrides || {});
+  const custom = Array.isArray(catalogState?.customDefinitions) ? catalogState.customDefinitions : [];
+  return [
+    ...shipped,
+    ...custom.map(definition => ({
+      ...definition,
+      weight:1,
+      targetLabel:'',
+      context:{ recommend:false },
+    })),
+  ];
+}
+
+function isHabitActiveOnDate(habitCatalogState, habitId, date) {
+  if (!isValidDateKey(date)) return false;
+  const custom = (habitCatalogState?.customDefinitions || []).find(habit => habit.id === habitId);
+  if (custom && date < custom.activeFrom) return false;
+  const lifecycle = (habitCatalogState?.status || []).find(entry => entry.habitId === habitId);
+  if (!lifecycle) return true;
+  let active = lifecycle.initialActive;
+  for (const change of lifecycle.changes || []) {
+    if (change.date > date) break;
+    active = change.active;
+  }
+  return active;
+}
+
+function getHabitsActiveOnDate(allHabits, habitCatalogState, date) {
+  return (Array.isArray(allHabits) ? allHabits : [])
+    .filter(habit => isHabitActiveOnDate(habitCatalogState, habit.id, date));
+}
+
+function setHabitActiveOnDate(habitCatalogState, habitId, active, date, allHabits) {
+  if (!(allHabits || []).some(habit => habit?.id === habitId)) throw new Error('Cannot change lifecycle state for an unknown habit.');
+  if (typeof active !== 'boolean' || !isValidDateKey(date)) throw new Error('A valid lifecycle date and active state are required.');
+  const next = {
+    schemaVersion:habitCatalogState.schemaVersion,
+    customDefinitions:(habitCatalogState.customDefinitions || []).map(habit => ({ ...habit })),
+    status:(habitCatalogState.status || []).map(entry => ({
+      habitId:entry.habitId,
+      initialActive:entry.initialActive,
+      changes:(entry.changes || []).map(change => ({ ...change })),
+    })),
+  };
+  let lifecycle = next.status.find(entry => entry.habitId === habitId);
+  if (!lifecycle) {
+    lifecycle = { habitId, initialActive:true, changes:[] };
+    next.status.push(lifecycle);
+  }
+  const earlier = lifecycle.changes.filter(change => change.date < date);
+  let stateBefore = lifecycle.initialActive;
+  for (const change of earlier) stateBefore = change.active;
+  const later = lifecycle.changes.filter(change => change.date > date);
+  lifecycle.changes = [...earlier, ...(active === stateBefore ? [] : [{ date, active }]), ...later];
+
+  let current = lifecycle.initialActive;
+  lifecycle.changes = lifecycle.changes.filter(change => {
+    if (change.active === current) return false;
+    current = change.active;
+    return true;
+  });
+  if (lifecycle.changes.length === 0 && lifecycle.initialActive === true) {
+    next.status = next.status.filter(entry => entry !== lifecycle);
+  }
+  return next;
+}
+
+function reconcileCompleteHabitOrder(savedOrder, allHabits) {
+  const allIds = (Array.isArray(allHabits) ? allHabits : []).map(habit => habit.id);
+  const validIds = new Set(allIds);
+  const seen = new Set();
+  const reconciled = [];
+  if (Array.isArray(savedOrder)) {
+    for (const id of savedOrder) {
+      if (validIds.has(id) && !seen.has(id)) {
+        seen.add(id);
+        reconciled.push(id);
+      }
+    }
+  }
+  for (const id of allIds) {
+    if (!seen.has(id)) reconciled.push(id);
+  }
+  return reconciled;
+}
+
 // ── Runtime habits (editable via Manage modal) ──
 const CUSTOM_HABITS_KEY = 'wavelength_wpb_habits';
 
@@ -3247,11 +3564,19 @@ function saveCustomHabits(overrides) {
   }
 }
 
-function reloadHabits() {
+function reloadHabits(now = new Date()) {
   const overrides = loadCustomHabits();
   HABITS = applyCategoryStateToHabits(buildRuntimeHabits(DEFAULT_HABITS, overrides || {}), categoryState);
+  const activeCategoryIds = categoryState.definitions.map(category => category.id);
+  habitCatalogState = loadHabitCatalogState(DEFAULT_HABITS, activeCategoryIds, dateKey(now));
+  const completeCatalog = buildCompleteHabitCatalog(DEFAULT_HABITS, overrides || {}, habitCatalogState);
+  categoryState = normalizeCategoryState(categoryState, completeCatalog, false);
+  ALL_HABITS = applyCategoryStateToHabits(completeCatalog, categoryState);
+  HABITS = getHabitsActiveOnDate(ALL_HABITS, habitCatalogState, dateKey(now));
+  userOrder = reconcileCompleteHabitOrder(userOrder, ALL_HABITS);
 }
 
+let ALL_HABITS = [];
 let HABITS = [];
 
 const CATEGORY_SCHEMA_VERSION = 2;
@@ -3587,6 +3912,18 @@ function saveCategoryState(state, habits, storage = localStorage) {
   return normalized;
 }
 
+function loadHabitCatalogCategoryIds(storage = localStorage) {
+  try {
+    const raw = storage.getItem(CATEGORY_STATE_KEY);
+    if (!raw) return DEFAULT_CATEGORY_DEFINITIONS.map(category => category.id);
+    const candidate = JSON.parse(raw);
+    const categoriesOnly = normalizeCategoryState({ ...candidate, assignments:[] }, [], true);
+    return categoriesOnly.definitions.map(category => category.id);
+  } catch (error) {
+    return DEFAULT_CATEGORY_DEFINITIONS.map(category => category.id);
+  }
+}
+
 function recoverStorageSnapshot(storage = localStorage) {
   const raw = storage.getItem(IMPORT_JOURNAL_KEY);
   if (!raw) return false;
@@ -3632,7 +3969,14 @@ try {
 } catch (error) {
   localStorage.removeItem(IMPORT_JOURNAL_KEY);
 }
+const initialHabitCatalogDate = dateKey(new Date());
+const initialActiveCategoryIds = loadHabitCatalogCategoryIds();
+let habitCatalogState = loadHabitCatalogState(DEFAULT_HABITS, initialActiveCategoryIds, initialHabitCatalogDate);
+const initialCompleteHabitCatalog = buildCompleteHabitCatalog(DEFAULT_HABITS, loadCustomHabits() || {}, habitCatalogState);
 let categoryState = loadCategoryState(DEFAULT_HABITS);
+categoryState = loadCategoryState(initialCompleteHabitCatalog);
+ALL_HABITS = applyCategoryStateToHabits(initialCompleteHabitCatalog, categoryState);
+HABITS = getHabitsActiveOnDate(ALL_HABITS, habitCatalogState, initialHabitCatalogDate);
 
 const CATS = ['all', ...DEFAULT_CATEGORY_DEFINITIONS.map(category => category.id)];
 const CATEGORY_NAMES = Object.fromEntries(DEFAULT_CATEGORY_DEFINITIONS.map(category => [category.id, category.name]));
@@ -6439,8 +6783,9 @@ function normalizeStoredState(rawState, habits, strict = false) {
 }
 
 function getActiveHabitsForStateValidation() {
-  const custom = loadCustomHabits() || {};
-  return DEFAULT_HABITS.map(habit => custom[habit.id] ? { ...habit, ...custom[habit.id] } : { ...habit });
+  return ALL_HABITS.length ? ALL_HABITS : buildCompleteHabitCatalog(
+    DEFAULT_HABITS, loadCustomHabits() || {}, habitCatalogState,
+  );
 }
 
 function loadState(activeHabits) {
@@ -6491,16 +6836,16 @@ function normalizeImportedHabitOrder(savedOrder, defaults) {
   return reconcileHabitOrder(savedOrder, defaults);
 }
 
-function loadOrder() {
+function loadOrder(habits = ALL_HABITS.length ? ALL_HABITS : DEFAULT_HABITS) {
   try {
     const raw = localStorage.getItem(ORDER_KEY);
-    if (raw) return reconcileHabitOrder(JSON.parse(raw), DEFAULT_HABITS);
+    if (raw) return reconcileCompleteHabitOrder(JSON.parse(raw), habits);
   } catch(e) {}
-  return reconcileHabitOrder([], DEFAULT_HABITS);
+  return reconcileCompleteHabitOrder([], habits);
 }
 
-let state = loadState();
-let userOrder = loadOrder();
+let state = loadState(ALL_HABITS);
+let userOrder = loadOrder(ALL_HABITS);
 let insightHistory = normalizeInsightHistory(null, DEFAULT_HABITS);
 
 function loadInsightHistory(activeHabits, storedState = state) {
@@ -6516,7 +6861,7 @@ function loadInsightHistory(activeHabits, storedState = state) {
 
 function saveInsightHistory(now = new Date()) {
   pruneInsightHistory(insightHistory, now, 400);
-  insightHistory = normalizeInsightHistory(insightHistory, HABITS.length ? HABITS : DEFAULT_HABITS, false);
+  insightHistory = normalizeInsightHistory(insightHistory, ALL_HABITS.length ? ALL_HABITS : DEFAULT_HABITS, false);
   normalizeInsightHistoryAgainstState(insightHistory, state, false);
   localStorage.setItem(INSIGHT_STORAGE_KEY, JSON.stringify(insightHistory));
 }
@@ -6738,7 +7083,7 @@ function saveOrder() {
 
 // Reset order to default
 function resetOrder() {
-  userOrder = HABITS.map(h => h.id);
+  userOrder = ALL_HABITS.map(h => h.id);
   saveOrder();
   renderHabits();
   showToast('↻ Habit order reset to default');
@@ -7568,6 +7913,7 @@ function refreshForDateRollover(now = new Date()) {
   rhythmWeatherData = null;
   rhythmWeatherGeneration++;
   rhythmWeatherRefreshPromise = null;
+  reloadHabits(now);
   updateDateDisplay(now);
   renderHabits(now);
   renderInsights(now);
@@ -8900,7 +9246,8 @@ function setActiveView(view, scroll = true) {
 // ═══════════════════════════════════════════════════════════════════
 function init() {
   reloadHabits();
-  insightHistory = loadInsightHistory(HABITS, state);
+  state = loadState(ALL_HABITS);
+  insightHistory = loadInsightHistory(ALL_HABITS, state);
   firstName = loadFirstName();
   const firstNameInput = document.getElementById('firstNameInput');
   if (firstNameInput) {
