@@ -350,6 +350,7 @@ function collectErrors(page) {
     actionHidden:true,
   });
 
+  await page.$eval('#resetBtn', button => button.scrollIntoView({ block:'center' }));
   await page.click('#resetBtn');
   await page.waitForFunction(() => Object.keys(state.done[dateKey(new Date())] || {}).length === 0);
 
