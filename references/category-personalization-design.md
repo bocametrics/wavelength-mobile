@@ -2,6 +2,8 @@
 
 This document defines the shipped mobile-first Categories, Manage Category, and Category Editor behavior. `index.html` is canonical; `../friday_app_2026-07-12.html` is its byte-identical compatibility mirror.
 
+The custom-habit lifecycle extension is implemented and browser-verified locally; native synchronization and release/device verification for that extension remain Phase 14. See the [habit lifecycle design contract](habit-lifecycle-design.md) for exact creation, archive/restore, historical eligibility, and backup v9 behavior.
+
 ## Management shell
 
 - When a management route is open, `html[data-management-open="true"] body` has no inherited top padding. The sticky management header owns safe-area spacing with `env(safe-area-inset-top)` and starts at the top of the viewport.
@@ -19,6 +21,16 @@ This document defines the shipped mobile-first Categories, Manage Category, and 
 - The source row remains in the list as a same-height `.category-drag-placeholder`. Before each prospective move, row rectangles are captured; after insertion, neighboring rows animate from their old positions with a FLIP-style transform and `requestAnimationFrame`.
 - On every armed release, including within the original slot, the proxy settles to the current placeholder before cleanup; persistence runs only when the row actually changed position. Pointer cancellation restores the original order and removes all proxy, placeholder, inline transform, capture, and body interaction state.
 - `prefers-reduced-motion: reduce` removes proxy and row transitions, commits a changed order immediately, and leaves the same reorder and cleanup behavior intact.
+- Scoped Manage renders **Add a new habit** and **Add an archived habit** after its active rows, outside `.manage-habit-row` and the reorder collection. They have no grip, do not change canonical order, and never enter the drag proxy. During an armed Manage drag, the action host becomes `visibility:hidden` without collapsing the geometry.
+- The complete canonical habit order retains active and archived identities. Category-scoped reordering changes the visible active category slots while preserving archived and out-of-category slots. Restoration reuses an identity's retained slot rather than appending it as a new habit.
+
+## Active and retained category references
+
+- `ALL_HABITS` contains every retained shipped/custom identity, including archived habits. `HABITS` is the current local-date active subset; a selected weekday controls today's tracking but does not make an active habit removable from category validation.
+- Shipped **Archive category** is reversible and blocked only by active assigned habits. Its helper reads `Move N active habits first` (singular **habit** for one). Archived habits can retain assignments to an archived category without blocking that archival.
+- Custom **Delete category** is permanent and blocked by any retained reference, including an archived habit. With active references only, its helper is `Move N active habits first`; with archived references only, `Reassign N archived habits before deleting` (both use singular **habit** for one). Mixed references use `Move N active and reassign M archived habits first`. Deletion must not erase a habit or its history to satisfy the blocker.
+- Restoring a habit whose retained category is archived requires choosing an active real category. The category assignment and habit restoration commit atomically; the previous category is not silently restored. If no active category exists, the UI asks the person to create or restore a category before retrying, without mutating the habit.
+- Creating from scoped Home or Manage preselects that category. Creating from All requires an explicit active real category. Scoped **Add an archived habit** opens the matching archive list, with **View all archived habits** only when archived identities exist elsewhere.
 
 ## Category Editor
 
@@ -43,14 +55,15 @@ This document defines the shipped mobile-first Categories, Manage Category, and 
 
 ## Backup migration
 
-- Backups use `BACKUP_VERSION = 7`.
-- Imports accept versions 1, 2, 3, 4, 5, 6, and 7. Versions 6 and later must contain `categoryState`; older versions receive deterministic shipped defaults.
+- Backups use `BACKUP_VERSION = 9`, including `habitCatalog` for custom definitions and date-effective archive/restore status alongside `categoryState`.
+- Imports accept versions 1–9. Versions 6 and later must contain `categoryState`; older versions receive deterministic shipped defaults. Versions 1–8 synthesize the legacy lifecycle catalog with no custom definitions and the Medication archive transition on the import date. Version 9 requires its own strictly validated catalog.
 - A version-6 backup containing category schema 1 migrates through `normalizeCategoryState` to schema 2. The category storage key does not change.
-- Category normalization occurs before the journaled storage snapshot commit. Any invalid category or emoji rejects the outer import without partially replacing app state.
+- Import first builds the complete and date-effective active habit catalogs. Category validation checks retained references against the complete catalog while using the active subset for category-archive blockers. Version-9 order must include every retained identity exactly once, including archived/custom habits.
+- Category normalization occurs before the journaled seven-document storage snapshot commit. Invalid category/emoji references, malformed lifecycle data, or future-dated activation/transitions reject the outer import before its authoritative writes. Write failures roll back state, order, First Name, evidence, categories, shipped overrides, and lifecycle catalog together.
 
 ## Protected invariants
 
 - **All** remains virtual, protected, unserialized, and unavailable as an assignment destination.
 - Category changes never alter habit IDs, completion history, recommendation context, or out-of-category canonical order.
-- Archive and deletion remain available only when a category is empty. Archive preserves identity and order; deleting a custom category removes only its definition and ordering slot.
+- Archive requires no active assigned habits; deletion requires no retained assigned habits. Archive preserves category identity, metadata, assignment references, and order. Deleting an unreferenced custom category removes only its definition and ordering slot.
 - The service-worker cache version, generated native web tree, native project, and signing state are outside this UI/schema change.

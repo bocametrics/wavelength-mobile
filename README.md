@@ -2,6 +2,10 @@
 
 This folder is the iPhone-first, installable version of Wavelength and the sole visual-design target. The legacy desktop HTML file at `../friday_app_2026-07-12.html` remains a byte-identical compatibility mirror, not a separately maintained interface.
 
+### Current lifecycle release status
+
+Custom habit creation and reversible archive/restore are implemented and verified locally through Phase 12 (`3517655`). The full local gate passed 38 source suites and 34 sequential browser runs across 17 suites; the lifecycle flow passed 12 scenarios and 234 assertions in each theme, with 16 accepted 390×844 screenshots. Fifteen browser suites honor Day/Night selection; two older suites ignore that environment. This lifecycle release has not been pushed or deployed, and its native package, simulator, physical-device, cache, and final release checks remain Phase 14. Earlier native/widget acceptance described below applies to an earlier build, not proof of this lifecycle release on a device.
+
 ## What is ready
 
 - Mobile-first layout with iPhone safe-area support
@@ -15,7 +19,9 @@ This folder is the iPhone-first, installable version of Wavelength and the sole 
 - First Name, Appearance, Backup/Share, and Import controls on the dedicated **Settings** page
 - Full-screen **Categories → Manage Category → Edit Habit** navigation, with per-habit Monday–Sunday schedules and all seven days selected by default
 - Three per-habit measurement types: **Check once**, **Count**, and **Amount** with a configurable goal, increment, and unit
-- Existing localStorage history and habit editing preserved; category organization, First Name, per-habit preferred-time windows, saved schedules, structured system-habit parameters, measurement settings, daily progress, and observed/forecast prospective evidence are included in version-8 backups and strictly validated on import
+- Custom habits through the existing editor, plus reversible archive/restore with retained identity, configuration, category assignment, order, progress, history, and evidence
+- Date-effective lifecycle eligibility: a new custom habit does not lower historical percentages before its creation, and archival/restoration does not rewrite earlier eligibility
+- Existing localStorage history and habit editing preserved; custom definitions, lifecycle status, category organization, First Name, preferred-time windows, schedules, structured system-habit parameters, measurement settings, daily progress, and observed/forecast prospective evidence are included in version-9 backups and strictly validated on import
 - Pending-day-aware streaks: an unfinished today does not erase a qualifying streak through yesterday
 - Three appearance modes: **System**, **Day**, and **Night**, shared across iPhone, Android, and desktop
 - A personalized Home greeting with the calm **Friend** fallback, time-consistent icons, and a roomier mobile streak card with the decorative left icon suppressed at widths up to 600px
@@ -34,6 +40,39 @@ Existing installations without a saved appearance preference start in Night to a
 Day mode keeps the completed-card background subtle, uses a brighter Night-family blue for completed checkboxes and the large streak count, and uses separate vivid/dark success greens for chart graphics and chart text. The split preserves cross-theme color identity while meeting the 3:1 non-text/large-text and 4.5:1 regular-text contrast floors.
 
 Android Chrome uses the active palette for browser/PWA chrome through the dynamic `theme-color` metadata. The manifest remains standalone-installable, all three appearance buttons meet the 44px mobile touch-target minimum, and the System mode uses the standard `prefers-color-scheme` media query on Android, iOS, Windows, and other modern platforms.
+
+## Add, archive, and restore habits
+
+### Add a new habit
+
+On Home or in Manage, choose **Add a new habit**. On Home it appears after incomplete habits and before **Completed · N**; Manage keeps it outside the reorderable habit rows. The quieter **Add an archived habit** action sits beneath it with a restore-arrow icon.
+
+1. Open the category where the habit belongs, or open All.
+2. Choose **Add a new habit** to open **New Habit**.
+3. Enter a unique Habit name and, optionally, a Card description. Names are limited to 48 characters; descriptions to 42. Active and archived names participate in duplicate checking.
+4. Confirm Category, Repeat, and Track as, then choose **Add habit**.
+
+Category launches preselect that category. All launches require you to choose an active real category explicitly. New habits default to ⭐, all seven weekdays, **Check once**, and **No anchor**. They return to the Home or Manage scope where creation began. Back, Escape, and browser/native Back ask **Discard unsaved changes?** before leaving a changed draft.
+
+Custom habits support tracking, completion history, and category-scoped reordering, but are not recommended by Next Wave yet. Recommendation timing/context authoring belongs to a later Habit Editor redesign; selecting a rhythm anchor does not opt a custom habit into recommendations.
+
+### Archive without deleting history
+
+Open the habit through Manage, then choose **Archive habit**. The confirmation explains: **It will stop appearing in your daily habits. Your history will be kept.** Choose **Archive habit** to confirm, or **Cancel** to keep it active.
+
+Archiving removes the habit from current Home/Manage lists, today's eligible totals, Next Wave, and the active native snapshot. Its stable ID, saved configuration, category assignment, canonical ordering slot, completion/numeric progress, and Insights evidence remain retained. A completed habit can be archived too. Today's displayed percentage may change, but earlier dates use their own lifecycle state instead of losing that habit retroactively.
+
+### Add an archived habit
+
+Choose **Add an archived habit** on Home or in Manage. **Archived habits** lists retained archived identities in canonical order, scoped to the current category. **View all archived habits** appears only when archives exist in another category.
+
+Choose **Restore** on a row to reactivate it. If its previous category is active, restoration is direct. If that category is archived, **Choose a category** asks for an active real category before **Restore habit**. Cancelling leaves everything unchanged. If no active category exists, create or restore a category first, then retry.
+
+Restoration preserves identity, configuration, history, and the retained ordering slot. If the habit was already complete today, it can return under **Completed · N** rather than the incomplete group. **Take medication as prescribed** is the initially archived shipped example; restoring it into the saved catalog is not undone by later launches.
+
+The global empty state reads **No archived habits yet** and **Habits you archive will appear here.** A scoped empty list says **No archived habits in {category name}**. Archive is reversible; there is no permanent habit-deletion action in this feature.
+
+For developer details, see the [habit lifecycle design contract](references/habit-lifecycle-design.md) and [category personalization contract](references/category-personalization-design.md).
 
 ## Habit measurement types
 
@@ -57,9 +96,9 @@ The `weight` field (w1/w2) is no longer editable in Manage and is not written to
 
 System-designed habits (the built-in defaults) carry typed parameters that derive their Next Wave recommendation windows and render a separate target qualifier. A concise, locked action title remains stable — for example, **Strength Training** with `20+ min` as its visible target — while parameters cover clock times (e.g. bedtime), durations (e.g. meditation minutes), quantities (e.g. water ounces), and counts (e.g. gratitude items). The target preview updates immediately as a parameter changes; system anchors remain visible as system-managed summaries rather than editable controls; descriptions, schedules, and tracking remain fully editable. When hydration uses Amount tracking, its progress chip is the single visible amount goal and the older system amount qualifier is suppressed; check-once hydration still displays its configured amount. Exact legacy clock titles such as "Wake at 7:30 AM" and "In bed by 11:30 PM" migrate to structured parameters on load or import. Unrecognized custom system titles survive unchanged as read-only legacy labels for both parameterized and unparameterized defaults, including across unrelated Manage saves and version-1 through version-7 backup imports. This also repairs already-imported version-2 wake titles the next time the corrected app loads. Bedtime is intentionally constrained to an evening window so its derived sleep and wind-down windows never cross midnight.
 
-Home groups the live compact count with **Today's habits** on the left and keeps the two 44×44 management controls as a right-side pair. On screens up to 600px, the horizontal category rail extends through the safe-area-aware page gutters while its first and last pills receive an additional 4px optical inset. The rail no longer ends in a trailing plus. **All** remains a permanent, protected aggregate on Home and in Manage Habits, but it is not shown as an editable category card. Categories starts at the top of the viewport with its sticky, safe-area-aware 17px header and uses full-column cards with 16px/500 names. A compact six-dot grip keeps a 44px target: after a 250ms touch hold, a full-card proxy follows only the finger's vertical movement, neighboring rows animate around a same-height placeholder, and the proxy settles into place on release. Reduced-motion users get the same reorder without transitions, and keyboard arrows remain available. Real categories can be created, renamed, assigned a curated quick-pick icon or one emoji from the system emoji keyboard, and reordered. The editor keeps Save in the content card, uses 16px inputs to avoid iOS focus zoom, opens without summoning the keyboard, labels the primary action **Add Category** or **Save Changes**, and asks before discarding a changed draft. Wavelength validates one emoji grapheme but cannot force the native emoji keyboard to open. Opening a category shows every assigned habit, regardless of today’s schedule or completion state. Habits move one at a time from their focused editor, retain their identity and history, and can be reordered only inside their real category.
+Home groups the live compact count with **Today's habits** on the left and keeps the two 44×44 management controls as a right-side pair. On screens up to 600px, the horizontal category rail extends through the safe-area-aware page gutters while its first and last pills receive an additional 4px optical inset. The rail no longer ends in a trailing plus. **All** remains a permanent, protected aggregate on Home and in Manage Habits, but it is not shown as an editable category card. Categories starts at the top of the viewport with its sticky, safe-area-aware 17px header and uses full-column cards with 16px/500 names. A compact six-dot grip keeps a 44px target: after a 250ms touch hold, a full-card proxy follows only the finger's vertical movement, neighboring rows animate around a same-height placeholder, and the proxy settles into place on release. Reduced-motion users get the same reorder without transitions, and keyboard arrows remain available. Real categories can be created, renamed, assigned a curated quick-pick icon or one emoji from the system emoji keyboard, and reordered. The editor keeps Save in the content card, uses 16px inputs to avoid iOS focus zoom, opens without summoning the keyboard, labels the primary action **Add Category** or **Save Changes**, and asks before discarding a changed draft. Wavelength validates one emoji grapheme but cannot force the native emoji keyboard to open. Opening a category shows every active assigned habit, regardless of today’s schedule or completion state; archived habits are available through **Add an archived habit**. Habits move one at a time from their focused editor, retain their identity and history, and can be reordered only inside their real category.
 
-Each real category has an icon-only **Category options** menu. Shipped categories offer **Edit category** and neutral **Archive category**; custom categories offer **Edit category** and irreversible red **Delete category**. Removal is unavailable until the category is empty and explains exactly how many habits must move first. Both paths use an in-app confirmation. Archiving preserves the category's stable ID, name, icon, and ordering slot; archived categories appear inline under **Archived · N** and can be restored in place, including custom categories archived by an earlier version. Deleting an empty custom category removes only its category definition and ordering slot—never habits, completion history, Insights evidence, or recommendation context. Home keeps completed tracking cards grouped beneath **Completed · N** and has no competing Reorder mode.
+Each real category has an icon-only **Category options** menu. Shipped categories offer **Edit category** and neutral **Archive category**; custom categories offer **Edit category** and irreversible red **Delete category**. Category archival requires no active assigned habits, even if some active habits are not scheduled today; archived habits may retain that category without blocking its archival. Permanent deletion of a custom category requires no retained assignments at all, including archived habits. Guidance names the active and/or archived references that must move or be reassigned first. Both paths use an in-app confirmation. Archiving preserves the category's stable ID, name, icon, assignment references, and ordering slot; archived categories appear inline under **Archived · N** and can be restored in place, including custom categories archived by an earlier version. Deleting an unreferenced custom category removes only its definition and ordering slot, never habits, completion history, Insights evidence, or recommendation context. Home keeps completed tracking cards grouped beneath **Completed · N** and has no competing user-facing Reorder mode. Lifecycle actions are not reorder targets and hide during an armed Manage drag without shifting its layout.
 
 ## Rhythm anchors
 
@@ -131,9 +170,13 @@ Condition cards remain hidden until there are at least 10 distinct relevant days
 
 **🏄 Waves ridden** evolves the earlier one-day follow-through story into a rolling 30-day report. Its headline counts distinct days on which at least one prospectively recorded context-aware Next Wave suggestion was completed after it was shown. The detail counts verified suggested habits, distinguishes current-condition cues from forecast cues, and names the most recent date and actions. It can appear after one verified completion, counts a busy day only once in the headline, and never infers that one habit substituted for another. The same evidence ledger powers condition learning and Waves ridden, but neither report reconstructs past weather, treats a forecast as an observation, or claims a medical outcome.
 
-Mobile backups now use version 8 and carry the schema-v2 insight ledger, structured system-habit parameters, optional First Name, per-habit preferred-time windows, and one validated category document. Versions 1–7 remain importable; legacy schema-v1 insight records migrate as observed evidence and malformed version-8 union arms fail before the journaled storage commit. Category schema version 2 still adds an optional single-grapheme `emoji` beside the curated fallback `iconKey`, while retaining the `wavelength_categories_v1` storage key so saved data migrates in place. The category normalizer accepts schema versions 1 and 2 and always returns version 2 without changing category IDs, order, sparse habit assignments, or archive state. Version-6 and version-7 backups keep their validated category documents; version-1 through version-5 backups deterministically receive the shipped active categories. The category document stores real category definitions, ordering, archive state, and sparse assignment overrides; **All** is never serialized or assignable. All imported evidence is validated against habit completion history before a journaled storage commit, so a failed write recovers the complete prior snapshot instead of leaving a hybrid restore.
+Mobile backups use version 9 and include the lifecycle catalog alongside the schema-v2 insight ledger, shipped-habit overrides and structured parameters, optional First Name, preferred-time windows, category state, complete canonical order, completion history, and numeric progress. Newly created definitions live in `habitCatalog.customDefinitions`; `customHabits` remains the shipped-habit override map. Versions 1–8 remain importable and synthesize the legacy lifecycle catalog with no custom definitions and the Medication archive transition on the import date. Import replaces the destination snapshot, so exporting a separate backup first is recommended.
 
-The complete dock/evidence browser flow is `tests/browser/navigation-insights-e2e.cjs`. It verifies 390px layout, safe-area clearance, bounded exact-source/no-coordinate evidence, observed/forecast separation, latest-episode View and reversible completion, gated reports, atomic malformed-v8 rejection, and v1 migration.
+Version 9 validates every retained identity, including custom and archived habits, across order, categories, completion/progress, and evidence. Malformed lifecycle documents, inconsistent references, future-dated activation/transitions, or invalid insight union arms fail before the imported snapshot's authoritative writes. The journaled commit covers all seven persisted documents: state/progress, order, First Name, Insights evidence, categories, shipped overrides, and lifecycle catalog. A write failure restores the prior snapshot rather than leaving a hybrid import, assuming usable browser storage.
+
+Category schema 2 retains its optional single-grapheme `emoji` beside the curated fallback `iconKey` and still uses `wavelength_categories_v1`. Category schemas 1 and 2 normalize to schema 2 without changing category IDs, order, sparse assignments, or archive state. Versions 6–8 keep their validated category documents; versions 1–5 receive deterministic shipped categories. Legacy schema-v1 insight records migrate to schema 2 as observed evidence. **All** remains virtual, never serialized or assignable. Appearance and native reminder preferences/permission are device-local and are not included in the backup.
+
+The complete dock/evidence browser flow is `tests/browser/navigation-insights-e2e.cjs`. It verifies 390px layout, safe-area clearance, bounded exact-source/no-coordinate evidence, observed/forecast separation, latest-episode View and reversible completion, gated reports, malformed-evidence rejection before writes, and v1 migration. Lifecycle-specific import and seven-document rollback coverage lives in `tests/habit-backup-regression.mjs`.
 
 ### Card copy
 
@@ -150,11 +193,11 @@ Default habit names and notes are location-agnostic. If location is available, W
 | Habit | Default anchor | Purpose |
 |-------|----------------|---------|
 | Get outdoor light after waking | Sunrise | Connect the morning cue to local daylight |
-| Drink 16 oz water | Feels-like above 85°F | Surface a concise extra-water cue during heat |
+| Drink water | Feels-like above 85°F | Surface a concise extra-water cue during heat |
 | Outdoor walk or movement | US AQI at or below 100 | Identify a more favorable outdoor-air window |
 | Sun protection before outdoor time | UV index at or above 3 | Surface protection when UV reaches the configured cue |
 
-The other 18 defaults intentionally have no anchor because their natural cue is a schedule, meal, prescription, supplement routine, or personal routine rather than an environmental condition. The daylight and supplements habits start on August 28, 2026, so they do not lower completion percentages for earlier dates. Existing saved order is preserved with new habits appended. Current 22-habit backups import unchanged, 21-habit backups append `supplements`, and older 20-habit backups append `daylight` then `supplements`; any other missing, unknown, or duplicate IDs remain invalid. If location permission is denied or unavailable, Wavelength stays location-neutral; it does not substitute West Palm Beach or any other city. Every habit remains usable, and environmental labels stay advisory. Choosing **No anchor** on any of the four anchored defaults is saved as an explicit opt-out and survives reloads, backups, and imports.
+The other 18 shipped defaults intentionally have no anchor because their natural cue is a schedule, meal, prescription, supplement routine, or personal routine rather than an environmental condition. The daylight and supplements habits start on August 28, 2026, so they do not lower completion percentages for earlier dates. Existing saved order is preserved with new habits appended. In legacy versions 1–8, complete 22-shipped-habit order imports unchanged, the exact 21-habit legacy set appends `supplements`, and the exact older 20-habit set appends `daylight` then `supplements`; other missing, unknown, or duplicate IDs remain invalid. Version 9 instead requires the full retained imported catalog, including all custom and archived identities, exactly once. If location permission is denied or unavailable, Wavelength stays location-neutral; it does not substitute West Palm Beach or any other city. Active habits remain usable, and environmental labels stay advisory. Choosing **No anchor** on any of the four anchored defaults is saved as an explicit opt-out and survives reloads, backups, and imports.
 
 ## Streak behavior
 
@@ -162,7 +205,7 @@ Only habits scheduled for a date appear in **Today's Habits** or count toward th
 
 A scheduled day qualifies after `min(5, habits scheduled that day)` habits are completed. This keeps the target attainable on lighter days. While today is below its target, the displayed current streak is counted through the previous scheduled day. A date with no scheduled habits is a rest day: it neither extends nor breaks the streak. A missed scheduled day still breaks the current chain.
 
-Current and longest streaks are recalculated from stored completion history under the current weekday schedule. Sparse schedules scan to the earliest stored completion rather than using a fixed calendar-day cap.
+Current and longest streaks are recalculated from retained completion history under the current weekday schedule and each date's lifecycle-active subset. Custom habits are excluded before their creation date; shipped/custom archive and restore transitions determine eligibility for the relevant date. Archiving today does not retroactively remove a previously eligible habit, and restoring today does not insert it into its archived interval. Sparse schedules scan to the earliest stored completion rather than using a fixed calendar-day cap.
 
 Run the regression coverage for both mobile and desktop builds with:
 
@@ -183,11 +226,18 @@ node tests/native-geolocation-regression.mjs
 node tests/native-notifications-regression.mjs
 node tests/capacitor-shell-regression.mjs
 node tests/typography-content-regression.mjs
+node tests/habit-lifecycle-regression.mjs
+node tests/habit-lifecycle-ui-regression.mjs
+node tests/habit-lifecycle-visual-regression.mjs
+node tests/habit-backup-regression.mjs
+node tests/category-personalization-regression.mjs
 ```
 
 All cross-build suites use the tracked desktop fixture at `tests/fixtures/friday_app_2026-07-12.html`, so they run from a clean repository checkout. When shared behavior changes, update both the external standalone desktop file and this byte-identical fixture.
 
-Custom habit overrides are limited to text, note, typed system parameters, valid nonempty weekday arrays, valid measurement settings, valid rhythm settings, and valid preferred-time windows. Legacy `weight` values are accepted only for backward-compatible import and are discarded during normalization. Rhythm overrides require a supported anchor type; threshold-based anchors require finite positive numbers, optional rhythm notes are limited to 60 characters and one concise clause, and `rhythm: null` records an explicit opt-out from a shipped default anchor. Imported structural fields, invalid parameter, measurement, or rhythm combinations, and malformed progress are rejected. Invalid legacy schedules safely fall back to every day, legacy habits without measurement settings remain Check once, and displayed custom text is escaped before insertion into HTML.
+Overrides for shipped habits are limited to text, note, typed system parameters, valid nonempty weekday arrays, valid measurement settings, valid rhythm settings, and valid preferred-time windows. New custom definitions are separately validated in the lifecycle catalog and bounded to 100 identities. Legacy `weight` values are accepted only for backward-compatible import and are discarded during normalization. Rhythm overrides require a supported anchor type; threshold-based anchors require finite positive numbers, optional rhythm notes are limited to 60 characters and one concise clause, and `rhythm: null` records an explicit opt-out from a shipped default anchor. Imported structural fields, invalid parameter, measurement, or rhythm combinations, and malformed progress are rejected. Invalid legacy schedules safely fall back to every day, legacy habits without measurement settings remain Check once, and displayed custom text is escaped before insertion into HTML.
+
+The 390×844 lifecycle browser flow is `tests/browser/habit-lifecycle-e2e.cjs`. It exercises actual creation from every origin, archive/restore retention, custom reordering, recommendation changes, native bridge publication/scheduling mocks, category reassignment rollback, dirty navigation, focus, wrapping, touch targets, and settled Day/Night contrast. Supply `WAVELENGTH_SOURCE_SHA256` for the exact served app bytes when running it; its fallback hash intentionally targets the original RED baseline. Browser bridge mocks do not replace Phase 14 native/device acceptance.
 
 ## Requirement for iPhone installation
 
@@ -207,7 +257,7 @@ npm run native:sync
 
 The first native capability is a calm **Next Wave reminder**. It is off by default, requests iOS notification permission only after the user enables it, and schedules a rolling 14-day horizon at the selected local time. It omits today after the time has passed or when today's scheduled habits are already complete. Tapping the notification returns to Home, where Next Wave is recomputed from local state. The reminder contains no habit names, weather readings, calendar details, health data, or location.
 
-Reminder preference and iOS permission are device-local. They are deliberately excluded from version-5 backups, so restoring a backup never silently enables notifications on another device. Safari/Home Screen local storage also does not automatically move into the Capacitor web view; use **Backup / Share** and **Import backup** for a deliberate migration.
+Reminder preference and iOS permission are device-local. They are deliberately excluded from backups, including version 9, so restoring a backup never silently enables notifications on another device. Safari/Home Screen local storage also does not automatically move into the Capacitor web view; use **Backup / Share** and **Import backup** for a deliberate migration.
 
 Inside Capacitor, Wavelength requests approximate location through the official native Geolocation bridge. This produces one Wavelength-branded iOS prompt and avoids the second `localhost` website prompt created by `navigator.geolocation` inside a web view. The browser and installed PWA retain their normal web-geolocation fallback. Denial or native failure remains location-neutral, and coordinates are not added to backups or insight evidence.
 
