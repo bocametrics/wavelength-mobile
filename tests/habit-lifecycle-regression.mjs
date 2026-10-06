@@ -66,7 +66,11 @@ function loadLifecycleFunctions(source) {
     'normalizeHabitCatalogState',
     'loadHabitCatalogState',
     'saveHabitCatalogState',
+    'assertHabitCatalogStorageIntegrity',
     'createCustomHabitId',
+    'createCustomHabitDraft',
+    'normalizeNewCustomHabitDraft',
+    'normalizeExistingCustomHabitDraft',
     'buildCompleteHabitCatalog',
     'isHabitActiveOnDate',
     'getHabitsActiveOnDate',
@@ -153,7 +157,11 @@ for (const [label, htmlPath] of builds) {
     normalizeHabitCatalogState,
     loadHabitCatalogState,
     saveHabitCatalogState,
+    assertHabitCatalogStorageIntegrity,
     createCustomHabitId,
+    createCustomHabitDraft,
+    normalizeNewCustomHabitDraft,
+    normalizeExistingCustomHabitDraft,
     buildCompleteHabitCatalog,
     isHabitActiveOnDate,
     getHabitsActiveOnDate,
@@ -224,6 +232,27 @@ for (const [label, htmlPath] of builds) {
   );
   assert.equal(malformedWrites, 0,
     `${label}: malformed local lifecycle data is not silently overwritten`);
+  assert.throws(
+    () => assertHabitCatalogStorageIntegrity(initial, defaults, activeCategoryIds, migrationDate, malformedStorage),
+    /recover|recovery|invalid|corrupt/i,
+    `${label}: lifecycle mutations fail closed instead of persisting over malformed retained catalog data`,
+  );
+  assert.equal(malformedWrites, 0,
+    `${label}: a failed mutation-integrity guard leaves malformed retained catalog bytes untouched`);
+  assert.equal(
+    assertHabitCatalogStorageIntegrity(initial, defaults, activeCategoryIds, migrationDate, {
+      getItem:() => JSON.stringify(initial),
+    }),
+    true,
+    `${label}: the mutation-integrity guard accepts the matching persisted catalog`,
+  );
+  assert.throws(
+    () => assertHabitCatalogStorageIntegrity(restoredOnMigrationDate, defaults, activeCategoryIds, migrationDate, {
+      getItem:() => JSON.stringify(initial),
+    }),
+    /recover|recovery|changed|mismatch/i,
+    `${label}: lifecycle mutations reject a persisted catalog that no longer matches runtime state`,
+  );
 
   const readOnlyStorage = {
     getItem:() => null,
@@ -253,6 +282,141 @@ for (const [label, htmlPath] of builds) {
     customDefinition(), defaults, activeCategoryIds, true,
   ));
   assert.deepEqual(validCustom, customDefinition(), `${label}: a canonical custom definition round-trips exactly`);
+
+  const blankDraft = plain(createCustomHabitDraft('all', migrationDate));
+  assert.deepEqual(blankDraft, {
+    cat:'',
+    icon:'⭐',
+    text:'',
+    note:'',
+    activeFrom:migrationDate,
+    days:[0,1,2,3,4,5,6],
+    measurement:'check',
+  }, `${label}: All Habits opens a blank every-day Check once draft with no implicit category`);
+  assert.equal(createCustomHabitDraft('morning', migrationDate).cat, 'morning',
+    `${label}: a real category launch preselects that category`);
+
+  const newHabitToken = '44444444-4444-4444-8444-444444444444';
+  const normalizedNewHabit = plain(normalizeNewCustomHabitDraft({
+    ...blankDraft,
+    cat:'morning',
+    text:'  Walk after lunch  ',
+    note:'  Take a short reset outside  ',
+    activeFrom:'2020-01-01',
+  }, defaults, activeCategoryIds, migrationDate, () => newHabitToken));
+  assert.deepEqual(normalizedNewHabit, customDefinition({
+    id:`habit_${newHabitToken}`,
+  }), `${label}: create mode normalizes copy, assigns an opaque ID, and forces today as activeFrom`);
+  assert.throws(() => normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning' }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
+    /name|text|required/i, `${label}: create mode rejects a blank name`);
+  assert.throws(() => normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning', text:'  WAKE  ' }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
+    /duplicate|already|name/i, `${label}: create mode rejects a normalized case-insensitive duplicate name`);
+  assert.throws(() => normalizeNewCustomHabitDraft({ ...blankDraft, text:'A named habit' }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
+    /category/i, `${label}: All Habits requires an explicit real category`);
+  assert.throws(() => normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning', text:'A named habit', days:[] }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
+    /day|schedule/i, `${label}: create mode requires at least one selected day`);
+  assert.throws(() => normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning', text:'A named habit', measurement:'count', target:1.5 }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
+    /count|whole|target|measurement/i, `${label}: create mode validates Count configuration`);
+  assert.throws(() => normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning', text:'A named habit', measurement:'amount', target:1, step:1, unit:'' }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
+    /amount|unit|measurement/i, `${label}: create mode validates Amount configuration`);
+  assert.doesNotThrow(() => normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning', text:'x'.repeat(48), note:'y'.repeat(42) }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
+    `${label}: create mode accepts the exact 48/42 character limits`);
+  assert.throws(() => normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning', text:'x'.repeat(49) }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
+    /48|name|text/i, `${label}: create mode rejects a 49-character name`);
+  assert.throws(() => normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning', text:'A named habit', note:'y'.repeat(43) }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
+    /42|description|note/i, `${label}: create mode rejects a 43-character description`);
+  for (const invisible of ['\u00ad', '\u034f', '\u061c', '\u180e', '\u200b', '\u2060', '\u2061', '\u2062', '\u2063', '\u2064', '\ufeff']) {
+    assert.throws(() => normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning', text:`Wa${invisible}lk` }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
+      /safe|name|text/i, `${label}: create mode rejects invisible U+${invisible.codePointAt(0).toString(16).toUpperCase()} in habit names`);
+  }
+  const unicodeCaseFoldDuplicate = customDefinition({
+    id:'habit_66666666-6666-4666-8666-666666666666',
+    cat:'fuel',
+    text:'Straße',
+  });
+  assert.throws(() => normalizeNewCustomHabitDraft(
+    { ...blankDraft, cat:'morning', text:'STRASSE' },
+    [...defaults, unicodeCaseFoldDuplicate], activeCategoryIds, migrationDate, () => newHabitToken,
+  ), /duplicate|already|name/i, `${label}: duplicate-name checks use Unicode-aware caseless matching`);
+  assert.throws(() => normalizeNewCustomHabitDraft(
+    { ...blankDraft, cat:'morning', text:'Straẞe' },
+    [...defaults, unicodeCaseFoldDuplicate], activeCategoryIds, migrationDate, () => newHabitToken,
+  ), /duplicate|already|name/i, `${label}: Unicode caseless matching folds capital sharp S`);
+
+  const existingCustom = customDefinition();
+  const updatedCustom = plain(normalizeExistingCustomHabitDraft({
+    ...existingCustom,
+    cat:'movement',
+    text:'  Evening journal  ',
+    note:'  Notice one good thing  ',
+  }, existingCustom, [...defaults, existingCustom], activeCategoryIds));
+  assert.deepEqual(updatedCustom, customDefinition({
+    cat:'movement',
+    text:'Evening journal',
+    note:'Notice one good thing',
+  }), `${label}: editing a custom habit preserves its stable identity and activeFrom while updating canonical fields`);
+  assert.doesNotThrow(() => normalizeExistingCustomHabitDraft(
+    { ...existingCustom, text:'  WALK AFTER LUNCH  ' }, existingCustom, [...defaults, existingCustom], activeCategoryIds,
+  ), `${label}: editing a custom habit may retain its own normalized name`);
+  assert.throws(() => normalizeExistingCustomHabitDraft(
+    { ...existingCustom, text:'  WAKE  ' }, existingCustom, [...defaults, existingCustom], activeCategoryIds,
+  ), /duplicate|already|name/i, `${label}: editing a custom habit rejects another retained habit's normalized name`);
+  const crossCategoryDuplicate = customDefinition({
+    id:'habit_55555555-5555-4555-8555-555555555555',
+    cat:'nutrition',
+    text:'Evening journal',
+  });
+  assert.throws(() => normalizeExistingCustomHabitDraft(
+    { ...existingCustom, text:'  EVENING JOURNAL  ' }, existingCustom,
+    [...defaults, existingCustom, crossCategoryDuplicate], activeCategoryIds,
+  ), /duplicate|already|name/i, `${label}: custom habit names remain unique across categories`);
+  assert.throws(() => normalizeExistingCustomHabitDraft(
+    { ...existingCustom, text:'STRASSE' }, existingCustom,
+    [...defaults, existingCustom, unicodeCaseFoldDuplicate], activeCategoryIds,
+  ), /duplicate|already|name/i, `${label}: edited custom names use the same Unicode-aware caseless matching`);
+  const existingWithPreference = customDefinition({
+    preferenceWindow:{ idealStart:1200, idealEnd:1320 },
+  });
+  const { preferenceWindow:ignoredPreference, ...draftWithoutPreference } = existingWithPreference;
+  const updatedWithPreservedPreference = plain(normalizeExistingCustomHabitDraft(
+    { ...draftWithoutPreference, note:'Updated without preferred-time authoring' },
+    existingWithPreference, [...defaults, existingWithPreference], activeCategoryIds,
+  ));
+  assert.deepEqual(updatedWithPreservedPreference.preferenceWindow, existingWithPreference.preferenceWindow,
+    `${label}: editing custom fields preserves an existing hidden preference window`);
+
+  assert.throws(() => normalizeHabitCatalogState({
+    ...initial,
+    customDefinitions:[customDefinition({ activeFrom:'2026-10-06' })],
+  }, defaults, activeCategoryIds, migrationDate, true), /future|date/i,
+  `${label}: strict lifecycle validation rejects future custom activeFrom dates`);
+  assert.throws(() => normalizeHabitCatalogState({
+    ...initial,
+    status:[...initial.status, {
+      habitId:'floss', initialActive:true, changes:[{ date:'2026-10-06', active:false }],
+    }],
+  }, defaults, activeCategoryIds, migrationDate, true), /future|date/i,
+  `${label}: strict lifecycle validation rejects future archive or restore transitions`);
+
+  const createdCatalogState = plain(normalizeHabitCatalogState({
+    ...initial,
+    customDefinitions:[normalizedNewHabit],
+  }, defaults, activeCategoryIds, migrationDate, true));
+  const createdStorageValues = new Map();
+  const createdStorage = {
+    getItem:key => createdStorageValues.get(key) ?? null,
+    setItem:(key, value) => createdStorageValues.set(key, value),
+  };
+  saveHabitCatalogState(createdCatalogState, defaults, activeCategoryIds, migrationDate, createdStorage);
+  const reloadedCreatedCatalog = plain(loadHabitCatalogState(
+    defaults, activeCategoryIds, migrationDate, createdStorage,
+  ));
+  assert.deepEqual(reloadedCreatedCatalog.customDefinitions, [normalizedNewHabit],
+    `${label}: a created custom definition survives persistence and reload`);
+  assert.equal(isHabitActiveOnDate(reloadedCreatedCatalog, normalizedNewHabit.id, '2026-10-04'), false,
+    `${label}: a newly created habit does not enter historical denominators before creation`);
+  assert.equal(isHabitActiveOnDate(reloadedCreatedCatalog, normalizedNewHabit.id, migrationDate), true,
+    `${label}: a newly created habit becomes active on its creation date`);
   assert.deepEqual(
     plain(normalizeCustomHabitDefinition(customDefinition({
       id:'habit_22222222-2222-4222-8222-222222222222',
@@ -339,7 +503,7 @@ for (const [label, htmlPath] of builds) {
         { date:'2026-10-09', active:true },
       ] },
     ],
-  }, defaults, activeCategoryIds, migrationDate, true));
+  }, defaults, activeCategoryIds, '2026-10-09', true));
   assert.deepEqual(normalized.status, [{
     habitId:'medication',
     initialActive:true,

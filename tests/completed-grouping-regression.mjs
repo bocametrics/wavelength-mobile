@@ -103,8 +103,8 @@ for (const [label, htmlPath] of builds) {
     `${label}: category-filtered canonical list is partitioned only after sorting`);
   assert.match(html, /const completedMarkup = grouped\.completed\.length === 0[\s\S]*completed-divider[\s\S]*Completed · \$\{grouped\.completed\.length\}[\s\S]*renderHabitCards\(grouped\.completed\)/,
     `${label}: completed cards receive a counted divider only when the group is non-empty`);
-  assert.match(html, /list\.innerHTML = sorted\.length === 0[\s\S]*`\$\{renderHabitCards\(grouped\.active\)\}\$\{completedMarkup\}`/,
-    `${label}: Home always keeps completed tracking cards below the divider`);
+  assert.match(html, /const activeMarkup = renderHabitCards\(grouped\.active\)[\s\S]*list\.innerHTML = sorted\.length === 0[\s\S]*`\$\{activeMarkup\}\$\{lifecycleActionsContainerMarkup\}\$\{completedMarkup\}`/,
+    `${label}: Home keeps lifecycle actions between incomplete and completed tracking cards`);
   assert.match(html, /<h3 class="completed-divider"[^>]*aria-label="\$\{getCompletedHabitsAriaLabel\(grouped\.completed\.length\)\}"/,
     `${label}: completed group has a semantic accessible heading`);
   assert.match(html, /\.completed-divider\s*\{[^}]*color:\s*var\(--text2\)[^}]*text-transform:\s*uppercase/s,
