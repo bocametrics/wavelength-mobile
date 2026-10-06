@@ -219,7 +219,7 @@ async function waitForHome(page) {
   assert.equal(optionStyles.archiveDanger, false, 'reversible Archive is not styled as permanent deletion');
   assert.equal(optionStyles.archiveDisabled, true);
   assert.equal(optionStyles.archiveDescribedBy, 'categoryOptionsGuidance');
-  assert.match(optionStyles.guidance, /^Move \d+ habits first$/);
+  assert.match(optionStyles.guidance, /^Move \d+ active habits first$/);
   assert.equal(optionStyles.guidanceTextAlign, 'center');
   assert.equal(optionStyles.guidanceHasLink, false, 'blocked-archive guidance remains explanatory plain text');
   assert.equal(optionStyles.guidanceGrouped, true, 'Archive and its helper share one semantic group');

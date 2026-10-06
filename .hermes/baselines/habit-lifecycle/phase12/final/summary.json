@@ -1,0 +1,242 @@
+{
+  "phase": 12,
+  "passed": true,
+  "sourceSha256": "3ecf1ac335d4e356c6d2c1bf40182a68cfd4320f4f6548028e716c4c2e208c11",
+  "browserSuites": 17,
+  "browserRuns": 34,
+  "themeAwareSuites": 15,
+  "themeAgnosticSuites": [
+    "navigation-insights-e2e.cjs",
+    "next-wave-e2e.cjs"
+  ],
+  "sourceSuites": 38,
+  "lifecycle": [
+    {
+      "theme": "light",
+      "scenarios": 12,
+      "assertions": 234,
+      "errors": 0,
+      "minimumSampledContrast": 4.67761779622635
+    },
+    {
+      "theme": "dark",
+      "scenarios": 12,
+      "assertions": 234,
+      "errors": 0,
+      "minimumSampledContrast": 5.719308247638388
+    }
+  ],
+  "review": {
+    "id": "deleg_0e70d7b5",
+    "passed": true,
+    "security_concerns": [],
+    "logic_errors": []
+  },
+  "visualFixes": [
+    "Archived names wrap without ellipsis",
+    "Scoped Day AA lifecycle accent",
+    "Manage drag action hiding preserves geometry"
+  ],
+  "limitations": [
+    "Native bridge boundaries mocked; physical-device verification is Phase 14",
+    "Two old suites ignore theme environment and their duplicate runs are not independent theme coverage",
+    "Layout/contrast inspections target lifecycle surfaces, not an exhaustive editor redesign"
+  ],
+  "screenshots": [
+    {
+      "file": "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/.hermes/baselines/habit-lifecycle/phase12/final/screenshots/light-home-all-completed.png",
+      "name": "home-all-completed",
+      "theme": "light",
+      "sha256": "475d43ae4982f4374dc6af5a4e47f4a3c79a356f63149985957476bc59e099d7",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/.hermes/baselines/habit-lifecycle/phase12/final/screenshots/light-home-category.png",
+      "name": "home-category",
+      "theme": "light",
+      "sha256": "2a07117a8122dc096309df2ac9faa623badd9c33c25768c23cdea04df068d745",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/.hermes/baselines/habit-lifecycle/phase12/final/screenshots/light-new-habit-category.png",
+      "name": "new-habit-category",
+      "theme": "light",
+      "sha256": "c2404cea788c5bf3e567071514566e58ebc5ac20cfca08e6e7ad8e49222294bd",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/.hermes/baselines/habit-lifecycle/phase12/final/screenshots/light-manage-scoped.png",
+      "name": "manage-scoped",
+      "theme": "light",
+      "sha256": "fa5a17e73bf8d3bb39c5f294f47793709d448abed37792ebfe6079cb997271a5",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/.hermes/baselines/habit-lifecycle/phase12/final/screenshots/light-archive-confirmation.png",
+      "name": "archive-confirmation",
+      "theme": "light",
+      "sha256": "defcf5ae5da90e360dc8bb26a5a8afa5e348b6bb66fabe926536158de8ed9c96",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/.hermes/baselines/habit-lifecycle/phase12/final/screenshots/light-restore-category-chooser.png",
+      "name": "restore-category-chooser",
+      "theme": "light",
+      "sha256": "085113e2d1482008ece023652433a31adfc52bcc1ee4117a500f98cca45e3053",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/.hermes/baselines/habit-lifecycle/phase12/final/screenshots/light-archived-populated.png",
+      "name": "archived-populated",
+      "theme": "light",
+      "sha256": "51369b46c9564a35e39d671b59cf0d4e932d822ae22d03a9349e42ecd2c2e4f5",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/.hermes/baselines/habit-lifecycle/phase12/final/screenshots/light-archived-empty.png",
+      "name": "archived-empty",
+      "theme": "light",
+      "sha256": "7b62a8515ea91dbf56146ceb2497bdafe168f727d52a7a66754e1d1dc0430025",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/.hermes/baselines/habit-lifecycle/phase12/final/screenshots/dark-home-all-completed.png",
+      "name": "home-all-completed",
+      "theme": "dark",
+      "sha256": "edd1ed890ede5bc807c5ffea08b3a32b34d686663eedb7e93cab8ccfc7061603",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/.hermes/baselines/habit-lifecycle/phase12/final/screenshots/dark-home-category.png",
+      "name": "home-category",
+      "theme": "dark",
+      "sha256": "3b771b77e4eb312ae0fd3c4e51583d914957deae33a128aaba123773d7e08422",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/.hermes/baselines/habit-lifecycle/phase12/final/screenshots/dark-new-habit-category.png",
+      "name": "new-habit-category",
+      "theme": "dark",
+      "sha256": "685e8aae38871c790cf359404ce4b4eac3cd23167e2012fc72fdea270ccee2fd",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/.hermes/baselines/habit-lifecycle/phase12/final/screenshots/dark-manage-scoped.png",
+      "name": "manage-scoped",
+      "theme": "dark",
+      "sha256": "31138100ed21a135745db1441a848dfbf48a9e9f13d9ed40f1de16c31a9aa308",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/.hermes/baselines/habit-lifecycle/phase12/final/screenshots/dark-archive-confirmation.png",
+      "name": "archive-confirmation",
+      "theme": "dark",
+      "sha256": "b27f884bc374928a6b712a89d563b69dbe2d8543aa28ea4a959080a6da661125",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/.hermes/baselines/habit-lifecycle/phase12/final/screenshots/dark-restore-category-chooser.png",
+      "name": "restore-category-chooser",
+      "theme": "dark",
+      "sha256": "64046e8c3ffb6a8378efc36e0e8d176e6d8a184df0fd2dbba0668bb3dbc8a5ef",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/.hermes/baselines/habit-lifecycle/phase12/final/screenshots/dark-archived-populated.png",
+      "name": "archived-populated",
+      "theme": "dark",
+      "sha256": "3a9b03b89c4b11fda7f64e3f5e7b90a225c638362406841043af75e2575cc13e",
+      "width": 390,
+      "height": 844
+    },
+    {
+      "file": "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/.hermes/baselines/habit-lifecycle/phase12/final/screenshots/dark-archived-empty.png",
+      "name": "archived-empty",
+      "theme": "dark",
+      "sha256": "297aa6ab85f3792f13e8bd743cdf47a71d36ef4045d15aa536723e8d1910c59f",
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "visualComparison": [
+    {
+      "name": "light-home-all-completed.png",
+      "identicalToVisuallyAccepted": true
+    },
+    {
+      "name": "light-home-category.png",
+      "identicalToVisuallyAccepted": true
+    },
+    {
+      "name": "light-new-habit-category.png",
+      "identicalToVisuallyAccepted": true
+    },
+    {
+      "name": "light-manage-scoped.png",
+      "identicalToVisuallyAccepted": true
+    },
+    {
+      "name": "light-archive-confirmation.png",
+      "identicalToVisuallyAccepted": true
+    },
+    {
+      "name": "light-restore-category-chooser.png",
+      "identicalToVisuallyAccepted": true
+    },
+    {
+      "name": "light-archived-populated.png",
+      "identicalToVisuallyAccepted": true
+    },
+    {
+      "name": "light-archived-empty.png",
+      "identicalToVisuallyAccepted": true
+    },
+    {
+      "name": "dark-home-all-completed.png",
+      "identicalToVisuallyAccepted": true
+    },
+    {
+      "name": "dark-home-category.png",
+      "identicalToVisuallyAccepted": true
+    },
+    {
+      "name": "dark-new-habit-category.png",
+      "identicalToVisuallyAccepted": true
+    },
+    {
+      "name": "dark-manage-scoped.png",
+      "identicalToVisuallyAccepted": true
+    },
+    {
+      "name": "dark-archive-confirmation.png",
+      "identicalToVisuallyAccepted": true
+    },
+    {
+      "name": "dark-restore-category-chooser.png",
+      "identicalToVisuallyAccepted": true
+    },
+    {
+      "name": "dark-archived-populated.png",
+      "identicalToVisuallyAccepted": true
+    },
+    {
+      "name": "dark-archived-empty.png",
+      "identicalToVisuallyAccepted": true
+    }
+  ],
+  "artifactsDirectory": "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/.hermes/baselines/habit-lifecycle/phase12/final"
+}

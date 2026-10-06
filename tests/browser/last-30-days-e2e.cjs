@@ -70,8 +70,11 @@ let browser;
 
   const result = await page.evaluate(() => {
     const now = new Date();
-    const week = getElapsedWeekSummary(state.done || {}, HABITS, now, state.progress || {});
-    const trend = getLast30DayTrend(state.done || {}, HABITS, now, state.progress || {}, state.created);
+    const week = getElapsedWeekSummary(state.done || {}, ALL_HABITS, now, state.progress || {}, habitCatalogState);
+    const trend = getLast30DayTrend(state.done || {}, ALL_HABITS, now, state.progress || {}, state.created, habitCatalogState);
+    // Independent fixture oracle: 50 completions, seven historical 22-habit
+    // days, and today's 21-habit day after the one-time Medication archival.
+    const independentFixture = { totalDone:50, totalPossible:175, trackedDays:8, averagePct:29 };
     const card = document.querySelector('.last-30-card');
     const svg = document.getElementById('last30Chart');
     const labels = [...svg.querySelectorAll('.trend-date-label')].map(node => node.textContent);
@@ -85,7 +88,9 @@ let browser;
       weekText:document.getElementById('weekStats').textContent,
       expectedWeek:`${week.pct}% completion`,
       trendText:document.getElementById('last30Stats').textContent,
-      expectedTrend:`${trend.averagePct}% average · ${trend.trackedDays} days`,
+      fixtureTotals:{ totalDone:trend.totalDone, totalPossible:trend.totalPossible, trackedDays:trend.trackedDays, averagePct:trend.averagePct },
+      independentFixture,
+      expectedTrend:`${independentFixture.averagePct}% average · ${independentFixture.trackedDays} days`,
       trackedDays:trend.trackedDays,
       pointCount:svg.querySelectorAll('.trend-point').length,
       pathCount:svg.querySelectorAll('.trend-line').length,
@@ -94,7 +99,7 @@ let browser;
       averageLineCount:svg.querySelectorAll('.trend-average-line').length,
       averageLabelCount:svg.querySelectorAll('.trend-average-label').length,
       averageY:Number(averageLine?.getAttribute('y1')),
-      expectedAverageY:10 + ((100 - trend.averagePct) / 100) * (150 - 10 - 26),
+      expectedAverageY:10 + ((100 - independentFixture.averagePct) / 100) * (150 - 10 - 26),
       averageOpacity:Number(averageStyle.opacity),
       averageDash:averageStyle.strokeDasharray,
       baselineBeforeData:Boolean(averageLine && svg.querySelector('.trend-line') &&
@@ -110,6 +115,8 @@ let browser;
 
   assert.match(result.dateLabel, new RegExp(`^Week \\d+ · ${result.year}$`));
   assert.equal(result.weekText, result.expectedWeek, 'This Week uses elapsed eligible days only');
+  assert.deepEqual(result.fixtureTotals, result.independentFixture,
+    'history denominator is seven pre-archive 22-habit days plus one 21-habit day, not 21 for every date');
   assert.equal(result.trendText, result.expectedTrend, 'Last 30 Days shows weighted average and tracked-day count');
   assert.equal(result.trackedDays, 8);
   assert.equal(result.pointCount, 8);

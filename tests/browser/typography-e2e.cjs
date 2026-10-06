@@ -160,7 +160,7 @@ function contrastRatio(foreground, background) {
   assert.match(home.fontFamily, /-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif/, 'the native system stack is explicit');
   assert.equal(home.homeFinalVisual.categoryOpticalInset, 4, 'the first category pill receives a four-pixel optical inset beyond the card edge');
   assert.equal(home.homeFinalVisual.titleAligned, 0, 'the Today’s Habits group remains aligned with the feature card');
-  assert.equal(home.homeFinalVisual.countText, '0/22', 'the Home count uses compact completed/total formatting');
+  assert.equal(home.homeFinalVisual.countText, '0/21', 'the Home count stays compact and excludes the initially archived medication habit');
   assert.equal(home.homeFinalVisual.countInTitleCopy, true, 'the Home count is grouped with Today’s Habits');
   assert.deepEqual(home.homeFinalVisual.toolIds, ['manageBtn', 'manageCategoriesBtn'], 'only the two management actions remain in the right tool group');
   assert.equal(home.homeFinalVisual.toolGap, 4, 'the two management controls keep an even four-pixel gap');

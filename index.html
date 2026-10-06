@@ -87,6 +87,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     --text2: #8a95ad;
     --text3: #5a6680;
     --accent: #60b0ff;
+    --lifecycle-accent: var(--accent);
     --accent2: #8fdbaf;
     --accent3: #f0c070;
     --success-ring: #8fdbaf;
@@ -135,6 +136,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     --text2: #506974;
     --text3: #5d737e;
     --accent: #2776a8;
+    --lifecycle-accent: #20638d;
     --accent2: #247653;
     --accent3: #8c5500;
     --success-ring: #16a34a;
@@ -419,7 +421,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     background: var(--surface);
-    color: var(--accent);
+    color: var(--lifecycle-accent);
   }
 
   .habit-lifecycle-secondary {
@@ -1599,6 +1601,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   .category-drag-proxy .category-grip,
   .category-drag-proxy .manage-habit-grip { cursor: grabbing; }
   body.dragging-active { user-select: none; }
+  body.dragging-active #manageHabitLifecycleActions { visibility: hidden; }
 
   .category-row-button,
   .manage-habit-row-button {
@@ -1774,12 +1777,10 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   .archived-habit-icon { font-size: 1.22rem; text-align: center; }
   .archived-habit-copy { display: grid; gap: 4px; min-width: 0; }
   .archived-habit-name {
-    overflow: hidden;
     color: var(--text);
     font-size: 1rem;
     font-weight: 500;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
   .archived-habit-meta { color: var(--text2); font-size: 0.8125rem; line-height: 1.35; }
   .archived-habit-restore,
@@ -1789,7 +1790,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     border: 1px solid var(--border2);
     border-radius: var(--radius-sm);
     background: var(--surface2);
-    color: var(--accent);
+    color: var(--lifecycle-accent);
     font-family: inherit;
     font-size: 0.875rem;
     font-weight: 600;

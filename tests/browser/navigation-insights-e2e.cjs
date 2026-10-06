@@ -349,7 +349,7 @@ function collectErrors(page) {
     { viewed:false, completed:false },
     { viewed:true, completed:true },
   ], 'view and completion attribution applies only to the latest forecast episode');
-  assert.equal(forecastEpisode.backupVersion, 8);
+  assert.equal(forecastEpisode.backupVersion, 9);
   assert.equal(forecastEpisode.insightVersion, 2);
   assert.equal(forecastEpisode.hasForbiddenEvidenceKey, false,
     'schema-v2 evidence omits coordinates and the full hourly forecast timeline');
@@ -480,7 +480,7 @@ function collectErrors(page) {
   assert.match(reports.learningText, /10 of 10 days with conditions met so far$/);
   assert.equal(reports.forecastCount, 10,
     'valid forecast episodes coexist without changing the 8-of-10 observed condition report');
-  assert.equal(reports.backup.version, 8);
+  assert.equal(reports.backup.version, 9);
   assert.equal(reports.backup.insightHistory.version, 2);
   assert.equal(reports.width.document, reports.width.viewport);
   assert.doesNotMatch(JSON.stringify(reports.backup.insightHistory), /latitude|longitude|\blat\b|\blon\b/i);

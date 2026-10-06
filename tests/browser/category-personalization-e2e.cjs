@@ -175,7 +175,7 @@ const SHOT_DIR = process.env.WAVELENGTH_SHOT_DIR || 'C:\\Temp';
     assert.equal(shippedOptions.edit, 'Edit category');
     assert.equal(shippedOptions.removal, 'Archive category');
     assert.equal(shippedOptions.disabled, true);
-    assert.match(shippedOptions.guidance, /^Move \d+ habits first$/);
+    assert.match(shippedOptions.guidance, /^Move \d+ active habits first$/);
     assert.doesNotMatch(shippedOptions.text, /Pause|color/i);
     await page.click('#categoryOptionsClose');
     await page.click('#manageCategoryBack');
