@@ -705,7 +705,7 @@ test('observed condition cards ignore forecast evidence', () => {
     'ten forecast UV cues cannot turn nine observed UV dates into an observed-condition card');
 });
 
-test('Waves ridden wording distinguishes current conditions from forecast cues', () => {
+test('Waves ridden wording distinguishes current conditions from forecasts', () => {
   const { getWavesRiddenCard } = loadInsightFunctions(html);
   const observedAt = new Date(2026, 7, 28, 9).getTime();
   const forecastAt = new Date(2026, 7, 29, 9).getTime();
@@ -724,8 +724,10 @@ test('Waves ridden wording distinguishes current conditions from forecast cues',
   assert.equal(card?.days, 2, 'observed and forecast follow-through both count without conflation');
   assert.match(`${card?.title || ''} ${card?.detail || ''}`, /current conditions/i,
     'Waves ridden names current-condition evidence');
-  assert.match(`${card?.title || ''} ${card?.detail || ''}`, /forecast cues/i,
-    'Waves ridden separately names forecast-cue evidence');
+  assert.match(`${card?.title || ''} ${card?.detail || ''}`, /forecasts/i,
+    'Waves ridden separately names forecast evidence without technical cue wording');
+  assert.doesNotMatch(`${card?.title || ''} ${card?.detail || ''}`, /\bcues?\b/i,
+    'Waves ridden never exposes internal cue terminology');
 });
 
 test('daily evidence cap refuses new episodes instead of evicting prior evidence', () => {

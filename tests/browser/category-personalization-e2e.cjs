@@ -202,6 +202,26 @@ const SHOT_DIR = process.env.WAVELENGTH_SHOT_DIR || 'C:\\Temp';
     await page.click('#manageCategoryList [data-habit-id="affirm"] .manage-habit-row-button');
     await page.waitForFunction(() => !document.getElementById('habitEditorView').hidden);
     const recoveryId = await page.evaluate(() => categoryState.definitions.find(category => category.name === 'Recovery').id);
+    const emptyCategoryHome = await page.evaluate(categoryId => {
+      const previousCategory = currentCat;
+      currentCat = categoryId;
+      renderHabits();
+      const result = {
+        habitCards:document.querySelectorAll('#habitList .habit').length,
+        emptyCards:document.querySelectorAll('#habitList .habit-empty').length,
+        lifecycleCopy:[...document.querySelectorAll('#habitList [data-habit-lifecycle-action]')].map(node => node.textContent.trim()),
+        leaksRawId:document.getElementById('habitList').textContent.includes(categoryId),
+      };
+      currentCat = previousCategory;
+      renderHabits();
+      return result;
+    }, recoveryId);
+    assert.deepEqual(emptyCategoryHome, {
+      habitCards:0,
+      emptyCards:0,
+      lifecycleCopy:['Add a new habit','Add an archived habit'],
+      leaksRawId:false,
+    }, 'a new empty category shows only lifecycle actions and never leaks its internal ID');
     await page.select('#habitEditorBody .eh-category', recoveryId);
     let browserBackPrompts = 0;
     const dismissBrowserBack = async dialog => {

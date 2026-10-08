@@ -297,21 +297,21 @@ private struct WavelengthWidgetView: View {
 
                 VStack(alignment: .leading, spacing: 0) {
                     Text(nextWave.eyebrow)
-                        .font(.caption2.weight(.semibold))
+                        .font(.caption.weight(.semibold))
                         .textCase(.uppercase)
                         .tracking(0.45)
                         .foregroundStyle(accentColor)
                         .widgetAccentable()
                         .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                        .truncationMode(.tail)
                         .padding(.bottom, 5)
 
                     HStack(alignment: .firstTextBaseline, spacing: 7) {
                         Text(nextWave.title)
-                            .font(.headline)
+                            .font(.title3.weight(.semibold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+                            .truncationMode(.tail)
                             .layoutPriority(1)
 
                         if !nextWave.targetLabel.isEmpty {

@@ -95,6 +95,10 @@ for (const [label, htmlPath] of builds) {
     `${label}: reminder consent uses an accessible explicit switch`);
   assert.match(html, /id="nextWaveNotificationTime"[^>]*type="time"[^>]*value="11:00"/,
     `${label}: reminder time uses a native bounded time control`);
+  assert.match(html, /\.settings-field\s*\{[^}]*min-width:\s*0/,
+    `${label}: Settings fields may shrink inside narrow cards`);
+  assert.match(html, /\.settings-field input\s*\{[^}]*width:\s*100%[^}]*min-width:\s*0[^}]*max-width:\s*100%/,
+    `${label}: native time inputs cannot exceed their Settings card`);
   assert.match(html, /function setupNativeNotifications\(\)[\s\S]*addEventListener\('change'[\s\S]*requestPermissions\(\)/,
     `${label}: notification permission is requested from an explicit Settings change`);
   assert.doesNotMatch(extractFunction(html, 'createBackupPayload'), /nativeNotification|reminder/i,

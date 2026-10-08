@@ -104,6 +104,26 @@ async function waitForHome(page) {
   assert.equal(manageAllHeader.optionsHidden, true, 'Manage All suppresses the nonfunctional ellipsis');
   assert.equal(manageAllHeader.optionsDisplay, 'none', 'suppressed Manage All ellipsis consumes no visible space');
   assert.ok(manageAllHeader.centerDelta <= 1, `Manage All title remains centered: ${manageAllHeader.centerDelta}`);
+  const manageLifecycleSpacing = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('#manageCategoryList .manage-habit-row')];
+    const finalRow = rows.at(-1).getBoundingClientRect();
+    const actions = document.getElementById('manageHabitLifecycleActions');
+    const actionRect = actions.getBoundingClientRect();
+    const primary = actions.querySelector('.habit-lifecycle-primary').getBoundingClientRect();
+    const secondary = actions.querySelector('.habit-lifecycle-secondary').getBoundingClientRect();
+    return {
+      listGap:actionRect.top - finalRow.bottom,
+      actionGap:secondary.top - primary.bottom,
+      primaryHeight:primary.height,
+      secondaryHeight:secondary.height,
+    };
+  });
+  assert.deepEqual(manageLifecycleSpacing, {
+    listGap:8,
+    actionGap:4,
+    primaryHeight:64,
+    secondaryHeight:44,
+  }, 'Manage All uses normal list spacing and keeps the archived action optically close');
   await page.waitForFunction(() => getComputedStyle(document.getElementById('manageCategoryView')).opacity === '1');
   await page.screenshot({ path:path.join(SHOT_DIR, `wavelength-manage-all-${THEME}.png`), fullPage:false });
 

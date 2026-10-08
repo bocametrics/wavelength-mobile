@@ -398,9 +398,11 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   .habit-lifecycle-actions {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 4px;
     width: 100%;
   }
+
+  #manageHabitLifecycleActions { margin-top: 8px; }
 
   .habit-lifecycle-primary,
   .habit-lifecycle-secondary {
@@ -1140,6 +1142,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   .settings-field {
     display: grid;
     gap: 7px;
+    min-width: 0;
     color: var(--text2);
     font-size: 0.76rem;
     font-weight: 600;
@@ -1147,6 +1150,8 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 
   .settings-field input {
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
     min-height: 44px;
     padding: 10px 12px;
     border: 1px solid var(--border2);
@@ -3035,7 +3040,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
       <h1 id="archivedHabitsHeading">Archived habits</h1>
       <span aria-hidden="true"></span>
     </div>
-    <p class="archived-habits-intro">Restore a habit to start tracking it again.</p>
+    <p class="archived-habits-intro">Add a habit to start tracking.</p>
     <div class="archived-habits-list" id="archivedHabitsList"></div>
     <button class="view-all-archived" id="viewAllArchivedHabits" type="button" hidden>View all archived habits</button>
   </section>
@@ -3118,13 +3123,13 @@ function getThemeStatusCopy(preference, effectiveTheme) {
 <dialog class="management-dialog" id="restoreHabitCategoryDialog" aria-labelledby="restoreHabitCategoryHeading">
   <div class="habit-lifecycle-dialog-content">
     <h2 id="restoreHabitCategoryHeading">Choose a category</h2>
-    <p class="habit-lifecycle-dialog-message">The habit’s previous category is archived. Choose an active category to restore it.</p>
+    <p class="habit-lifecycle-dialog-message">The habit’s previous category is archived. Choose an active category to add it.</p>
     <label class="restore-category-field" for="restoreHabitCategoryInput">
       <span>Category</span>
       <select id="restoreHabitCategoryInput"></select>
     </label>
     <div class="habit-lifecycle-dialog-actions">
-      <button class="category-option" id="restoreHabitCategoryConfirm" type="button">Restore habit</button>
+      <button class="category-option" id="restoreHabitCategoryConfirm" type="button">Add habit</button>
       <button class="category-option" id="restoreHabitCategoryCancel" type="button">Cancel</button>
     </div>
   </div>
@@ -5928,7 +5933,7 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
 
   const sunsetHabit = eligibleHabits.find(habit => normalizeRhythmConfig(habit.rhythm)?.type === 'sunset');
   if (sunsetHabit && hour >= 16) {
-    const detail = snapshot.sunset ? `Sunset today · ${snapshot.sunset}` : 'Your evening cue is still open.';
+    const detail = snapshot.sunset ? `Sunset today · ${snapshot.sunset}` : 'Your evening window is still open.';
     return withForecastCopy(result(sunsetHabit, 'sunset-rhythm', 'Suggested now', detail), sunsetHabit);
   }
 
@@ -6192,10 +6197,10 @@ function refreshRhythmAnchorLabels(now = new Date()) {
 
 function getRhythmAnchorText(rhythm, data) {
   if (!data) {
-    if (rhythm.type === 'temp-above') return `Heat cue above ${rhythm.threshold}°F`;
-    if (rhythm.type === 'temp-below') return `Cold cue below ${rhythm.threshold}°F`;
-    if (rhythm.type === 'uv-above') return `UV cue at ${rhythm.threshold} or higher`;
-    if (rhythm.type === 'aqi-below') return `US AQI cue at or below ${rhythm.threshold}`;
+    if (rhythm.type === 'temp-above') return `Heat guidance above ${rhythm.threshold}°F`;
+    if (rhythm.type === 'temp-below') return `Cold guidance below ${rhythm.threshold}°F`;
+    if (rhythm.type === 'uv-above') return `Sun protection at UV ${rhythm.threshold}+`;
+    if (rhythm.type === 'aqi-below') return `Outdoor range · AQI ${rhythm.threshold} or lower`;
     return RHYTHM_LABELS[rhythm.type] || '';
   }
   switch (rhythm.type) {
@@ -6204,22 +6209,22 @@ function getRhythmAnchorText(rhythm, data) {
     case 'sunset':
       return data.sunset ? `🌇 Sunset ${data.sunset} · ${rhythm.note || 'Start winding down'}` : RHYTHM_LABELS.sunset;
     case 'temp-above':
-      if (!Number.isFinite(data.feel)) return `Heat cue above ${rhythm.threshold}°F`;
+      if (!Number.isFinite(data.feel)) return `Heat guidance above ${rhythm.threshold}°F`;
       return data.feel > rhythm.threshold
-        ? `🔥 Feels like ${data.feel}°F · ${rhythm.note || 'Heat cue active'}`
-        : `Feels like ${data.feel}°F · Below heat cue`;
+        ? `🔥 Feels like ${data.feel}°F · ${rhythm.note || 'Heat guidance active'}`
+        : `Feels like ${data.feel}°F · Heat guidance above ${rhythm.threshold}°F`;
     case 'temp-below':
-      if (!Number.isFinite(data.feel)) return `Cold cue below ${rhythm.threshold}°F`;
+      if (!Number.isFinite(data.feel)) return `Cold guidance below ${rhythm.threshold}°F`;
       return data.feel < rhythm.threshold
-        ? `❄️ Feels like ${data.feel}°F · ${rhythm.note || 'Cold cue active'}`
-        : `Feels like ${data.feel}°F · Above cold cue`;
+        ? `❄️ Feels like ${data.feel}°F · ${rhythm.note || 'Cold guidance active'}`
+        : `Feels like ${data.feel}°F · Cold guidance below ${rhythm.threshold}°F`;
     case 'uv-above':
-      if (!Number.isFinite(data.uv)) return `UV cue at ${rhythm.threshold} or higher`;
+      if (!Number.isFinite(data.uv)) return `Sun protection at UV ${rhythm.threshold}+`;
       return data.uv >= rhythm.threshold
-        ? `☀️ UV ${data.uv} · ${rhythm.note || 'Sun cue active'}`
-        : `UV ${data.uv} · Below sun cue`;
+        ? `☀️ UV ${data.uv} · ${rhythm.note || 'Sun protection suggested'}`
+        : `UV ${data.uv} · Sun protection at ${rhythm.threshold}+`;
     case 'aqi-below': {
-      if (!Number.isFinite(data.aqi) || data.aqi < 0) return `US AQI cue at or below ${rhythm.threshold}`;
+      if (!Number.isFinite(data.aqi) || data.aqi < 0) return `Outdoor range · AQI ${rhythm.threshold} or lower`;
       const category = getAqiCategory(data.aqi);
       return data.aqi <= rhythm.threshold
         ? `🍃 AQI ${data.aqi} · ${rhythm.note || category}`
@@ -6945,12 +6950,12 @@ function getConditionInsightCards(history, minimumRelevantDays = 10, now = new D
   const minimum = Number.isInteger(minimumRelevantDays) && minimumRelevantDays > 0 ? minimumRelevantDays : 10;
   const todayKey = dateKey(now);
   const definitions = [
-    { id:'sun-wise', icon:'🧴', eyebrow:'Sun-wise', reason:'uv-protect', cue:'UV' },
-    { id:'heatwise', icon:'💧', eyebrow:'Heatwise', reason:'heat-hydrate', cue:'heat' },
-    { id:'morning-light', icon:'🌤️', eyebrow:'Morning light', reason:'sunrise-light', cue:'morning-light' },
-    { id:'poor-air-movement', icon:'🍃', eyebrow:'Poor-air follow-through', reason:'aqi-adapt', cue:'poor-air' },
-    { id:'good-air-movement', icon:'🌿', eyebrow:'Good-air follow-through', reason:'aqi-opportunity', cue:'good-air' },
-    { id:'evening-rhythm', icon:'🌆', eyebrow:'Evening rhythm', reason:'sunset-rhythm', cue:'sunset' },
+    { id:'sun-wise', icon:'🧴', eyebrow:'Sun-wise', reason:'uv-protect', condition:'UV conditions' },
+    { id:'heatwise', icon:'💧', eyebrow:'Heatwise', reason:'heat-hydrate', condition:'heat' },
+    { id:'morning-light', icon:'🌤️', eyebrow:'Morning light', reason:'sunrise-light', condition:'morning light' },
+    { id:'poor-air-movement', icon:'🍃', eyebrow:'Poor-air follow-through', reason:'aqi-adapt', condition:'poor air quality' },
+    { id:'good-air-movement', icon:'🌿', eyebrow:'Good-air follow-through', reason:'aqi-opportunity', condition:'good air quality' },
+    { id:'evening-rhythm', icon:'🌆', eyebrow:'Evening rhythm', reason:'sunset-rhythm', condition:'sunset timing' },
   ];
   const cards = [];
   definitions.forEach(definition => {
@@ -6976,11 +6981,35 @@ function getConditionInsightCards(history, minimumRelevantDays = 10, now = new D
     const completed = group.completed.size;
     cards.push({
       id:definition.id, icon:definition.icon, eyebrow:definition.eyebrow, relevant, completed,
-      title:`You marked “${group.label}” complete on ${completed} of ${relevant} days when Wavelength showed a ${definition.cue} cue.`,
-      detail:`Observed in your history · Based on ${relevant} closed ${definition.cue}-cue dates`,
+      title:`You marked “${group.label}” complete on ${completed} of ${relevant} days when ${definition.condition} shaped your Next Wave.`,
+      detail:`Observed in your history · Based on ${relevant} past days with ${definition.condition}`,
     });
   });
   return cards;
+}
+
+function getConditionInsightProgress(history, minimumRelevantDays = 10, now = new Date()) {
+  const minimum = Number.isInteger(minimumRelevantDays) && minimumRelevantDays > 0 ? minimumRelevantDays : 10;
+  const todayKey = dateKey(now);
+  const reasons = ['uv-protect','heat-hydrate','sunrise-light','aqi-adapt','aqi-opportunity','sunset-rhythm'];
+  let closest = 0;
+  reasons.forEach(reason => {
+    const groups = new Map();
+    Object.entries((history && history.days) || {}).forEach(([key, day]) => {
+      if (!isValidDateKey(key) || key >= todayKey) return;
+      (day.recommendations || []).filter(record => record.evidenceType !== 'forecast' && record.reason === reason).forEach(record => {
+        if (!record.habitLabel || !record.rule) return;
+        const signature = JSON.stringify([record.habitId, record.habitLabel, record.measurementType, record.ruleVersion, record.rule]);
+        if (!groups.has(signature)) groups.set(signature, new Set());
+        groups.get(signature).add(key);
+      });
+    });
+    [...groups.values()].forEach(dates => {
+      const relevant = dates.size;
+      if (relevant < minimum) closest = Math.max(closest, relevant);
+    });
+  });
+  return closest;
 }
 
 function selectConditionInsightCard(cards, now = new Date()) {
@@ -7030,8 +7059,8 @@ function getWavesRiddenCard(history, now = new Date()) {
   const hasObserved = qualifyingDays.some(day => day.evidenceTypes.has('observed'));
   const hasForecast = qualifyingDays.some(day => day.evidenceTypes.has('forecast'));
   const evidencePhrase = hasObserved && hasForecast
-    ? 'current conditions and forecast cues'
-    : hasForecast ? 'forecast cues' : 'conditions';
+    ? 'current conditions and forecasts'
+    : hasForecast ? 'forecasts' : 'conditions';
   return {
     id:'waves-ridden', icon:'🏄', eyebrow:'Waves ridden',
     title:`You followed through on ${days} ${days === 1 ? 'day' : 'days'} when ${evidencePhrase} shaped your Next Wave.`,
@@ -7233,20 +7262,6 @@ function saveInsightHistory(now = new Date()) {
   localStorage.setItem(INSIGHT_STORAGE_KEY, JSON.stringify(insightHistory));
 }
 
-function getMaxConditionDays(history, now = new Date()) {
-  const todayKey = dateKey(now);
-  const reasons = ['uv-protect','heat-hydrate','sunrise-light','aqi-adapt','aqi-opportunity','sunset-rhythm'];
-  let maxDays = 0;
-  for (const reason of reasons) {
-    const count = Object.entries((history && history.days) || {})
-      .filter(([key]) => isValidDateKey(key) && key < todayKey)
-      .filter(([, day]) => (day.recommendations || []).some(record => record.reason === reason))
-      .length;
-    if (count > maxDays) maxDays = count;
-  }
-  return maxDays;
-}
-
 function renderAdaptiveInsights(now = new Date()) {
   const conditionSection = document.getElementById('conditionInsightSection');
   const adaptiveSection = document.getElementById('adaptiveDaySection');
@@ -7275,25 +7290,26 @@ function renderAdaptiveInsights(now = new Date()) {
   const heading = document.getElementById('insightLearningHeading');
   const body = document.getElementById('insightLearningBody');
   const progress = document.getElementById('insightLearningProgress');
-  const maxDays = getMaxConditionDays(insightHistory, now);
-  const capped = Math.min(maxDays, 10);
+  const formingDays = getConditionInsightProgress(insightHistory, 10, now);
 
   if (selected || wavesRidden) {
     // Some insights are showing — check if all condition patterns are eligible.
-    if (allCards.length >= 6) {
+    if (allCards.length >= 6 && formingDays === 0) {
       learning.hidden = true;
     } else {
       learning.hidden = false;
       heading.textContent = 'More insights forming';
       body.textContent = 'Wavelength is learning how your habits respond to weather, air quality, and light. New patterns appear as conditions repeat in your history.';
-      progress.textContent = `${capped} of 10 days with conditions met so far`;
+      progress.textContent = formingDays > 0
+        ? `${formingDays} of 10 matching days toward another pattern`
+        : 'More patterns will appear as matching conditions repeat';
     }
   } else {
     // No insights yet — show the learning state with a live progress count.
     learning.hidden = false;
     heading.textContent = 'Learning your rhythm';
     body.textContent = 'Wavelength is learning how your habits respond to weather, air quality, and light. After 10 days with the same condition, a pattern begins to appear.';
-    progress.textContent = `${capped} of 10 days with conditions met so far`;
+    progress.textContent = `${formingDays} of 10 matching days toward your first pattern`;
   }
 }
 
@@ -8260,7 +8276,7 @@ function renderArchivedHabitsPage() {
           <span class="archived-habit-name">${escapeHtml(habit.text)}</span>
           <span class="archived-habit-meta">${escapeHtml(categoryName)} · ${escapeHtml(schedule)}</span>
         </span>
-        <button class="archived-habit-restore" type="button" data-restore-habit-id="${escapeHtml(habit.id)}">Restore</button>
+        <button class="archived-habit-restore" type="button" data-restore-habit-id="${escapeHtml(habit.id)}">Add</button>
       </div>`;
     }).join('')
     : scoped
@@ -8340,7 +8356,7 @@ function restoreArchivedHabit(habitId) {
     const activeCategories = getActiveCategoryDefinitions(categoryState);
     if (category.archived) {
       if (activeCategories.length === 0) {
-        showToast('Create or restore a category before restoring this habit.');
+        showToast('Create or restore a category before adding this habit.');
         return false;
       }
       restoringArchivedHabitId = habit.id;
@@ -8371,11 +8387,11 @@ function restoreArchivedHabit(habitId) {
     renderHabits(restoreNow);
     renderArchivedHabitsPage();
     const categoryName = getCategoryDisplayName(category.id);
-    showToast(`Habit restored to ${categoryName}.`);
+    showToast(`Habit added to ${categoryName}.`);
     focusArchivedRestoreControl(Math.max(0, previousIndex));
     return true;
   } catch (error) {
-    showToast(error.message || 'Unable to restore habit');
+    showToast(error.message || 'Unable to add habit');
     return false;
   }
 }
@@ -8416,11 +8432,11 @@ function confirmRestoreHabitCategory() {
     document.getElementById('restoreHabitCategoryDialog').close();
     restoringArchivedHabitId = null;
     const categoryName = getCategoryDisplayName(category.id);
-    showToast(`Habit restored to ${categoryName}.`);
+    showToast(`Habit added to ${categoryName}.`);
     focusArchivedRestoreControl(Math.max(0, previousIndex));
     return true;
   } catch (error) {
-    showToast(error.message || 'Unable to restore habit');
+    showToast(error.message || 'Unable to add habit');
     return false;
   }
 }
@@ -8715,6 +8731,12 @@ function getCompletedHabitsAriaLabel(count) {
   return `${count} completed ${count === 1 ? 'habit' : 'habits'}`;
 }
 
+function shouldShowHabitEmptyState(categoryId, activeHabits, scheduledHabits) {
+  if (scheduledHabits.length > 0) return false;
+  if (categoryId === 'all') return true;
+  return activeHabits.some(habit => habit.cat === categoryId);
+}
+
 function renderHabits(now = new Date()) {
   lastRenderedDateKey = dateKey(now);
   const list = document.getElementById('habitList');
@@ -8780,7 +8802,9 @@ function renderHabits(now = new Date()) {
       `;
     }).join('');
 
-  const emptyMarkup = `<div class="habit-empty">No ${currentCat === 'all' ? '' : `${currentCat} `}habits scheduled today.</div>`;
+  const emptyMarkup = shouldShowHabitEmptyState(currentCat, HABITS, sorted)
+    ? '<div class="habit-empty">No habits scheduled today.</div>'
+    : '';
   const activeMarkup = renderHabitCards(grouped.active);
   const lifecycleActionsMarkup = renderHabitLifecycleActions(currentCat, 'home');
   const lifecycleActionsContainerMarkup = `<div class="habit-lifecycle-actions">${lifecycleActionsMarkup}</div>`;
