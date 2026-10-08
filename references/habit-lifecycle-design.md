@@ -4,9 +4,9 @@ This document describes the implemented custom-habit creation, editing, archival
 
 ## Verification and release boundary
 
-The lifecycle implementation and 390×844 browser acceptance are complete locally through checkpoint `351765567c25997328420fc91ce5cac7cd0902f1`. Phase 12 passed 38 source suites and 34 sequential browser runs across 17 suites. The lifecycle suite passed 12 scenarios and 234 assertions in each theme, with zero runtime errors and 16 accepted viewport screenshots. Fifteen browser suites honor Day/Night selection; two older suites ignore that environment, so their duplicate runs are not independent theme coverage.
+The current unreleased alignment and Insights candidate includes the complete lifecycle implementation and 390×844 browser acceptance. Its local gate covers 38 source suites and an exact 34-run browser matrix across 17 suites. The lifecycle suite passes 12 scenarios and 239 assertions in each theme, with zero runtime errors and 16 accepted viewport screenshots. Fifteen browser suites honor Day/Night selection; two older suites ignore that environment, so their duplicate runs are not independent theme coverage.
 
-The accepted source SHA-256 is `3ecf1ac335d4e356c6d2c1bf40182a68cfd4320f4f6548028e716c4c2e208c11`. See the [Phase 12 acceptance report](../.hermes/baselines/habit-lifecycle/phase12/final/report.md). This feature has not been pushed or deployed. Cache/native synchronization, simulator and physical-device verification, final sealed release review, and deployment remain Phase 14. Browser mocks establish native bridge behavior, not physical-device acceptance of this lifecycle release.
+The current synchronized source SHA-256 is `715f688d9e38062bbc8f11c3da6d2124d285833392f038da0b332f1cddb44b88`; the lifecycle harness uses the same fail-closed fallback. The [Phase 12 acceptance report](../.hermes/baselines/habit-lifecycle/phase12/final/report.md) remains historical evidence for the earlier baseline, not proof of the current candidate. The candidate has not been pushed, deployed, or installed on the physical iPhone. Browser mocks establish native bridge behavior, not physical-device acceptance.
 
 ## Complete catalog versus active habits
 
@@ -65,9 +65,9 @@ Exact entry labels:
 - Primary: **Add a new habit**, with a decorative plus.
 - Secondary: **Add an archived habit**, with a decorative restore arrow.
 
-“Add” is the entry-point language because an inactive shipped habit may never have been personally tracked. The underlying operation and an individual archived row use restoration terminology. Labels omit ellipses. The actions never become habit cards, affect counts, enter canonical order, or acquire reorder grips.
+“Add” is the user-facing language because an inactive shipped habit may never have been personally tracked. The underlying lifecycle operation may retain restoration-oriented implementation names, but archived rows and confirmations also say **Add**. Labels omit ellipses. The actions never become habit cards, affect counts, enter canonical order, or acquire reorder grips.
 
-The primary has a 64px minimum height and subtle solid border; the secondary has a 44px minimum height, with a 10px gap inside the group. Home's legacy reorder state hides the group. Actual Manage grip dragging hides its action host with `visibility:hidden`, retaining geometry during the drag. Manage All does not expose category-scoped reorder grips.
+The primary has a 64px minimum height and subtle solid border; the secondary has a 44px minimum height, with a 4px gap inside the group. Home keeps its established 8px list rhythm, while Manage adds an explicit 8px gap above the lifecycle group. Home's legacy reorder state hides the group. Actual Manage grip dragging hides its action host with `visibility:hidden`, retaining geometry during the drag. Manage All does not expose category-scoped reorder grips.
 
 ## Create and edit flow
 
@@ -85,11 +85,11 @@ Creation journals catalog, category state, and complete order as one snapshot. E
 
 Edit mode uses the habit's title and the exact save label **Save**. **Archive habit** is available only in edit mode. **Reset habit defaults** is hidden for custom habits and in create mode. Successful creation returns to the actual Home or Manage origin and category scope. Toolbar Back, Escape, and browser/native Back ask **Discard unsaved changes?** for a changed draft; declining keeps it intact.
 
-## Archive and restore flow
+## Archive and add flow
 
 The edit-mode archive action is neutral and reversible. The native HTML dialog has the exact heading `Archive “{habit name}”?`, message **It will stop appearing in your daily habits. Your history will be kept.**, and actions **Archive habit** / **Cancel**. Cancellation, including dialog Escape, makes no lifecycle mutation. Successful archival returns through the editor's origin-aware management route; it does not delete the retained identity or data.
 
-**Add an archived habit** opens **Archived habits** with the current category scope. Its introduction is **Restore a habit to start tracking it again.** Rows show full wrapping habit names, retained category, weekday summary, and **Restore**. Rows follow the retained canonical order, not the order in which habits were archived.
+**Add an archived habit** opens **Archived habits** with the current category scope. Its introduction is **Add a habit to start tracking.** Rows show full wrapping habit names, retained category, weekday summary, and **Add**. Rows follow the retained canonical order, not the order in which habits were archived.
 
 Exact empty-state copy:
 
@@ -98,13 +98,13 @@ Exact empty-state copy:
 - Scoped message: `No archived habits in {category name}` with no trailing period.
 - **View all archived habits** appears only when archived identities exist outside the current category. It changes the archive scope without changing the original navigation destination.
 
-Restoration is direct when the retained category is active. The habit retains its prior canonical slot and configuration. Home's incomplete/completed partition may place it in a different visible group if its retained completion already meets today's goal.
+Adding is direct when the retained category is active. The habit retains its prior canonical slot and configuration. Home's incomplete/completed partition may place it in a different visible group if its retained completion already meets today's goal.
 
-When the retained category is archived, restoration opens **Choose a category**. The message is **The habit’s previous category is archived. Choose an active category to restore it.** The labeled **Category** select contains active real categories, with **Restore habit** / **Cancel** actions. The lifecycle transition and category reassignment commit together. Cancellation and injected write failures preserve the earlier catalog, assignments, and runtime state; a failed commit leaves the chooser available for retry.
+When the retained category is archived, adding opens **Choose a category**. The message is **The habit’s previous category is archived. Choose an active category to add it.** The labeled **Category** select contains active real categories, with **Add habit** / **Cancel** actions. The lifecycle transition and category reassignment commit together. Cancellation and injected write failures preserve the earlier catalog, assignments, and runtime state; a failed commit leaves the chooser open with its selection intact. Focus returns to a logical archived row after direct or reassigned addition.
 
-When no active category exists, no restoration mutation occurs. The live status says **Create or restore a category before restoring this habit.** The person can recover a category through Categories, then retry.
+When no active category exists, no lifecycle mutation occurs. The live status says **Create or restore a category before adding this habit.** The person can recover a category through Categories, then retry.
 
-The one-time default example is **Take medication as prescribed** (`medication`), initially archived by the default catalog migration. Once restored into a persisted catalog, normal reloads do not reseed the migration or archive it again. Importing a legacy backup is a deliberate replacement operation and synthesizes a new legacy lifecycle catalog as described below.
+The one-time default example is **Take medication as prescribed** (`medication`), initially archived by the default catalog migration. Once added into a persisted catalog, normal reloads do not reseed the migration or archive it again. Importing a legacy backup is a deliberate replacement operation and synthesizes a new legacy lifecycle catalog as described below.
 
 ## Category relationships
 
@@ -112,7 +112,7 @@ The [category personalization contract](category-personalization-design.md) dist
 
 - Shipped-category archival is blocked only by currently active assigned habits, including active habits not scheduled today. Retained archived habits do not block it.
 - Custom-category deletion is blocked by every retained reference in `ALL_HABITS`, whether active or archived. No habit or history is deleted to make a category removable.
-- Restoring an archived habit into an archived category requires active-category reassignment; it does not implicitly restore the category.
+- Adding an archived habit whose retained category is archived requires active-category reassignment; it does not implicitly restore the category.
 - Category IDs, saved assignments, and order survive category archival. **All** remains virtual, protected, and unserialized.
 
 ## Backup v9 and persistence
@@ -139,8 +139,8 @@ Create, custom edit, archive, and restore use `assertHabitCatalogStorageIntegrit
 
 ## Accessibility and visual contract
 
-- Plus/restore SVGs use `aria-hidden="true"`; accessible action names are the visible text, not spoken icon names.
-- Lifecycle actions, Back, restore controls, and dialog buttons retain at least 44px touch targets. Disabled save states prevent invalid creation.
+- Plus/return-arrow SVGs use `aria-hidden="true"`; accessible action names are the visible text, not spoken icon names.
+- Lifecycle actions, Back, archived-habit Add controls, and dialog buttons retain at least 44px touch targets. Disabled save states prevent invalid creation.
 - Native HTML dialogs use `aria-labelledby`. Category, measurement, rhythm-selection, and threshold controls have explicit labels; Card description has an `aria-label`. The current habit-name and optional rhythm-note inputs remain placeholder-only, so this phase does not certify explicit labeling for every editor field. Status messages use the existing live announcement path.
 - Keyboard focus-visible outlines remain visible. Archived-view Back/Escape/history exits return focus to the originating Home or Manage archive launch action. After scoped **View all archived habits**, lookup prefers the matching category and safely falls back to an available rerendered action.
 - Archived names wrap, including long unbroken text, without ellipsis at 390px. The archived rows are separate from the fixed-height daily habit-card design and its legacy/user-text fallback behavior.
@@ -151,9 +151,9 @@ Create, custom edit, archive, and restore use `assertHabitCatalogStorageIntegrit
 
 - `tests/habit-lifecycle-regression.mjs`: catalog, migration, date eligibility, normalization, stable IDs, mutation integrity, custom create/edit.
 - `tests/habit-backup-regression.mjs`: v9/legacy migration, strict references and seven-document rollback.
-- `tests/habit-lifecycle-ui-regression.mjs`: shared actions, routing, exact copy, archive/restore and focus contracts.
+- `tests/habit-lifecycle-ui-regression.mjs`: shared actions, routing, exact copy, archive/Add and focus contracts.
 - `tests/habit-lifecycle-visual-regression.mjs`: cross-build wrapping, scoped contrast token, and Manage drag visibility guards.
 - `tests/category-personalization-regression.mjs`, history/streak, completed grouping, measurement, and native consumer suites: cross-surface invariants.
-- `tests/browser/habit-lifecycle-e2e.cjs`: actual create/archive/restore, save origins, retained data/reload/reorder, recommendation-before/after archival, real widget publication and reminder scheduling with bridge-only mocks, injected rollback, history/dirty/focus paths, visual measurements and settled screenshots.
+- `tests/browser/habit-lifecycle-e2e.cjs`: actual create/archive/add, save origins, retained data/reload/reorder, recommendation-before/after archival, real widget publication and reminder scheduling with bridge-only mocks, injected rollback, history/dirty/focus paths, visual measurements and settled screenshots.
 
-For a browser rerun, pass `WAVELENGTH_SOURCE_SHA256` explicitly for the served bytes, select `WAVELENGTH_THEME=light` and then `dark`, and execute sequentially with isolated profiles. The harness's fallback hash intentionally refers to the original RED baseline. Source-only documentation updates do not change the accepted app bytes or establish native/release parity.
+For a browser rerun, pass `WAVELENGTH_SOURCE_SHA256` explicitly for the served bytes, select `WAVELENGTH_THEME=light` and then `dark`, and execute sequentially with isolated profiles. The harness's fallback hash targets the current synchronized candidate so an unintended source change fails closed. Source-only documentation updates do not change the accepted app bytes or establish native/release parity.

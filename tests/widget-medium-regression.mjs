@@ -64,6 +64,26 @@ assert.match(nextWaveView,
   'the emoji must mirror the in-app 44-point rounded-square accent tile');
 assert.match(nextWaveView, /Text\(nextWave\.eyebrow\)[\s\S]*?\.textCase\(\.uppercase\)/,
   'the eyebrow must retain the in-app card’s uppercase treatment');
+const eyebrowBlock = nextWaveView.slice(
+  nextWaveView.indexOf('Text(nextWave.eyebrow)'),
+  nextWaveView.indexOf('HStack(alignment: .firstTextBaseline'),
+);
+assert.match(eyebrowBlock, /\.font\(\.caption\.weight\(\.semibold\)\)/,
+  'the medium eyebrow must use one stable, readable semantic font');
+assert.match(eyebrowBlock, /\.lineLimit\(1\)[\s\S]*?\.truncationMode\(\.tail\)/,
+  'the medium eyebrow must truncate rather than shrink');
+assert.doesNotMatch(eyebrowBlock, /minimumScaleFactor/,
+  'the medium eyebrow must not become smaller for longer copy');
+const titleBlock = nextWaveView.slice(
+  nextWaveView.indexOf('Text(nextWave.title)'),
+  nextWaveView.indexOf('if !nextWave.targetLabel.isEmpty'),
+);
+assert.match(titleBlock, /\.font\(\.title3\.weight\(\.semibold\)\)/,
+  'every medium habit title must use the same larger semantic font');
+assert.match(titleBlock, /\.lineLimit\(1\)[\s\S]*?\.truncationMode\(\.tail\)/,
+  'long medium habit titles must use a one-line trailing ellipsis');
+assert.doesNotMatch(titleBlock, /minimumScaleFactor/,
+  'medium habit titles must truncate instead of silently shrinking');
 assert.doesNotMatch(nextWaveView, /nextWave\.state\s*==|switch\s+nextWave\.state/,
   'Quiet Moment must use the same medium-card layout as every app-authored Next Wave state');
 assert.match(nextWaveView,

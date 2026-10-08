@@ -118,6 +118,11 @@ for (const [label, htmlPath] of builds) {
   } = loadFunctions(html);
   const plain = value => JSON.parse(JSON.stringify(value));
 
+  assert.doesNotMatch(html, /Your evening cue is still open\./,
+    `${label}: user-facing sunset guidance avoids technical cue terminology`);
+  assert.match(html, /Your evening window is still open\./,
+    `${label}: sunset fallback describes the open evening window directly`);
+
   assert.deepEqual(
     plain(normalizeMeasurementConfig({})),
     { type:'check', target:1, step:1, unit:'' },
@@ -213,17 +218,17 @@ for (const [label, htmlPath] of builds) {
   }
   assert.equal(
     getRhythmAnchorText({ type:'aqi-below', threshold:50 }, { feel:92 }),
-    'US AQI cue at or below 50',
+    'Outdoor range · AQI 50 or lower',
     `${label}: a forecast-only partial result keeps the AQI threshold visible`,
   );
   assert.equal(
     getRhythmAnchorText({ type:'uv-above', threshold:3 }, { aqi:43 }),
-    'UV cue at 3 or higher',
+    'Sun protection at UV 3+',
     `${label}: an AQI-only partial result keeps the UV threshold visible`,
   );
   assert.equal(
     getRhythmAnchorText({ type:'temp-below', threshold:50 }, { feel:null }),
-    'Cold cue below 50°F',
+    'Cold guidance below 50°F',
     `${label}: null feels-like data never becomes a favorable zero reading`,
   );
   assert.equal(
@@ -243,7 +248,7 @@ for (const [label, htmlPath] of builds) {
   );
   assert.equal(
     getRhythmAnchorText({ type:'aqi-below', threshold:100 }, { aqi:-1 }),
-    'US AQI cue at or below 100',
+    'Outdoor range · AQI 100 or lower',
     `${label}: negative AQI is invalid rather than favorable`,
   );
   for (const [aqi, category] of [
@@ -266,7 +271,7 @@ for (const [label, htmlPath] of builds) {
   );
   assert.equal(
     getRhythmAnchorText({ type:'temp-above', threshold:85 }, { feel:78 }),
-    'Feels like 78°F · Below heat cue',
+    'Feels like 78°F · Heat guidance above 85°F',
     `${label}: inactive heat copy avoids restating threshold math`,
   );
   assert.equal(
@@ -276,7 +281,7 @@ for (const [label, htmlPath] of builds) {
   );
   assert.equal(
     getRhythmAnchorText({ type:'temp-below', threshold:50 }, { feel:55 }),
-    'Feels like 55°F · Above cold cue',
+    'Feels like 55°F · Cold guidance below 50°F',
     `${label}: inactive cold copy avoids restating threshold math`,
   );
   assert.equal(
@@ -286,7 +291,7 @@ for (const [label, htmlPath] of builds) {
   );
   assert.equal(
     getRhythmAnchorText({ type:'uv-above', threshold:3 }, { uv:2.1 }),
-    'UV 2.1 · Below sun cue',
+    'UV 2.1 · Sun protection at 3+',
     `${label}: inactive UV copy avoids threshold narration`,
   );
   assert.equal(
@@ -628,8 +633,8 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /function refreshForDateRollover\(now = new Date\(\)\)[\s\S]*rhythmWeatherData = null[\s\S]*rhythmWeatherGeneration\+\+/, `${label}: rollover clears all environmental channels and bumps the generation`);
   assert.match(html, /function toggleHabit\(id\) \{\s*const now = new Date\(\);\s*if \(!ensureCurrentRenderedDate\(now\)\) return;\s*const todayKey = dateKey\(now\);[\s\S]*renderHabits\(now\)/, `${label}: toggle threads its transaction timestamp through the rerender`);
   assert.match(html, /function adjustMeasuredHabit\(id, direction\) \{\s*const now = new Date\(\);\s*if \(!ensureCurrentRenderedDate\(now\)\) return;\s*const key = dateKey\(now\);[\s\S]*renderHabits\(now\)/, `${label}: measured adjustments thread the transaction timestamp through the rerender`);
-  assert.match(html, /case 'uv-above':[\s\S]*!Number\.isFinite\(data\.uv\)[\s\S]*UV cue at \$\{rhythm\.threshold\} or higher[\s\S]*data\.uv >= rhythm\.threshold/, `${label}: partial forecast data keeps the configured UV threshold visible`);
-  assert.match(html, /case 'aqi-below':[\s\S]*!Number\.isFinite\(data\.aqi\)[\s\S]*US AQI cue at or below \$\{rhythm\.threshold\}[\s\S]*data\.aqi <= rhythm\.threshold/, `${label}: partial air-quality data keeps the configured AQI threshold visible`);
+  assert.match(html, /case 'uv-above':[\s\S]*!Number\.isFinite\(data\.uv\)[\s\S]*Sun protection at UV \$\{rhythm\.threshold\}\+[\s\S]*data\.uv >= rhythm\.threshold/, `${label}: partial forecast data keeps the configured UV threshold visible`);
+  assert.match(html, /case 'aqi-below':[\s\S]*!Number\.isFinite\(data\.aqi\)[\s\S]*Outdoor range · AQI \$\{rhythm\.threshold\} or lower[\s\S]*data\.aqi <= rhythm\.threshold/, `${label}: partial air-quality data keeps the configured AQI threshold visible`);
   assert.match(html, /normalizeRhythmConfig/, `${label}: rhythm config is normalized for validation and rendering`);
   assert.match(html, /JSON\.stringify\(rhythm\)\s*!==\s*JSON\.stringify\(defaultRhythm\)/, `${label}: Manage does not persist rhythm overrides identical to shipped defaults`);
   assert.match(html, /function resetHabitEditorDefaults\(\)[\s\S]*previousHabits[\s\S]*reconcileMeasurementTypeChanges[\s\S]*saveState\(\)[\s\S]*renderHabits\(resetDate\)/, `${label}: focused Reset defaults reconciles measured state and saves before rerendering`);

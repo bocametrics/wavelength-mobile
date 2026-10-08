@@ -49,6 +49,7 @@ function loadInsightFunctions(html) {
     'clearInsightDate',
     'pruneInsightHistory',
     'getConditionInsightCards',
+    'getConditionInsightProgress',
     'selectConditionInsightCard',
     'getWavesRiddenCard',
   ];
@@ -60,6 +61,27 @@ function loadInsightFunctions(html) {
     context,
   );
   return context.exports;
+}
+
+function renderLearningState(html, allCards, formingDays) {
+  const ids = [
+    'conditionInsightSection', 'adaptiveDaySection', 'insightLearning',
+    'conditionInsightIcon', 'conditionInsightEyebrow', 'conditionInsightTitle', 'conditionInsightDetail',
+    'adaptiveDayIcon', 'adaptiveDayEyebrow', 'adaptiveDayTitle', 'adaptiveDayDetail',
+    'insightLearningHeading', 'insightLearningBody', 'insightLearningProgress',
+  ];
+  const elements = Object.fromEntries(ids.map(id => [id, { hidden:false, textContent:'' }]));
+  const context = {
+    document:{ getElementById:id => elements[id] || null },
+    insightHistory:{},
+    getConditionInsightCards:() => allCards,
+    selectConditionInsightCard:cards => cards[0] || null,
+    getWavesRiddenCard:() => null,
+    getConditionInsightProgress:() => formingDays,
+  };
+  vm.createContext(context);
+  vm.runInContext(`${extractFunction(html, 'renderAdaptiveInsights')}\nrenderAdaptiveInsights(new Date(2026, 7, 30, 12));`, context);
+  return elements;
 }
 
 const plain = value => JSON.parse(JSON.stringify(value));
@@ -75,6 +97,7 @@ for (const [label, htmlPath] of builds) {
     clearInsightDate,
     pruneInsightHistory,
     getConditionInsightCards,
+    getConditionInsightProgress,
     selectConditionInsightCard,
     getWavesRiddenCard,
   } = loadInsightFunctions(html);
@@ -374,9 +397,49 @@ for (const [label, htmlPath] of builds) {
   const conditionCards = plain(getConditionInsightCards(insightSeed, 10, new Date(2026, 7, 30, 12)));
   assert.deepEqual(conditionCards, [{
     id:'sun-wise', icon:'🧴', eyebrow:'Sun-wise', relevant:10, completed:8,
-    title:'You marked “Sun protection before outdoor time” complete on 8 of 10 days when Wavelength showed a UV cue.',
-    detail:'Observed in your history · Based on 10 closed UV-cue dates',
-  }], `${label}: UV insight limits its claim to dates when Wavelength visibly showed the cue`);
+    title:'You marked “Sun protection before outdoor time” complete on 8 of 10 days when UV conditions shaped your Next Wave.',
+    detail:'Observed in your history · Based on 10 past days with UV conditions',
+  }], `${label}: UV insight explains its condition history without technical cue terminology`);
+  assert.equal(getConditionInsightProgress({
+    version:1,
+    days:Object.fromEntries(Object.entries(insightSeed.days).slice(0, 9)),
+  }, 10, new Date(2026, 7, 30, 12)), 9,
+  `${label}: progress toward the first pattern reports the closest matching history below eligibility`);
+  assert.equal(getConditionInsightProgress(insightSeed, 10, new Date(2026, 7, 30, 12)), 0,
+    `${label}: an already eligible pattern is not misreported as still forming`);
+  const formingSeed = plain(insightSeed);
+  Object.values(formingSeed.days).slice(0, 6).forEach(day => {
+    const timestamp = day.recommendations[0].shownAt + 2;
+    day.recommendations.push({
+      habitId:'daylight', reason:'sunrise-light', shownAt:timestamp, lastShownAt:timestamp,
+      observedAt:timestamp - 1000, habitLabel:'Get outdoor light after waking', measurementType:'check',
+      ruleVersion:1, rule:{channel:'light',reading:'sunrise',operator:'after'},
+      conditions:{sunrise:'6:58 AM'}, sources:{weather:'open-meteo'},
+    });
+  });
+  assert.equal(getConditionInsightProgress(formingSeed, 10, new Date(2026, 7, 30, 12)), 6,
+    `${label}: after one insight appears, progress reports the closest distinct pattern still forming`);
+
+  const sameConditionSeed = plain(insightSeed);
+  Object.values(sameConditionSeed.days).slice(0, 9).forEach(day => {
+    const timestamp = day.recommendations[0].shownAt + 3;
+    day.recommendations.push({
+      habitId:'custom-sunscreen', reason:'uv-protect', shownAt:timestamp, lastShownAt:timestamp,
+      observedAt:timestamp - 1000, habitLabel:'Reapply sunscreen before afternoon activity', measurementType:'check',
+      ruleVersion:1, rule:{channel:'uv',reading:'uv',operator:'gte',threshold:5},
+      conditions:{uv:7}, sources:{weather:'open-meteo'},
+    });
+  });
+  assert.equal(getConditionInsightProgress(sameConditionSeed, 10, new Date(2026, 7, 30, 12)), 9,
+    `${label}: an eligible pattern does not hide a second same-condition pattern still forming`);
+  const sixEligibleCards = Array.from({ length:6 }, (_, index) => ({
+    icon:'•', eyebrow:`Pattern ${index + 1}`, title:'Eligible pattern', detail:'Observed in history',
+  }));
+  const renderedBoundary = renderLearningState(html, sixEligibleCards, 9);
+  assert.equal(renderedBoundary.insightLearning.hidden, false,
+    `${label}: six eligible condition families do not hide a distinct pattern still forming`);
+  assert.equal(renderedBoundary.insightLearningProgress.textContent, '9 of 10 matching days toward another pattern',
+    `${label}: the rendered all-family boundary reports the closest distinct forming pattern`);
 
   const currentDateSeed = plain(insightSeed);
   const currentTimestamp = new Date(2026, 7, 30, 9).getTime();
@@ -482,10 +545,16 @@ for (const [label, htmlPath] of builds) {
     `${label}: learning copy states the threshold and introduces the pattern concept`);
   assert.doesNotMatch(html, /\d+ of 6 patterns taking shape|allCards\.length\} of 6 patterns taking shape/,
     `${label}: forming progress never reports only fully eligible output cards`);
-  assert.match(html, /const maxDays = getMaxConditionDays\(insightHistory, now\);[\s\S]*const capped = Math\.min\(maxDays, 10\);[\s\S]*if \(selected \|\| wavesRidden\)/,
-    `${label}: real closed condition-day progress is computed before either learning state renders`);
-  assert.match(html, /progress\.textContent = `\$\{capped\} of 10 days with conditions met so far`;/,
-    `${label}: learning and forming use the same understandable condition-day progress copy`);
+  assert.match(html, /const formingDays = getConditionInsightProgress\(insightHistory, 10, now\);[\s\S]*if \(selected \|\| wavesRidden\)/,
+    `${label}: progress toward the nearest not-yet-eligible pattern is computed before either learning state renders`);
+  assert.match(html, /formingDays > 0[\s\S]*`\$\{formingDays\} of 10 matching days toward another pattern`[\s\S]*'More patterns will appear as matching conditions repeat'/,
+    `${label}: forming copy cannot show a completed 10-of-10 counter while another pattern is still pending`);
+  assert.match(html, /`\$\{formingDays\} of 10 matching days toward your first pattern`/,
+    `${label}: the first-pattern learning state retains meaningful live progress`);
+  assert.doesNotMatch(extractFunction(html, 'getConditionInsightCards'), /\bcue\b|cue-/i,
+    `${label}: condition insight cards avoid technical cue terminology`);
+  assert.doesNotMatch(extractFunction(html, 'getWavesRiddenCard'), /forecast cues/i,
+    `${label}: Waves ridden refers to forecasts directly`);
   assert.match(html, /function renderAdaptiveInsights\(now = new Date\(\)\)[\s\S]*\.textContent = selected\.title[\s\S]*\.textContent = wavesRidden\.detail/,
     `${label}: adaptive card copy renders as text rather than HTML`);
   assert.match(html, /icon:'🏄', eyebrow:'Waves ridden'/,

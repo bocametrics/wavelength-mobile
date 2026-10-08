@@ -385,7 +385,7 @@ function collectErrors(page) {
     conditionHidden:true,
     adaptiveHidden:true,
     learningHidden:false,
-    learningText:'≈ Learning your rhythm Wavelength is learning how your habits respond to weather, air quality, and light. After 10 days with the same condition, a pattern begins to appear. 0 of 10 days with conditions met so far',
+    learningText:'≈ Learning your rhythm Wavelength is learning how your habits respond to weather, air quality, and light. After 10 days with the same condition, a pattern begins to appear. 0 of 10 matching days toward your first pattern',
   });
   await page.screenshot({ path:path.join(SHOT_DIR, 'wavelength-navigation-insights-learning.png'), fullPage:true });
 
@@ -470,14 +470,15 @@ function collectErrors(page) {
   }));
   assert.deepEqual(reports.condition, {
     eyebrow:'Sun-wise',
-    title:'You marked “Sun protection before outdoor time” complete on 8 of 10 days when Wavelength showed a UV cue.',
-    detail:'Observed in your history · Based on 10 closed UV-cue dates',
+    title:'You marked “Sun protection before outdoor time” complete on 8 of 10 days when UV conditions shaped your Next Wave.',
+    detail:'Observed in your history · Based on 10 past days with UV conditions',
   });
   assert.equal(reports.waves.eyebrow, 'Waves ridden');
   assert.equal(reports.waves.title, 'You followed through on 8 days when conditions shaped your Next Wave.');
   assert.match(reports.waves.detail, /^9 suggested habits completed in the last 30 days\. Most recently on [A-Z][a-z]{2} \d{1,2}: “Sun protection before outdoor time” and “Drink water”\.$/);
   assert.equal(reports.learningHidden, false);
-  assert.match(reports.learningText, /10 of 10 days with conditions met so far$/);
+  assert.match(reports.learningText, /1 of 10 matching days toward another pattern$/);
+  assert.doesNotMatch(reports.learningText, /10 of 10|\bcues?\b/i);
   assert.equal(reports.forecastCount, 10,
     'valid forecast episodes coexist without changing the 8-of-10 observed condition report');
   assert.equal(reports.backup.version, 9);

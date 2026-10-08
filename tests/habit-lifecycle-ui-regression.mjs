@@ -68,12 +68,24 @@ for (const [label, htmlPath] of builds) {
     `${label}: the primary create card is compact, solid-bordered, and aligned with habit cards`);
   assert.match(html, /\.habit-lifecycle-secondary\s*\{[\s\S]*?min-height:\s*44px/,
     `${label}: the archived action keeps a 44px touch target`);
+  assert.match(html, /\.habit-lifecycle-actions\s*\{[^}]*gap:\s*4px/,
+    `${label}: the archived action stays optically close to the create card`);
+  assert.match(html, /#manageHabitLifecycleActions\s*\{[^}]*margin-top:\s*8px/,
+    `${label}: Manage separates lifecycle actions from the final habit by the normal list gap`);
   assert.doesNotMatch(html, /\.habit-lifecycle-(?:primary|actions)[^{]*\{[^}]*border[^;}]*dashed/s,
     `${label}: lifecycle actions never use a dashed drop-target treatment`);
   assert.match(html, /\.habits\.reorder-mode \.habit-lifecycle-actions\s*\{[^}]*display:\s*none/s,
     `${label}: Home hides lifecycle actions while reordering`);
 
   const renderHabits = extractFunction(html, 'renderHabits');
+  const shouldShowHabitEmptyStateSource = extractFunction(html, 'shouldShowHabitEmptyState');
+  const shouldShowHabitEmptyState = Function(`${shouldShowHabitEmptyStateSource}; return shouldShowHabitEmptyState;`)();
+  assert.equal(shouldShowHabitEmptyState('cat_custom', [], []), false,
+    `${label}: a newly created empty category does not render a placeholder card`);
+  assert.equal(shouldShowHabitEmptyState('cat_custom', [{ id:'later', cat:'cat_custom' }], []), true,
+    `${label}: a category with an assigned off-schedule habit can explain that nothing is scheduled today`);
+  assert.equal(shouldShowHabitEmptyState('all', [], []), true,
+    `${label}: All retains its quiet-day empty state`);
   assert.match(renderHabits, /renderHabitLifecycleActions\(currentCat,\s*'home'\)/,
     `${label}: Home renders the shared action group with its current category scope`);
   assertOrdered(renderHabits, [
@@ -81,8 +93,10 @@ for (const [label, htmlPath] of builds) {
     'renderHabitLifecycleActions(currentCat',
     'completedMarkup',
   ], `${label}: Home places lifecycle actions after incomplete cards and before Completed`);
-  assert.match(renderHabits, /habit-empty[\s\S]*renderHabitLifecycleActions\(currentCat,\s*'home'\)/,
-    `${label}: the no-scheduled-habits message remains above the lifecycle actions`);
+  assert.match(renderHabits, /shouldShowHabitEmptyState\(currentCat,\s*HABITS,\s*sorted\)/,
+    `${label}: Home distinguishes empty categories from assigned habits that are merely off schedule`);
+  assert.doesNotMatch(renderHabits, /`No \$\{currentCat|`\$\{currentCat\} habits scheduled/,
+    `${label}: internal category IDs can never enter the empty-state copy`);
 
   assert.match(html, /id="manageCategoryList"[^>]*><\/div>\s*<div class="habit-lifecycle-actions" id="manageHabitLifecycleActions"/,
     `${label}: Manage owns an action host outside its reorderable habit list`);
@@ -199,7 +213,7 @@ for (const [label, htmlPath] of builds) {
     `${label}: archival never deletes completion, progress, evidence, definition, or order data`);
 
   // Archived habits is an accessible, origin-aware full-screen view.
-  assert.match(html, /<section class="management-view" id="archivedHabitsView" aria-labelledby="archivedHabitsHeading"[^>]*hidden inert>[\s\S]*<h1 id="archivedHabitsHeading">Archived habits<\/h1>[\s\S]*Restore a habit to start tracking it again\.[\s\S]*id="archivedHabitsList"/,
+  assert.match(html, /<section class="management-view" id="archivedHabitsView" aria-labelledby="archivedHabitsHeading"[^>]*hidden inert>[\s\S]*<h1 id="archivedHabitsHeading">Archived habits<\/h1>[\s\S]*Add a habit to start tracking\.[\s\S]*id="archivedHabitsList"/,
     `${label}: Archived habits has the approved full-screen landmark, heading, and intro`);
   assert.match(html, /id="viewAllArchivedHabits"[^>]*>View all archived habits<\/button>/,
     `${label}: scoped archived views can reveal the complete archived catalog`);
@@ -210,8 +224,8 @@ for (const [label, htmlPath] of builds) {
     `${label}: scoped archived empty state uses the exact dynamic copy without extra punctuation`);
   assert.match(renderArchivedHabitsPage, /userOrder\.indexOf[\s\S]*archivedHabitScope/,
     `${label}: archived rows retain canonical order and category scope`);
-  assert.match(renderArchivedHabitsPage, /getCategoryDisplayName[\s\S]*getScheduleSummary[\s\S]*>Restore<\/button>/,
-    `${label}: archived rows show retained category, schedule, and an explicit Restore control`);
+  assert.match(renderArchivedHabitsPage, /getCategoryDisplayName[\s\S]*getScheduleSummary[\s\S]*>Add<\/button>/,
+    `${label}: archived rows show retained category, schedule, and an explicit Add control`);
   assert.match(renderArchivedHabitsPage, /archivedElsewhere[\s\S]*viewAllArchivedHabits\.hidden = !archivedElsewhere[\s\S]*archivedHabitScope = 'all'/,
     `${label}: View all appears only for archived habits outside the current scope and changes only that scope`);
   assert.match(renderArchivedHabitsPage, /isHabitActiveOnDate\(habitCatalogState,\s*habit\.id,\s*archiveDate\) === false[\s\S]*data-archived-habit-id/,
@@ -221,24 +235,24 @@ for (const [label, htmlPath] of builds) {
     `${label}: archived navigation preserves a safe Home or Manage origin and category scope`);
 
   const restoreArchivedHabit = extractFunction(html, 'restoreArchivedHabit');
-  assert.match(restoreArchivedHabit, /assertHabitCatalogStorageIntegrity[\s\S]*getActiveCategoryDefinitions\(categoryState\)[\s\S]*activeCategories\.length === 0[\s\S]*showToast\('Create or restore a category before restoring this habit\.'\)/,
+  assert.match(restoreArchivedHabit, /assertHabitCatalogStorageIntegrity[\s\S]*getActiveCategoryDefinitions\(categoryState\)[\s\S]*activeCategories\.length === 0[\s\S]*showToast\('Create or restore a category before adding this habit\.'\)/,
     `${label}: restore fails closed on malformed catalog data and explains the zero-active-category recovery path`);
   assert.match(restoreArchivedHabit, /category\.archived[\s\S]*restoreHabitCategoryDialog/,
     `${label}: restoring from an archived category requires an active-category choice`);
   assert.match(restoreArchivedHabit, /setHabitActiveOnDate[\s\S]*saveHabitCatalogState[\s\S]*renderArchivedHabitsPage/,
     `${label}: direct restoration persists lifecycle state and keeps the archived screen open`);
-  assert.match(restoreArchivedHabit, /showToast\(`Habit restored to \$\{[^}]+\}\.`\)/,
+  assert.match(restoreArchivedHabit, /showToast\(`Habit added to \$\{[^}]+\}\.`\)/,
     `${label}: direct restoration announces the retained category`);
   assert.match(restoreArchivedHabit, /saveHabitCatalogState[\s\S]*habitCatalogState = nextHabitCatalog[\s\S]*reloadHabits\(restoreNow\)[\s\S]*queueNativeNotificationSync\(\)[\s\S]*renderArchivedHabitsPage/,
     `${label}: direct restoration persists before rebuilding and keeps the archived screen open`);
-  assert.match(html, /id="restoreHabitCategoryDialog"[\s\S]*id="restoreHabitCategoryInput"[\s\S]*id="restoreHabitCategoryConfirm"[\s\S]*id="restoreHabitCategoryCancel"/,
+  assert.match(html, /id="restoreHabitCategoryDialog"[\s\S]*Choose an active category to add it\.[\s\S]*id="restoreHabitCategoryInput"[\s\S]*id="restoreHabitCategoryConfirm"[^>]*>Add habit<\/button>[\s\S]*id="restoreHabitCategoryCancel"/,
     `${label}: archived-category restoration uses a focused active-category chooser`);
   const confirmRestoreHabitCategory = extractFunction(html, 'confirmRestoreHabitCategory');
   assert.match(confirmRestoreHabitCategory, /assertHabitCatalogStorageIntegrity[\s\S]*setHabitCategoryAssignment/,
     `${label}: archived-category confirmation cannot overwrite malformed retained catalog data`);
   assert.match(confirmRestoreHabitCategory, /setHabitCategoryAssignment[\s\S]*setHabitActiveOnDate[\s\S]*commitStorageSnapshot\(localStorage,\s*\{[\s\S]*\[HABIT_CATALOG_KEY\][\s\S]*\[CATEGORY_STATE_KEY\][\s\S]*\}\)[\s\S]*habitCatalogState = nextHabitCatalog[\s\S]*categoryState = nextCategoryState/,
     `${label}: archived-category restoration atomically reassigns and reactivates before mutating globals`);
-  assert.match(confirmRestoreHabitCategory, /reloadHabits\(restoreNow\)[\s\S]*queueNativeNotificationSync\(\)[\s\S]*renderArchivedHabitsPage[\s\S]*showToast\(`Habit restored to \$\{[^}]+\}\.`\)/,
+  assert.match(confirmRestoreHabitCategory, /reloadHabits\(restoreNow\)[\s\S]*queueNativeNotificationSync\(\)[\s\S]*renderArchivedHabitsPage[\s\S]*showToast\(`Habit added to \$\{[^}]+\}\.`\)/,
     `${label}: reassigned restoration stays on the list and announces the chosen category`);
   assert.match(html, /id="toast"[^>]*(?:role="status"[^>]*aria-live="polite"|aria-live="polite"[^>]*role="status")/,
     `${label}: lifecycle confirmations use a polite status live region`);

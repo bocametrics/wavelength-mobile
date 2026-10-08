@@ -168,12 +168,12 @@ for (const [label, htmlPath] of builds) {
   );
   assert.equal(
     getRhythmAnchorText(byId.hydrate.rhythm, { feel:82 }),
-    'Feels like 82°F · Below heat cue',
+    'Feels like 82°F · Heat guidance above 85°F',
     `${label}: a cool-day hydration anchor reports context without implying the habit must wait`,
   );
-  assert.equal(getRhythmAnchorText(byId.hydrate.rhythm, null), 'Heat cue above 85°F', `${label}: denied location keeps the hydration threshold visible`);
-  assert.equal(getRhythmAnchorText(byId.beach.rhythm, null), 'US AQI cue at or below 100', `${label}: denied location keeps the AQI threshold visible`);
-  assert.equal(getRhythmAnchorText(byId.sunscreen.rhythm, null), 'UV cue at 3 or higher', `${label}: denied location keeps the UV threshold visible`);
+  assert.equal(getRhythmAnchorText(byId.hydrate.rhythm, null), 'Heat guidance above 85°F', `${label}: denied location keeps the hydration threshold visible`);
+  assert.equal(getRhythmAnchorText(byId.beach.rhythm, null), 'Outdoor range · AQI 100 or lower', `${label}: denied location keeps the AQI threshold visible`);
+  assert.equal(getRhythmAnchorText(byId.sunscreen.rhythm, null), 'Sun protection at UV 3+', `${label}: denied location keeps the UV threshold visible`);
   assert.match(html, /const rhythm = normalizeRhythmConfig\(h\.rhythm\);[\s\S]*rhythm-anchor-label[\s\S]*getRhythmAnchorText\(rhythm, rhythmWeatherData\)/, `${label}: initial card render uses the same complete fallback helper as live updates`);
   assert.doesNotMatch(html, /rhythm-anchor-label[^`]*RHYTHM_LABELS\[normalizeRhythmConfig\(h\.rhythm\)\.type\]/, `${label}: initial card render does not bypass threshold-aware fallback copy`);
   assert.match(html, /'uv-above': 'When UV index reaches'/, `${label}: Manage describes the inclusive UV comparison accurately`);

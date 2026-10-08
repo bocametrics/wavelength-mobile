@@ -56,12 +56,32 @@ function collectErrors(page) {
     status:document.getElementById('nativeNotificationStatus').textContent,
     calls:window.__nativeNotificationCalls,
     width:{ document:document.documentElement.scrollWidth, viewport:innerWidth },
+    geometry:(() => {
+      const card = document.getElementById('nativeNotificationCard').getBoundingClientRect();
+      const input = document.getElementById('nextWaveNotificationTime').getBoundingClientRect();
+      return { cardLeft:card.left, cardRight:card.right, inputLeft:input.left, inputRight:input.right };
+    })(),
   }));
   assert.equal(initial.enabled, false);
   assert.equal(initial.time, '11:00');
   assert.equal(initial.calls.requested, 0, 'launch does not prompt for notification permission');
   assert.equal(initial.calls.scheduled.length, 0, 'disabled reminders schedule nothing');
   assert.equal(initial.width.document, initial.width.viewport, JSON.stringify(initial.width));
+  assert.ok(initial.geometry.inputLeft > initial.geometry.cardLeft &&
+    initial.geometry.inputRight < initial.geometry.cardRight,
+  `native time field must stay inside its card: ${JSON.stringify(initial.geometry)}`);
+  await page.setViewport({ width:320, height:844, deviceScaleFactor:1 });
+  const narrowGeometry = await page.evaluate(() => {
+    const card = document.getElementById('nativeNotificationCard').getBoundingClientRect();
+    const input = document.getElementById('nextWaveNotificationTime').getBoundingClientRect();
+    return { cardLeft:card.left, cardRight:card.right, inputLeft:input.left, inputRight:input.right,
+      documentWidth:document.documentElement.scrollWidth, viewportWidth:innerWidth };
+  });
+  assert.ok(narrowGeometry.inputLeft > narrowGeometry.cardLeft &&
+    narrowGeometry.inputRight < narrowGeometry.cardRight,
+  `320px native time field must stay inside its card: ${JSON.stringify(narrowGeometry)}`);
+  assert.ok(narrowGeometry.documentWidth <= narrowGeometry.viewportWidth, JSON.stringify(narrowGeometry));
+  await page.setViewport({ width:390, height:844, deviceScaleFactor:1 });
 
   const reminderTime = await page.evaluate(() => {
     const now = new Date();

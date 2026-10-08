@@ -10,7 +10,7 @@ const THEME = process.env.WAVELENGTH_THEME || 'light';
 assert.ok(['light', 'dark'].includes(THEME), 'WAVELENGTH_THEME must be light|dark');
 const ORIGIN = process.env.WAVELENGTH_ORIGIN || 'http://127.0.0.1:8791';
 const SHOT_DIR = process.env.WAVELENGTH_SHOT_DIR || 'C:\\Temp\\habit-lifecycle-phase12';
-const SOURCE_HASH = process.env.WAVELENGTH_SOURCE_SHA256 || 'b1d5266dd8430415a43651a2347ef8b8582b31f267f72fa9d07251b72c50f6c2';
+const SOURCE_HASH = process.env.WAVELENGTH_SOURCE_SHA256 || '715f688d9e38062bbc8f11c3da6d2124d285833392f038da0b332f1cddb44b88';
 assert.match(SOURCE_HASH, /^[0-9a-f]{64}$/, 'Expected source hash must be an exact SHA-256');
 const FIXED_NOW = '2026-10-05T14:00:00.000Z';
 const sha256 = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
@@ -182,6 +182,12 @@ async function archive(id, screenshot=false) {
     });
     await scenario(2,'Home category launch and preselected create category',async()=>{
       await category('morning'); check('Category lifecycle scope',await page.$eval(homeAction('create'),n=>n.dataset.categoryId),'morning');
+      check('Category lifecycle spacing',await page.evaluate(()=>{
+        const actions=document.querySelector('#habitList .habit-lifecycle-actions');
+        const primary=actions.querySelector('.habit-lifecycle-primary').getBoundingClientRect();
+        const secondary=actions.querySelector('.habit-lifecycle-secondary').getBoundingClientRect();
+        return {listGap:getComputedStyle(actions.parentElement).gap,actionGap:secondary.top-primary.bottom};
+      }),{listGap:'8px',actionGap:4});
       await shot('home-category',homeAction('create')); await click(homeAction('create')); await view('habitEditorView');
       check('Create category preselected',await page.$eval('#habitCategoryInput',n=>n.value),'morning');
       check('Create launch origin',await page.evaluate(()=>habitEditorOrigin),'home'); await shot('new-habit-category');
@@ -323,6 +329,8 @@ async function archive(id, screenshot=false) {
       evidence.fixtures.push({scenario:8,kind:'runtime hard edge',detail:'Retained archived medication with nonempty previous-day completion history assigned to archived Legacy care via real lifecycle/category/insight model helpers.'});
       const retained=await snapshot('medication');check('Archived-category fixture has nonempty retained completion evidence',Object.values(retained.evidence).some(x=>x.completion));
       await click('[data-restore-habit-id="medication"]'); check('Archived-category chooser opens',await page.$eval('#restoreHabitCategoryDialog',n=>n.open));
+      check('Chooser guidance uses Add language',await page.$eval('#restoreHabitCategoryDialog .habit-lifecycle-dialog-message',n=>n.textContent),'The habit’s previous category is archived. Choose an active category to add it.');
+      check('Chooser confirmation uses Add language',await page.$eval('#restoreHabitCategoryConfirm',n=>n.textContent),'Add habit');
       check('Chooser excludes archived categories',await page.$$eval('#restoreHabitCategoryInput option',ns=>ns.every(n=>n.value!=='cat_deadbeef'))); await shot('restore-category-chooser');
       await page.keyboard.press('Escape'); check('Chooser Escape cancels',await page.$eval('#restoreHabitCategoryDialog',n=>!n.open)); check('Escape clears restoring identity',await page.evaluate(()=>restoringArchivedHabitId),null); check('Escape leaves retained data',await snapshot('medication'),retained);
       await click('[data-restore-habit-id="medication"]'); await select('#restoreHabitCategoryInput','movement');
@@ -346,9 +354,11 @@ async function archive(id, screenshot=false) {
     });
     await scenario(9,'Global/scoped empty states, conditional View all, canonical archive order',async()=>{
       await category('morning');await click(homeAction('archived'));await view('archivedHabitsView');
+      check('Archived intro uses Add language',await page.$eval('.archived-habits-intro',n=>n.textContent),'Add a habit to start tracking.');
       check('Scoped empty copy exact',await page.$eval('#archivedHabitsList',n=>n.textContent.trim()),'No archived habits in Morning');
       check('View all when archive exists elsewhere',await isVisible('#viewAllArchivedHabits'));await click('#viewAllArchivedHabits');
-      check('Global archive contains shipped medication',await page.$$eval('[data-archived-habit-id]',ns=>ns.map(n=>n.dataset.archivedHabitId)),['medication']);await shot('archived-populated');
+      check('Global archive contains shipped medication',await page.$$eval('[data-archived-habit-id]',ns=>ns.map(n=>n.dataset.archivedHabitId)),['medication']);
+      check('Archived row action uses Add language',await page.$eval('[data-restore-habit-id="medication"]',n=>n.textContent),'Add');await shot('archived-populated');
       check('Global hides View all',await isVisible('#viewAllArchivedHabits'),false);await click('[data-restore-habit-id="medication"]');
       check('Global empty headline exact',await page.$eval('.management-empty p:first-child',n=>n.textContent),'No archived habits yet');check('Global empty guidance exact',await page.$eval('.management-empty p:last-child',n=>n.textContent),'Habits you archive will appear here.');await shot('archived-empty');
       await click('#archivedHabitsBack');await home();await category('all');await click('#manageBtn');await view('manageCategoryView');
