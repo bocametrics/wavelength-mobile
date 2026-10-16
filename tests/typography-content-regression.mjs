@@ -26,10 +26,16 @@ const expectedNotes = {
   affirm:'Choose words that encourage you',
   hydrate:'Set an amount that works for you',
   strength:'Use bodyweight or bands',
-  cardio:'Run, bike, dance, or do intervals',
+  beach:'Walk, roll, hike, swim or paddle',
+  cardio:'Run, bike, dance or do intervals',
+  learn:'Practice, recall or research',
+  goals:'Name the outcomes that matter',
+  breakfast:'Choose what suits your morning',
   supplements:'Follow your usual routine',
-  medication:'Follow your prescribed directions',
-  sunscreen:'Shade, clothing, hat, or sunscreen',
+  medication:'Follow prescribed directions',
+  dinner:'Leave time to wind down for bed',
+  sunscreen:'Shade, clothing, hat, sunscreen',
+  sleep:"Allow a full night's sleep",
 };
 
 for (const [label, htmlPath] of builds) {
@@ -43,13 +49,15 @@ for (const [label, htmlPath] of builds) {
   for (const [id, expected] of Object.entries(expectedNotes)) {
     assert.equal(byId[id].note, expected, `${label}: ${id} uses the concise reviewed card summary`);
   }
-  assert.ok(habits.every(habit => habit.note.length <= 42), `${label}: shipped card summaries stay within the 42-character authoring budget`);
-  assert.match(html, /const HABIT_CARD_NOTE_MAX = 42;/, `${label}: the card-summary authoring limit is explicit`);
-  assert.match(html, /class="eh-note" maxlength="\$\{HABIT_CARD_NOTE_MAX\}"/, `${label}: Manage applies the shared card-summary limit`);
+  assert.ok(habits.every(habit => habit.text.length <= 30), `${label}: shipped titles stay within the 30-character authoring budget`);
+  assert.equal(byId.sunscreen.text, 'Use sun protection outdoors', `${label}: outdoor protection title keeps its action and setting within the new budget`);
+  assert.ok(habits.every(habit => habit.note.length <= 32), `${label}: shipped card summaries stay within the 32-character authoring budget`);
+  assert.match(html, /const HABIT_CARD_NOTE_MAX = 32;/, `${label}: the new card-summary authoring limit is explicit`);
+  assert.match(html, /id="habitNoteInput"[^>]*maxlength="32"/, `${label}: new descriptions use the new authoring limit`);
   assert.match(html, /class="eh-note-count"[^>]*>\$\{[^}]*\.length\} \/ \$\{HABIT_CARD_NOTE_MAX\}</, `${label}: Manage shows a live description counter`);
-  assert.match(html, /note\.length > HABIT_CARD_NOTE_MAX && note !== originalNote/, `${label}: edited over-limit legacy descriptions fail closed`);
-  assert.match(html, /Use 42 characters or fewer for the card description/, `${label}: the description error explains the limit`);
-  assert.match(html, /input\.nextElementSibling\.textContent = `\$\{input\.value\.length\} \/ \$\{HABIT_CARD_NOTE_MAX\}`/, `${label}: the counter updates without injecting user content`);
+  assert.match(html, /note\.length > HABIT_CARD_NOTE_MAX && note !== originalNote/, `${label}: editing a legacy description enforces the new budget only if changed`);
+  assert.match(html, /Use 32 characters or fewer for the card description/, `${label}: the description error explains the new limit`);
+  assert.match(html, /\.textContent = `\$\{[^\n]*\.length\} \/ \$\{HABIT_CARD_NOTE_MAX\}`/, `${label}: counter updates use text content, not user-supplied HTML`);
   assert.match(html, /body\s*\{[\s\S]*?font-family:\s*-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;/,
     `${label}: the app explicitly uses the native system font stack`);
   assert.doesNotMatch(html, /@import\s+url\(['"]https:\/\/fonts\.googleapis\.com\//,

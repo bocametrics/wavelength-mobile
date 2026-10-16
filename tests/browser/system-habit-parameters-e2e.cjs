@@ -58,7 +58,7 @@ let browser;
     return {
       id:habit.id,
       titleCount:row.querySelectorAll('.eh-system-title').length,
-      editableTitleCount:row.querySelectorAll('input.eh-text[type="text"]').length,
+      editableTitleCount:row.querySelectorAll('input.eh-text[type="text"], textarea.eh-text:not([readonly])').length,
       visibleRhythmEditors:[...row.querySelectorAll('.eh-rhythm-block')].filter(element => !element.hidden).length,
       anchorCount:row.querySelectorAll('.eh-system-anchor').length,
       hasWeight:!!row.querySelector('.eh-weight'),
@@ -78,13 +78,13 @@ let browser;
     wake.dispatchEvent(new Event('input', { bubbles:true }));
     wake.dispatchEvent(new Event('change', { bubbles:true }));
   });
-  assert.equal(await page.$eval('#habitEditorBody .eh-system-title', element => element.textContent), 'Wake at 7:45 AM');
+  assert.equal(await page.$eval('#habitEditorBody .eh-system-title', element => [element.querySelector('.eh-system-name').textContent, element.querySelector('.eh-system-target')?.textContent].filter(Boolean).join(' ').trim()), 'Wake at 7:45 AM');
   await page.evaluate(() => {
     const wake = document.querySelector('#habitEditorBody .eh-param-targetTime');
     wake.value = '08:00';
     wake.dispatchEvent(new Event('change', { bubbles:true }));
   });
-  assert.equal(await page.$eval('#habitEditorBody .eh-system-title', element => element.textContent), 'Wake at 8:00 AM');
+  assert.equal(await page.$eval('#habitEditorBody .eh-system-title', element => [element.querySelector('.eh-system-name').textContent, element.querySelector('.eh-system-target')?.textContent].filter(Boolean).join(' ').trim()), 'Wake at 8:00 AM');
   const discardDialog = new Promise((resolve, reject) => {
     page.once('dialog', async dialog => {
       try {
@@ -109,7 +109,7 @@ let browser;
     const overrides = JSON.parse(localStorage.getItem('wavelength_wpb_habits'));
     const row = document.querySelector('#habitEditorBody .edit-habit');
     return {
-      title:row.querySelector('.eh-system-title').textContent,
+      title:[row.querySelector('.eh-system-name').textContent, row.querySelector('.eh-system-target')?.textContent].filter(Boolean).join(' ').trim(),
       time:row.querySelector('.eh-param-targetTime').value,
       stored:overrides.sleep,
       rhythmVisible:!row.querySelector('.eh-rhythm-block').hidden,
@@ -129,11 +129,11 @@ let browser;
   });
   await page.reload({ waitUntil:'networkidle0' });
   await openEditor('sleep');
-  assert.equal(await page.$eval('#habitEditorBody .eh-system-title', element => element.textContent), 'Sleep when the moon feels right');
+  assert.equal(await page.$eval('#habitEditorBody .eh-system-title', element => [element.querySelector('.eh-system-name').textContent, element.querySelector('.eh-system-target')?.textContent].filter(Boolean).join(' ').trim()), 'Sleep when the moon feels right');
   await activate('#habitEditorSave');
   await openEditor('sleep');
   assert.deepEqual(await page.evaluate(() => ({
-    title:document.querySelector('#habitEditorBody .eh-system-title').textContent,
+    title:[document.querySelector('#habitEditorBody .eh-system-name').textContent, document.querySelector('#habitEditorBody .eh-system-target')?.textContent].filter(Boolean).join(' ').trim(),
     stored:JSON.parse(localStorage.getItem('wavelength_wpb_habits')).sleep,
   })), {
     title:'Sleep when the moon feels right', stored:{ text:'Sleep when the moon feels right' },
@@ -147,11 +147,11 @@ let browser;
   });
   await page.reload({ waitUntil:'networkidle0' });
   await openEditor('affirm');
-  assert.equal(await page.$eval('#habitEditorBody .eh-system-title', element => element.textContent), 'A legacy affirming phrase');
+  assert.equal(await page.$eval('#habitEditorBody .eh-system-title', element => [element.querySelector('.eh-system-name').textContent, element.querySelector('.eh-system-target')?.textContent].filter(Boolean).join(' ').trim()), 'A legacy affirming phrase');
   await activate('#habitEditorSave');
   await openEditor('affirm');
   assert.deepEqual(await page.evaluate(() => ({
-    title:document.querySelector('#habitEditorBody .eh-system-title').textContent,
+    title:[document.querySelector('#habitEditorBody .eh-system-name').textContent, document.querySelector('#habitEditorBody .eh-system-target')?.textContent].filter(Boolean).join(' ').trim(),
     stored:JSON.parse(localStorage.getItem('wavelength_wpb_habits')).affirm,
   })), { title:'A legacy affirming phrase', stored:{ text:'A legacy affirming phrase' } });
 
@@ -179,7 +179,7 @@ let browser;
     const row = document.querySelector('#habitEditorBody .edit-habit');
     return {
       toast:document.getElementById('toast').textContent,
-      title:row.querySelector('.eh-system-title').textContent,
+      title:[row.querySelector('.eh-system-name').textContent, row.querySelector('.eh-system-target')?.textContent].filter(Boolean).join(' ').trim(),
       time:row.querySelector('.eh-param-targetTime').value,
       grandfathered:row.dataset.grandfatheredTitle,
       stored:JSON.parse(localStorage.getItem('wavelength_wpb_habits')).wake,
@@ -195,7 +195,7 @@ let browser;
     wake.value = '07:45';
     wake.dispatchEvent(new Event('change', { bubbles:true }));
   });
-  assert.equal(await page.$eval('#habitEditorBody .eh-system-title', element => element.textContent), 'Wake at 7:45 AM');
+  assert.equal(await page.$eval('#habitEditorBody .eh-system-title', element => [element.querySelector('.eh-system-name').textContent, element.querySelector('.eh-system-target')?.textContent].filter(Boolean).join(' ').trim()), 'Wake at 7:45 AM');
 
   assert.deepEqual(errors, []);
   console.log(`system habit parameters 390px ${THEME} Edge flow passed`);

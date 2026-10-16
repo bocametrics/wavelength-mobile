@@ -356,16 +356,23 @@ for (const [label, htmlPath] of builds) {
     `${label}: measured completion synchronizes prospective evidence`);
   assert.match(html, /resetHabitDay\(state, resetDate\)[\s\S]*clearInsightDate\(insightHistory, resetDate\)[\s\S]*renderInsights\(resetDate\)/,
     `${label}: Reset today removes the date's evidence and requires a fresh finalized cue`);
-  assert.match(html, /function saveHabitEditorForm\(\)[\s\S]*saveState\(\);[\s\S]*saveInsightHistory\(editDate\);[\s\S]*renderHabits\(editDate\)/,
-    `${label}: Manage changes remove completion evidence invalidated by a goal edit`);
+  const systemHabitSave = extractFunction(html, 'saveHabitEditorForm');
+  assert.match(systemHabitSave, /reconcileMeasurementTypeChanges\(nextState\.done, nextState\.progress,[\s\S]*reconcileMeasuredDay\(nextState\.done, nextState\.progress,[\s\S]*normalizeInsightHistoryAgainstState\(nextInsightHistory, nextState, false\)/,
+    `${label}: Manage stages completion/evidence reconciliation before committing a goal edit`);
+  assert.match(systemHabitSave, /commitStorageSnapshot\(localStorage,\s*\{[\s\S]*\[CUSTOM_HABITS_KEY\][\s\S]*\[CATEGORY_STATE_KEY\][\s\S]*\[STORAGE_KEY\][\s\S]*\[INSIGHT_STORAGE_KEY\]/,
+    `${label}: system goal edits commit configuration, category, progress and Insights together`);
+  assert.doesNotMatch(systemHabitSave, /\bsaveState\(|\bsaveInsightHistory\(/,
+    `${label}: no separate late persistence can split a completed system edit transaction`);
+  assert.match(systemHabitSave, /renderingCommittedHabitEditorSnapshot = true;[\s\S]*renderHabits\(editDate\);[\s\S]*finally[\s\S]*renderingCommittedHabitEditorSnapshot = false;/,
+    `${label}: committed system edits render without unjournaled streak/evidence writes`);
 
   if (label === 'mobile') {
     assert.match(html, /function createBackupPayload\(\)[\s\S]*normalizeInsightHistoryAgainstState\([\s\S]*state, false\)/,
       `${label}: backup export repairs contradictory local evidence before serializing it`);
-    assert.match(html, /const BACKUP_VERSION = 9;/, `${label}: personalized backups identify the version-9 lifecycle and evidence schema`);
+    assert.match(html, /const BACKUP_VERSION = 10;/, `${label}: personalized backups identify v10 while retaining lifecycle and evidence schemas`);
     assert.match(html, /const backupInsightHistory = normalizeInsightHistory\(insightHistory, ALL_HABITS, false\)[\s\S]*insightHistory:\s*backupInsightHistory/,
       `${label}: version-9 backups retain validated evidence for active and archived habits`);
-    assert.match(html, /!\[1, 2, 3, 4, 5, 6, 7, 8, BACKUP_VERSION\]\.includes\(payload\.version\)/,
+    assert.match(html, /!\[1, 2, 3, 4, 5, 6, 7, 8, 9, BACKUP_VERSION\]\.includes\(payload\.version\)/,
       `${label}: version-1 through version-8 backups remain importable`);
     assert.match(html, /payload\.version === 1 && !payload\.insightHistory\s*\?\s*normalizeInsightHistory\(null, importedAllHabits\)\s*:\s*normalizeInsightHistory\(payload\.insightHistory, importedAllHabits, true\)/,
       `${label}: evidence-free v1 imports remain empty while active and archived evidence documents migrate`);

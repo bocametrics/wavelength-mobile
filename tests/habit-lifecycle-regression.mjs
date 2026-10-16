@@ -58,7 +58,8 @@ function loadLifecycleFunctions(source) {
     'HABIT_CATALOG_KEY',
     'MAX_CUSTOM_HABITS',
   ];
-  const dependencyConstants = ['RHYTHM_TYPES'];
+  const dependencyConstants = ['RHYTHM_TYPES', 'HABIT_NAME_MAX', 'HABIT_CARD_NOTE_MAX']
+    .filter(name => new RegExp(`const ${name}\\s*=`).test(source));
   const names = [
     'createDefaultHabitCatalogState',
     'normalizeHabitIcon',
@@ -91,7 +92,11 @@ function loadLifecycleFunctions(source) {
     'normalizePreferenceWindow',
     'isConciseRhythmNote',
     'normalizeRhythmConfig',
+    'getHabitEditorValidationErrors',
     'isValidDateKey',
+    'createDefaultCustomNextWaveState',
+    'normalizeCustomNextWaveState',
+    'deriveCustomRecommendationContext',
   ];
   const availableDependencies = dependencyNames
     .filter(name => source.includes(`function ${name}(`))
@@ -319,12 +324,18 @@ for (const [label, htmlPath] of builds) {
     /count|whole|target|measurement/i, `${label}: create mode validates Count configuration`);
   assert.throws(() => normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning', text:'A named habit', measurement:'amount', target:1, step:1, unit:'' }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
     /amount|unit|measurement/i, `${label}: create mode validates Amount configuration`);
-  assert.doesNotThrow(() => normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning', text:'x'.repeat(48), note:'y'.repeat(42) }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
-    `${label}: create mode accepts the exact 48/42 character limits`);
-  assert.throws(() => normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning', text:'x'.repeat(49) }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
-    /48|name|text/i, `${label}: create mode rejects a 49-character name`);
-  assert.throws(() => normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning', text:'A named habit', note:'y'.repeat(43) }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
-    /42|description|note/i, `${label}: create mode rejects a 43-character description`);
+  for (const unit of ['ＯＺ', 'two  units']) {
+    assert.equal(normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning', text:'Literal unit test', measurement:'amount', target:10, step:1, unit }, defaults, activeCategoryIds, migrationDate, () => newHabitToken).unit,
+      unit, `${label}: create preserves literal unit glyphs and internal spacing`);
+  }
+  assert.throws(() => normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning', text:'Raw note budget', note:'ab  ab  ab  ab  ab  ab  ab  ab  ab' }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
+    /32|description|note/i, `${label}: real create authoring agrees with the raw description counter budget`);
+  assert.doesNotThrow(() => normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning', text:'x'.repeat(30), note:'y'.repeat(32) }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
+    `${label}: create mode accepts the approved 30/32 authoring budgets`);
+  assert.throws(() => normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning', text:'x'.repeat(31) }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
+    /30|name|text|title/i, `${label}: create mode rejects a 31-character new name`);
+  assert.throws(() => normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning', text:'A named habit', note:'y'.repeat(33) }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
+    /32|description|note/i, `${label}: create mode rejects a 33-character new description`);
   for (const invisible of ['\u00ad', '\u034f', '\u061c', '\u180e', '\u200b', '\u2060', '\u2061', '\u2062', '\u2063', '\u2064', '\ufeff']) {
     assert.throws(() => normalizeNewCustomHabitDraft({ ...blankDraft, cat:'morning', text:`Wa${invisible}lk` }, defaults, activeCategoryIds, migrationDate, () => newHabitToken),
       /safe|name|text/i, `${label}: create mode rejects invisible U+${invisible.codePointAt(0).toString(16).toUpperCase()} in habit names`);
@@ -379,7 +390,7 @@ for (const [label, htmlPath] of builds) {
   });
   const { preferenceWindow:ignoredPreference, ...draftWithoutPreference } = existingWithPreference;
   const updatedWithPreservedPreference = plain(normalizeExistingCustomHabitDraft(
-    { ...draftWithoutPreference, note:'Updated without preferred-time authoring' },
+    { ...draftWithoutPreference, note:'Updated while keeping time' },
     existingWithPreference, [...defaults, existingWithPreference], activeCategoryIds,
   ));
   assert.deepEqual(updatedWithPreservedPreference.preferenceWindow, existingWithPreference.preferenceWindow,

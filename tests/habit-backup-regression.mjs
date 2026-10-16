@@ -86,8 +86,8 @@ function assertOrdered(source, tokens, message) {
 for (const [label, htmlPath] of builds) {
   const html = fs.readFileSync(htmlPath, 'utf8');
 
-  assert.match(html, /const BACKUP_VERSION\s*=\s*9\s*;/,
-    `${label}: habit lifecycle backups advance to version 9`);
+  assert.match(html, /const BACKUP_VERSION\s*=\s*10\s*;/,
+    `${label}: portable backups advance to version 10 without weakening lifecycle compatibility`);
 
   const exporter = extractFunction(html, 'createBackupPayload');
   assert.match(exporter, /habitCatalog\s*:\s*normalizeHabitCatalogState\(/,
@@ -100,11 +100,11 @@ for (const [label, htmlPath] of builds) {
     `${label}: v9 export retains completion, progress, and evidence documents`);
 
   const importer = extractFunction(html, 'importBackupFile');
-  assert.match(importer, /\[1,\s*2,\s*3,\s*4,\s*5,\s*6,\s*7,\s*8,\s*BACKUP_VERSION\]\.includes\(payload\.version\)/,
-    `${label}: versions 1 through 8 remain importable under v9`);
-  assert.match(importer, /payload\.version === BACKUP_VERSION && !payload\.habitCatalog/,
+  assert.match(importer, /\[1,\s*2,\s*3,\s*4,\s*5,\s*6,\s*7,\s*8,\s*9,\s*BACKUP_VERSION\]\.includes\(payload\.version\)/,
+    `${label}: versions 1 through 9 remain importable under v10`);
+  assert.match(importer, /payload\.version >= 9 && !payload\.habitCatalog/,
     `${label}: a v9 document without its lifecycle catalog fails closed`);
-  assert.match(importer, /const importedHabitCatalog = payload\.version === BACKUP_VERSION[\s\S]*normalizeHabitCatalogState\(payload\.habitCatalog[\s\S]*createDefaultHabitCatalogState\(dateKey\(importDate\)\)/,
+  assert.match(importer, /const importedHabitCatalog = payload\.version >= 9[\s\S]*normalizeHabitCatalogState\(payload\.habitCatalog[\s\S]*createDefaultHabitCatalogState\(dateKey\(importDate\)\)/,
     `${label}: v9 validates its catalog while v1-v8 synthesize deterministic schema-1 migration state`);
   assert.match(importer, /const importedCategoryIds[\s\S]*normalizeHabitCatalogState\(payload\.habitCatalog/,
     `${label}: custom definitions validate against the imported category identity set`);
@@ -121,7 +121,7 @@ for (const [label, htmlPath] of builds) {
     'commitStorageSnapshot',
   ], `${label}: v9 import validates every cross-reference before its atomic write`);
 
-  assert.match(importer, /normalizeImportedHabitOrder\(\s*payload\.order,\s*payload\.version === BACKUP_VERSION \? importedCompleteHabits : DEFAULT_HABITS,?\s*\)/,
+  assert.match(importer, /normalizeImportedHabitOrder\(\s*payload\.order,\s*payload\.version >= 9 \? importedCompleteHabits : DEFAULT_HABITS,?\s*\)/,
     `${label}: v9 order validates against custom and archived identities while legacy order migration stays compatible`);
   assert.match(importer, /normalizeCategoryState\(payload\.categoryState, importedCompleteHabits, true, importedActiveHabits\)/,
     `${label}: category references validate against complete and date-effective active imported catalogs`);
@@ -143,13 +143,14 @@ for (const [label, htmlPath] of builds) {
     'CATEGORY_STATE_KEY',
     'CUSTOM_HABITS_KEY',
     'HABIT_CATALOG_KEY',
+    'CUSTOM_NEXT_WAVE_KEY',
   ];
   for (const constantName of snapshotConstantNames) {
     assert.match(snapshotSource, new RegExp(`\\[${constantName}\\]\\s*:`),
       `${label}: atomic import includes ${constantName}`);
   }
-  assert.equal((snapshotSource.match(/^\s*\[[A-Z_]+\]\s*:/gm) || []).length, 7,
-    `${label}: atomic import snapshot contains exactly seven persisted documents`);
+  assert.equal((snapshotSource.match(/^\s*\[[A-Z_]+\]\s*:/gm) || []).length, 8,
+    `${label}: atomic import snapshot contains exactly eight persisted documents`);
   assert.match(importer, /commitStorageSnapshot\(localStorage, importedSnapshot\)[\s\S]*habitCatalogState = importedHabitCatalog[\s\S]*reloadHabits\(importDate\)/,
     `${label}: runtime adopts the committed lifecycle catalog before rebuilding active habits`);
 
@@ -170,7 +171,8 @@ for (const [label, htmlPath] of builds) {
     CATEGORY_STATE_KEY:'wavelength_categories_v1',
     CUSTOM_HABITS_KEY:'wavelength_wpb_habits',
     HABIT_CATALOG_KEY:'wavelength_habit_catalog_v1',
-  }, `${label}: the journaled snapshot resolves to the app's seven authoritative persistence keys`);
+    CUSTOM_NEXT_WAVE_KEY:'wavelength_custom_next_wave_v1',
+  }, `${label}: the journaled snapshot resolves to the app's eight authoritative persistence keys`);
   const original = Object.fromEntries(
     Object.values(resolvedKeys).map(key => [key, `old-${key}`]),
   );
@@ -178,21 +180,21 @@ for (const [label, htmlPath] of builds) {
     Object.keys(original).map(key => [key, `new-${key}`]),
   );
   const journalKey = extractStringConstant(html, 'IMPORT_JOURNAL_KEY');
-  for (let failAt = 1; failAt <= 9; failAt += 1) {
+  for (let failAt = 1; failAt <= 10; failAt += 1) {
     const storage = makeStorage(original, failAt);
     assert.throws(() => commitStorageSnapshot(storage, replacement), /injected quota failure/,
       `${label}: mutation ${failAt} reaches the atomic import boundary`);
     assert.deepEqual(Object.fromEntries(storage.values), original,
-      `${label}: mutation ${failAt} restores all seven authoritative documents`);
+      `${label}: mutation ${failAt} restores all eight authoritative documents`);
     assert.equal(storage.values.has(journalKey), false,
       `${label}: mutation ${failAt} leaves no completed recovery journal behind`);
   }
   const successfulStorage = makeStorage(original);
   commitStorageSnapshot(successfulStorage, replacement);
   assert.deepEqual(Object.fromEntries(successfulStorage.values), replacement,
-    `${label}: successful atomic import commits all seven authoritative documents`);
+    `${label}: successful atomic import commits all eight authoritative documents`);
   assert.equal(successfulStorage.values.has(journalKey), false,
     `${label}: successful atomic import removes its recovery journal`);
 }
 
-console.log('habit backup v9 regression tests passed for mobile and desktop');
+console.log('habit backup v10 with v9 compatibility regression tests passed for mobile and desktop');

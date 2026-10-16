@@ -83,14 +83,14 @@ const expectedIdentities = {
 
 const expectedCrosswalkNotes = {
   hydrate:'Set an amount that works for you',
-  cardio:'Run, bike, dance, or do intervals',
-  learn:'Practice, recall, or focused research',
+  cardio:'Run, bike, dance or do intervals',
+  learn:'Practice, recall or research',
   journal:'One insight, sentence, or page',
-  breakfast:'Choose what works for your morning',
+  breakfast:'Choose what suits your morning',
   lunch:'Choose what works for your day',
-  dinner:'Leave time to wind down before bed',
+  dinner:'Leave time to wind down for bed',
   winddown:'Dim lights and put screens away',
-  sleep:"Make room for a full night's sleep",
+  sleep:"Allow a full night's sleep",
 };
 
 const targetCases = [

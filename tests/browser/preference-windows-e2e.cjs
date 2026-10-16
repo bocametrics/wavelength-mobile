@@ -42,9 +42,10 @@ let browser;
       hasField:!!row?.querySelector('.eh-preference'),
       eligible:isEligibleForPreferenceWindow(HABITS.find(habit => habit.id === 'stretch')),
       heading:document.getElementById('habitEditorHeading').textContent.trim(),
+      identity:row.querySelector('.eh-system-name').textContent.trim(),
     };
   });
-  assert.deepEqual(fieldPresence, { hasField:true, eligible:true, heading:'Mobility' });
+  assert.deepEqual(fieldPresence, { hasField:true, eligible:true, heading:'Edit Habit', identity:'Mobility' });
 
   await page.evaluate(() => {
     const input = document.querySelector('#habitEditorBody .eh-preference');
@@ -64,7 +65,7 @@ let browser;
     };
   });
   assert.deepEqual(stored, {
-    override:{ idealStart:435, idealEnd:465 }, backupVersion:9,
+    override:{ idealStart:435, idealEnd:465 }, backupVersion:10,
     payloadOverride:{ idealStart:435, idealEnd:465 }, runtimeStretch:{ idealStart:435, idealEnd:465 },
   });
 

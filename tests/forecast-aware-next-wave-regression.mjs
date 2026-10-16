@@ -44,6 +44,9 @@ function loadFunctions(html) {
   assert.ok(softRefreshPolicy, 'ENVIRONMENT_SOFT_REFRESH_MS is missing');
   const rhythmPrelude = html.match(/const RHYTHM_TYPES\s*=\s*[^;]+;/);
   assert.ok(rhythmPrelude, 'rhythm constants are missing');
+  const defaultsPrelude = html.match(/const DEFAULT_HABITS = (\[[\s\S]*?\n\]);/);
+  const systemIdsPrelude = html.match(/const SYSTEM_HABIT_IDS\s*=\s*[^;]+;/);
+  assert.ok(defaultsPrelude && systemIdsPrelude, 'actual shipped identity constants are missing');
   const names = [
     'normalizeMeasurementConfig',
     'getHabitProgress',
@@ -73,7 +76,7 @@ function loadFunctions(html) {
   const context = {};
   vm.createContext(context);
   vm.runInContext(
-    `${opportunityPolicy[0]}\n${softRefreshPolicy[0]}\n${freshnessPolicy[0]}\n${rhythmPrelude[0]}\n` +
+    `${defaultsPrelude[0]}\n${systemIdsPrelude[0]}\n${opportunityPolicy[0]}\n${softRefreshPolicy[0]}\n${freshnessPolicy[0]}\n${rhythmPrelude[0]}\n` +
     `${names.map(name => extractFunction(html, name)).join('\n')}\n` +
     `globalThis.exports = { ${names.join(', ')} };`,
     context,
@@ -246,12 +249,12 @@ for (const [label, htmlPath] of builds) {
   ], { uv:null });
   assert.deepEqual(plain(getNextWaveSuggestion([sunscreen], {}, {}, sunTime, forecastUv)), {
     habitId:'sunscreen', category:'hygiene', icon:'🧴', reason:'forecast-uv', eyebrow:'Suggested now',
-    title:'Sun protection before outdoor time', targetLabel:'',
+    title:'Use sun protection outdoors', targetLabel:'',
     detail:'Forecast UV 4 · Protect before going out.', action:'View habit',
   }, `${label}: sun protection can use a fresh hourly UV forecast without treating two minutes as outdoor exposure`);
   assert.deepEqual(plain(getNextWaveSuggestion([sunscreen], {}, {}, sunTime, { ...forecastUv, uv:4 })), {
     habitId:'sunscreen', category:'hygiene', icon:'🧴', reason:'uv-protect', eyebrow:'Suggested now',
-    title:'Sun protection before outdoor time', targetLabel:'',
+    title:'Use sun protection outdoors', targetLabel:'',
     detail:'UV 4 · Protection matters now', action:'View habit',
   }, `${label}: a live UV reading keeps the established current-condition copy`);
   assert.deepEqual(plain(getNextWaveSuggestion([sunscreen, beach], {}, {}, sunTime, {

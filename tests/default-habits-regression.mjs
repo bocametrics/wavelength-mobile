@@ -72,15 +72,15 @@ for (const [label, htmlPath] of builds) {
   const publicCopy = habits.map(habit => `${habit.text} ${habit.note}`).join(' ');
   assert.doesNotMatch(publicCopy, /Florida|WPB|West Palm|coloring book|markets, bio/i, `${label}: default habit copy is location and project agnostic`);
   assert.equal(byId.beach.text, 'Outdoor walk or movement', `${label}: the beach-specific habit becomes universally usable`);
-  assert.equal(byId.medication.note, 'Follow your prescribed directions', `${label}: medication copy stays concise and defers to prescribed directions`);
+  assert.equal(byId.medication.note, 'Follow prescribed directions', `${label}: medication copy stays concise and defers to prescribed directions`);
   assert.equal(byId.supplements.cat, 'fuel', `${label}: supplements live in Fuel`);
   assert.equal(byId.supplements.text, 'Take supplements', `${label}: supplements are distinct from prescribed medication`);
   assert.equal(byId.supplements.note, 'Follow your usual routine', `${label}: supplements avoid dosage or medical-timing advice`);
   assert.equal(byId.supplements.activeFrom, '2026-08-28', `${label}: supplements do not rewrite pre-release history`);
   assert.doesNotMatch(`${byId.supplements.text} ${byId.supplements.note}`, /medication|prescrib/i, `${label}: supplement copy stays distinct from medicine`);
-  assert.ok(habits.every(habit => habit.text.length <= 48), `${label}: default titles fit the concise Manage limit`);
-  assert.ok(habits.every(habit => habit.note.length <= 42), `${label}: default descriptions fit the concise Manage limit`);
-  assert.equal(byId.sleep.note, "Make room for a full night's sleep", `${label}: sleep copy uses a general adult minimum rather than local sunrise`);
+  assert.ok(habits.every(habit => habit.text.length <= 30), `${label}: default titles fit the approved concise authoring budget`);
+  assert.ok(habits.every(habit => habit.note.length <= 32), `${label}: default descriptions fit the approved concise authoring budget`);
+  assert.equal(byId.sleep.note, "Allow a full night's sleep", `${label}: sleep copy retains general full-night intent rather than local sunrise`);
   assert.equal(byId.gratitude.note, 'Notice what went well today', `${label}: gratitude copy avoids an unsupported neurological claim`);
 
   assert.deepEqual(byId.hydrate.rhythm, {
@@ -147,7 +147,7 @@ for (const [label, htmlPath] of builds) {
   assert.throws(() => normalizeImportedHabitOrder(['wake', 'wake'], habits), /not compatible/i, `${label}: backup order rejects duplicate IDs`);
   assert.throws(() => normalizeImportedHabitOrder(['wake', 'future-id'], habits), /not compatible/i, `${label}: backup order rejects unknown IDs`);
   if (label === 'mobile') {
-    assert.match(html, /const importedOrder = normalizeImportedHabitOrder\(\s*payload\.order,\s*payload\.version === BACKUP_VERSION \? importedCompleteHabits : DEFAULT_HABITS,?\s*\)/, `${label}: backup import uses complete-catalog order for v9 and strict shipped-order migration for legacy backups`);
+    assert.match(html, /const importedOrder = normalizeImportedHabitOrder\(\s*payload\.order,\s*payload\.version >= 9 \? importedCompleteHabits : DEFAULT_HABITS,?\s*\)/, `${label}: backup import uses complete-catalog order for v9/v10 and strict shipped-order migration for legacy backups`);
     assert.match(html, /\[ORDER_KEY\]:JSON\.stringify\(importedOrder\)[\s\S]*commitStorageSnapshot\(localStorage, importedSnapshot\)/, `${label}: backup import stages the reconciled order in its atomic snapshot`);
   }
 
