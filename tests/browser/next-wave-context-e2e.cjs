@@ -360,7 +360,7 @@ let browser;
   }, 'morning light participates without losing its stable habit identity');
   assert.deepEqual(forecastResults.sunscreen, {
     habitId:'sunscreen', category:'hygiene', icon:'🧴', reason:'forecast-uv', eyebrow:'Suggested now',
-    title:'Sun protection before outdoor time', targetLabel:'',
+    title:'Use sun protection outdoors', targetLabel:'',
     detail:'Forecast UV 4 · Protect before going out.', action:'View habit',
   }, 'sun protection uses hourly UV without misrepresenting its two-minute task as outdoor exposure');
   assert.deepEqual(forecastResults.rendered, {

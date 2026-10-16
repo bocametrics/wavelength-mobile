@@ -59,10 +59,13 @@ function loadFunctions(html) {
   ];
   const rhythmPrelude = html.match(/const RHYTHM_TYPES\s*=\s*[^;]+;/);
   assert.ok(rhythmPrelude, 'rhythm constants are missing');
+  const defaultsPrelude = html.match(/const DEFAULT_HABITS = (\[[\s\S]*?\n\]);/);
+  const systemIdsPrelude = html.match(/const SYSTEM_HABIT_IDS\s*=\s*[^;]+;/);
+  assert.ok(defaultsPrelude && systemIdsPrelude, 'actual shipped identity constants are missing');
   const context = {};
   vm.createContext(context);
   vm.runInContext(
-    `${rhythmPrelude[0]}\n${names.map(name => extractFunction(html, name)).join('\n')}\n` +
+    `${defaultsPrelude[0]}\n${systemIdsPrelude[0]}\n${rhythmPrelude[0]}\n${names.map(name => extractFunction(html, name)).join('\n')}\n` +
     `globalThis.exports = { ${names.join(', ')} };`,
     context,
   );

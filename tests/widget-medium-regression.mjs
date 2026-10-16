@@ -68,8 +68,8 @@ const eyebrowBlock = nextWaveView.slice(
   nextWaveView.indexOf('Text(nextWave.eyebrow)'),
   nextWaveView.indexOf('HStack(alignment: .firstTextBaseline'),
 );
-assert.match(eyebrowBlock, /\.font\(\.caption\.weight\(\.semibold\)\)/,
-  'the medium eyebrow must use one stable, readable semantic font');
+assert.match(eyebrowBlock, /\.font\(\.caption2\.weight\(\.semibold\)\)/,
+  'the medium eyebrow must match the small widget header semantic size and weight');
 assert.match(eyebrowBlock, /\.lineLimit\(1\)[\s\S]*?\.truncationMode\(\.tail\)/,
   'the medium eyebrow must truncate rather than shrink');
 assert.doesNotMatch(eyebrowBlock, /minimumScaleFactor/,
@@ -78,8 +78,10 @@ const titleBlock = nextWaveView.slice(
   nextWaveView.indexOf('Text(nextWave.title)'),
   nextWaveView.indexOf('if !nextWave.targetLabel.isEmpty'),
 );
-assert.match(titleBlock, /\.font\(\.title3\.weight\(\.semibold\)\)/,
-  'every medium habit title must use the same larger semantic font');
+assert.match(widgetSource, /@ScaledMetric\(relativeTo:\s*\.title3\)\s*private var recommendationTitleSize:\s*CGFloat\s*=\s*19\b/,
+  'medium titles default to 19 points while retaining Dynamic Type relative to title3');
+assert.match(titleBlock, /\.font\(\.system\(size:\s*recommendationTitleSize,\s*weight:\s*\.semibold\)\)/,
+  'every medium habit title must use the same modestly smaller scaled semibold font');
 assert.match(titleBlock, /\.lineLimit\(1\)[\s\S]*?\.truncationMode\(\.tail\)/,
   'long medium habit titles must use a one-line trailing ellipsis');
 assert.doesNotMatch(titleBlock, /minimumScaleFactor/,

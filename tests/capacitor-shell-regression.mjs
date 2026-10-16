@@ -44,8 +44,8 @@ assert.equal(config.appId, 'com.bocametrics.wavelength');
 assert.equal(config.appName, 'Wavelength');
 assert.equal(config.webDir, 'www');
 assert.deepEqual(config.plugins?.LocalNotifications?.presentationOptions, ['banner', 'list', 'sound']);
-assert.match(read('sw.js'), /const CACHE_NAME = 'wavelength-mobile-v49';/,
-  'the PWA cache advances with the alignment, terminology, Insights, and widget polish release');
+assert.match(read('sw.js'), /const CACHE_NAME = 'wavelength-mobile-v50';/,
+  'the PWA cache advances with the habit editor, authored-cue and native/widget polish release');
 
 const bridge = read('native/native-bridge.js');
 assert.match(bridge, /from '@capacitor\/core'/);
@@ -75,8 +75,8 @@ assert.match(read('ios/.gitignore'), /^App\/App\/public$/m);
 
 const project = read('ios/App/App.xcodeproj/project.pbxproj');
 assert.deepEqual([...project.matchAll(/CURRENT_PROJECT_VERSION = (\d+);/g)].map(match => match[1]),
-  ['2', '2', '2', '2'],
-  'app and widget Debug/Release configurations identify lifecycle release build 2');
+  ['3', '3', '3', '3'],
+  'app and widget Debug/Release configurations identify habit editor release build 3');
 assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.bocametrics\.wavelength;/);
 const packageSwift = read('ios/App/CapApp-SPM/Package.swift');
 assert.match(packageSwift, /CapacitorGeolocation/);

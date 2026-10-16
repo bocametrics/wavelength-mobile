@@ -245,8 +245,8 @@ for (const [label, htmlPath] of builds) {
     `${label}: every shipped default has an explicit system identity independent of parameters`);
   assert.match(html, /const isSystem = SYSTEM_HABIT_IDS\.has\(h\.id\);[\s\S]*?\$\{isSystem \? `<div class="eh-system-title">/,
     `${label}: every system habit title renders locked, not only parameterized habits`);
-  assert.match(html, /\$\{isSystem \? `<div class="eh-system-anchor">System anchor · /,
-    `${label}: system anchors render as visible read-only summaries`);
+  assert.match(html, /\$\{isSystem \? `<div class="eh-system-anchor">[\s\S]*?Habit cue[\s\S]*?Set by Wavelength/,
+    `${label}: system habit cues use the unified feature name with a read-only managed explanation`);
   assert.match(html, /<div class="eh-rhythm-block" \$\{isSystem \? 'hidden' : ''\}>/,
     `${label}: system rhythm editors are withheld from the active UI`);
   assert.match(html, /const existingOverrides = loadCustomHabits\(\) \|\| \{\};[\s\S]*?const hasGrandfatheredTitle = isSystem[\s\S]*?parseLegacySystemHabitTitle\(id, existingText\) === null;[\s\S]*?if \(!isSystem && text !== def\.text\) changes\.text = text;[\s\S]*?else if \(hasGrandfatheredTitle\) changes\.text = existingText;/,

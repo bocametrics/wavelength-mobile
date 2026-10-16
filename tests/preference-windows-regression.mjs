@@ -43,7 +43,12 @@ for (const { label, path } of BUILD_FILES) {
   const context = {};
   vm.createContext(context);
   const defs = VM_SYMBOLS.map(s => extractFunction(script, s)).join('\n');
+  const defaultsPrelude = script.match(/const DEFAULT_HABITS = (\[[\s\S]*?\n\]);/);
+  const systemIdsPrelude = script.match(/const SYSTEM_HABIT_IDS\s*=\s*[^;]+;/);
+  if (!defaultsPrelude || !systemIdsPrelude) throw new Error(`${label}: actual shipped identity constants are missing`);
   const stubs = `
+    ${defaultsPrelude[0]}
+    ${systemIdsPrelude[0]}
     const SYSTEM_HABIT_PARAMETER_DEFS = {
       wake:{ targetTime:{ type:'time', default:'06:30' } },
       dinner:{ targetTime:{ type:'time', default:'19:00' } },
@@ -114,9 +119,9 @@ for (const { label, path } of BUILD_FILES) {
   assert(/preferenceWindowToDisplayTime\(h\.preferenceWindow\)/.test(script), 'editor pre-fills from stored preference');
 
   // ── backup schema (v9) ──
-  assert(/const BACKUP_VERSION = 9;/.test(script), 'backup schema is version 9');
+  assert(/const BACKUP_VERSION = 10;/.test(script), 'backup schema is version 10');
   assert(!/preferenceWindows:\s*Object\.fromEntries\(/.test(script), 'v9 avoids a duplicate top-level preferenceWindows map');
-  assert(/\[1, 2, 3, 4, 5, 6, 7, 8, BACKUP_VERSION\]\.includes\(payload\.version\)/.test(html), 'import still accepts v1–v8');
+  assert(/\[1, 2, 3, 4, 5, 6, 7, 8, 9, BACKUP_VERSION\]\.includes\(payload\.version\)/.test(html), 'import still accepts v1–v9');
   assert(/payload\.version <= 5 && payload\.preferenceWindows/.test(script),
     'legacy v5 and earlier imports restore the former preferenceWindows map');
 

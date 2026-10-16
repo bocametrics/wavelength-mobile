@@ -84,12 +84,12 @@ for (const [label, htmlPath] of builds) {
   assert.equal(greeting.textContent, 'Good morning, Friend ☀️', `${label}: an empty First Name uses the friendly display fallback`);
 
   const backup = extractFunction(html, 'createBackupPayload');
-  assert.match(html, /const BACKUP_VERSION = 9;/,
+  assert.match(html, /const BACKUP_VERSION = 10;/,
     `${label}: First Name and category backups remain in the version-9 schema`);
   assert.match(backup, /firstName\s*:\s*firstName/,
     `${label}: backup payload includes First Name`);
   const importer = extractFunction(html, 'importBackupFile');
-  assert.match(importer, /\[1, 2, 3, 4, 5, 6, 7, 8, BACKUP_VERSION\]\.includes\(payload\.version\)/,
+  assert.match(importer, /\[1, 2, 3, 4, 5, 6, 7, 8, 9, BACKUP_VERSION\]\.includes\(payload\.version\)/,
     `${label}: backup import preserves versions 1 through 8`);
   assert.match(importer, /const importedFirstName = normalizeFirstName\(payload\.firstName\)/,
     `${label}: import accepts a missing First Name as empty`);

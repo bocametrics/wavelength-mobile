@@ -130,20 +130,21 @@ for (const [label, htmlPath] of builds) {
     `${label}: new custom habits default to the star icon`);
   assert.match(createCustomHabitDraft, /text:\s*''[\s\S]*note:\s*''[\s\S]*activeFrom:\s*date[\s\S]*days:\s*\[0,\s*1,\s*2,\s*3,\s*4,\s*5,\s*6\][\s\S]*measurement:\s*'check'/,
     `${label}: create mode defaults to blank copy, today, every day, and Check once`);
-  assert.match(html, /function buildCompleteHabitCatalog\([\s\S]*context:\{ recommend:false \}/,
-    `${label}: custom habits remain recommendation-disabled in the runtime catalog`);
+  assert.match(extractFunction(html, 'buildCompleteHabitCatalog'),
+    /context:\s*(?:\{ recommend:false \}|deriveCustomRecommendationContext\([\s\S]*?\))/,
+    `${label}: custom context is either default-manual or derived explicitly; actual off/opt-in semantics are tested by lifecycle and custom-runtime suites`);
 
   const openNewHabitEditorPage = extractFunction(html, 'openNewHabitEditorPage');
   assert.match(openNewHabitEditorPage, /habitEditorMode = 'create'[\s\S]*habitEditorOrigin = safeOrigin[\s\S]*habitEditorHeading[^\n]*New Habit[\s\S]*habitEditorSave[^\n]*Add habit/,
     `${label}: Add a new habit opens the existing editor shell with create-mode labels`);
-  assert.match(html, /id="habitNameInput"[^>]*maxlength="48"[^>]*required/,
-    `${label}: custom habit name is required and limited to 48 characters`);
-  assert.match(html, /id="habitNoteInput"[^>]*maxlength="42"/,
-    `${label}: custom habit description is optional and limited to 42 characters`);
+  assert.match(html, /id="habitNameInput"[^>]*maxlength="30"[^>]*required/,
+    `${label}: a newly authored custom name is required and limited to 30 characters`);
+  assert.match(html, /id="habitNoteInput"[^>]*maxlength="32"/,
+    `${label}: a newly authored custom description is optional and limited to 32 characters`);
   assert.match(html, /id="habitCategoryInput"[\s\S]*<option value="">Choose a category<\/option>/,
     `${label}: create mode exposes the required category placeholder`);
-  assert.match(html, /id="habitRhythmInput"[\s\S]*<option value="none">No anchor<\/option>/,
-    `${label}: create mode defaults the rhythm control to No anchor`);
+  assert.match(html, /id="habitRhythmInput"[\s\S]*<option value="none">No cue<\/option>/,
+    `${label}: create mode defaults the user-facing cue control to No cue`);
   assert.match(html, /for="\$\{habitEditorMode === 'create' \? 'habitMeasurementInput' : `measurement-\$\{escapeHtml\(h\.id\)\}`\}"[\s\S]*id="habitMeasurementInput"/,
     `${label}: create-mode measurement label targets the rendered select ID`);
   assert.match(html, /for="\$\{habitEditorMode === 'create' \? 'habitRhythmInput' : `rhythm-\$\{escapeHtml\(h\.id\)\}`\}"[\s\S]*id="habitRhythmInput"/,
@@ -152,6 +153,8 @@ for (const [label, htmlPath] of builds) {
     `${label}: create-mode validity controls the shared save action`);
 
   const saveNewCustomHabit = extractFunction(html, 'saveNewCustomHabit');
+  assert.match(saveNewCustomHabit, /commitStorageSnapshot\(localStorage,\s*\{[\s\S]*\[CUSTOM_NEXT_WAVE_KEY\]/,
+    `${label}: custom creation atomically retains explicit consent/setting beside the new stable catalog identity`);
   assert.match(saveNewCustomHabit, /normalizeNewCustomHabitDraft/,
     `${label}: create save reuses the strict custom-definition normalizer`);
   assert.match(saveNewCustomHabit, /customDefinitions:\s*\[\.\.\.habitCatalogState\.customDefinitions,\s*createdHabit\]/,
@@ -178,6 +181,8 @@ for (const [label, htmlPath] of builds) {
     `${label}: create and edit drafts share the existing dirty-leave guard`);
 
   const saveExistingCustomHabit = extractFunction(html, 'saveExistingCustomHabit');
+  assert.match(saveExistingCustomHabit, /commitStorageSnapshot\(localStorage,\s*\{[\s\S]*\[CUSTOM_NEXT_WAVE_KEY\]/,
+    `${label}: custom editing atomically includes configuration without losing archived peer consent`);
   assert.match(saveExistingCustomHabit, /normalizeExistingCustomHabitDraft[\s\S]*customDefinitions:\s*habitCatalogState\.customDefinitions\.map[\s\S]*commitStorageSnapshot\(localStorage,\s*\{[\s\S]*\[HABIT_CATALOG_KEY\][\s\S]*\[CATEGORY_STATE_KEY\]/,
     `${label}: editing a custom habit atomically updates its retained definition and category state`);
   assert.match(saveExistingCustomHabit, /previousHabits[\s\S]*nextState[\s\S]*reconcileMeasurementTypeChanges\(nextState\.done,\s*nextState\.progress,\s*previousHabits[\s\S]*reconcileMeasuredDay\(nextState\.done,\s*nextState\.progress[\s\S]*nextInsightHistory[\s\S]*commitStorageSnapshot\(localStorage,\s*\{[\s\S]*\[STORAGE_KEY\][\s\S]*\[INSIGHT_STORAGE_KEY\][\s\S]*\}\)[\s\S]*state = nextState[\s\S]*insightHistory = nextInsightHistory/,

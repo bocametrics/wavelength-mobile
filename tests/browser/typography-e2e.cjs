@@ -254,6 +254,9 @@ function contrastRatio(foreground, background) {
           noteWidth:note.width,
           noteRight:note.right,
           counterLeft:counter.left,
+          counterRight:counter.right,
+          counterBottom:counter.bottom,
+          noteTop:note.top,
           parameterTop:parameter?.top ?? null,
           noteBottom:note.bottom,
         };
@@ -262,33 +265,36 @@ function contrastRatio(foreground, background) {
       viewportWidth:innerWidth,
     };
   });
-  assert.deepEqual(manage.maxLengths, [42]);
-  assert.ok(manage.counters.every((counter, index) => counter === `${manage.notes[index].length} / 42`));
-  assert.ok(manage.notes.every(note => note.length <= 42));
+  assert.deepEqual(manage.maxLengths, [32]);
+  assert.ok(manage.counters.every((counter, index) => counter === `${manage.notes[index].length} / 32`));
+  assert.ok(manage.notes.every(note => note.length <= 32));
   assert.equal(px(manage.sizes.title), 17);
   assert.equal(px(manage.sizes.systemTitle), 15);
   assert.equal(px(manage.sizes.note), 16);
   assert.equal(px(manage.sizes.counter), 12);
-  assert.equal(px(manage.sizes.measurementLabel), 12);
-  assert.equal(px(manage.sizes.measureField), 11.5);
+  assert.equal(px(manage.sizes.measurementLabel), 14);
+  assert.equal(px(manage.sizes.measureField), 14);
   assert.equal(px(manage.sizes.day), 11.5);
   assert.equal(px(manage.sizes.button), 14);
   assert.equal(manage.documentWidth, manage.viewportWidth, 'Manage has no document overflow');
   assert.ok(manage.firstRow.noteWidth >= 200, 'the card-summary input keeps useful editing width');
-  assert.ok(manage.firstRow.counterLeft >= manage.firstRow.noteRight, 'the summary counter does not overlap the input');
+  assert.ok(manage.firstRow.counterBottom <= manage.firstRow.noteTop, 'summary counter is on the label row above the field');
+  assert.ok(manage.firstRow.counterRight <= manage.firstRow.noteRight + 0.5, 'label-row counter stays inside field content width');
   assert.ok(manage.firstRow.parameterTop >= manage.firstRow.noteBottom, 'system parameters wrap below the summary row');
   await page.screenshot({ path:path.join(SHOT_DIR, `wavelength-typography-manage-${THEME}.png`), fullPage:false });
 
   await page.evaluate(() => {
     const input = document.querySelector('.eh-note');
-    input.value = 'X'.repeat(43);
+    input.value = 'X'.repeat(33);
     input.dispatchEvent(new Event('input', { bubbles:true }));
   });
   await page.$eval('#habitEditorSave', element => element.click());
-  assert.equal(await page.$eval('#toast', element => element.classList.contains('show')), true);
+  assert.equal(await page.$eval('#habitEditorSave', element => element.disabled), true, 'invalid description blocks Save');
+  assert.equal(await page.$eval('#habit-error-note', element => !element.hidden && /32/.test(element.textContent)), true, 'description error explains its new budget inline');
+  assert.equal(await page.$eval('#habitEditorValidationSummary', element => !element.hidden && /32/.test(element.textContent)), true, 'blocked Save has a visible reason');
   assert.equal(await page.$eval('#habitEditorView', view => !view.hidden), true, 'edited over-limit description keeps editor open');
-  assert.equal(await page.$eval('.eh-note-count', counter => counter.textContent.trim()), '43 / 42');
-  assert.equal(await page.$eval('.eh-note', input => document.activeElement === input), true);
+  assert.equal(await page.$eval('.eh-note-count', counter => counter.textContent.trim()), '33 / 32');
+  assert.equal(await page.$eval('.eh-note', input => input.getAttribute('aria-invalid')), 'true');
   assert.equal(await page.evaluate(() => localStorage.getItem(CUSTOM_HABITS_KEY)), null, 'rejected description changes nothing');
 
   const longToast = await page.evaluate(() => {

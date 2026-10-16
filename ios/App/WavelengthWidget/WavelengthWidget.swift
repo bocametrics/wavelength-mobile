@@ -237,6 +237,8 @@ private struct WavelengthProvider: TimelineProvider {
 private struct WavelengthWidgetView: View {
     @Environment(\.widgetRenderingMode) private var renderingMode
     @Environment(\.widgetFamily) private var widgetFamily
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .title3) private var recommendationTitleSize: CGFloat = 19
 
     let entry: WavelengthEntry
 
@@ -297,7 +299,7 @@ private struct WavelengthWidgetView: View {
 
                 VStack(alignment: .leading, spacing: 0) {
                     Text(nextWave.eyebrow)
-                        .font(.caption.weight(.semibold))
+                        .font(.caption2.weight(.semibold))
                         .textCase(.uppercase)
                         .tracking(0.45)
                         .foregroundStyle(accentColor)
@@ -308,11 +310,10 @@ private struct WavelengthWidgetView: View {
 
                     HStack(alignment: .firstTextBaseline, spacing: 7) {
                         Text(nextWave.title)
-                            .font(.title3.weight(.semibold))
+                            .font(.system(size: recommendationTitleSize, weight: .semibold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
                             .truncationMode(.tail)
-                            .layoutPriority(1)
 
                         if !nextWave.targetLabel.isEmpty {
                             Text("·")
@@ -399,33 +400,59 @@ private struct WavelengthWidgetView: View {
 
             Spacer(minLength: 0)
 
-            ZStack {
-                Circle()
-                    .stroke(.secondary.opacity(0.22), lineWidth: 9)
-                Circle()
-                    .trim(from: 0, to: progressFraction(progress))
-                    .stroke(
-                        accentColor,
-                        style: StrokeStyle(lineWidth: 9, lineCap: .round)
-                    )
-                    .rotationEffect(.degrees(-90))
-                    .widgetAccentable()
+            if dynamicTypeSize.isAccessibilitySize {
+                accessibilityProgressContent(progress)
+            } else {
+                ZStack {
+                    Circle()
+                        .stroke(.secondary.opacity(0.22), lineWidth: 9)
+                    Circle()
+                        .trim(from: 0, to: progressFraction(progress))
+                        .stroke(
+                            accentColor,
+                            style: StrokeStyle(lineWidth: 9, lineCap: .round)
+                        )
+                        .rotationEffect(.degrees(-90))
+                        .widgetAccentable()
 
-                VStack(spacing: 0) {
-                    Text("\(progress.completed)/\(progress.total)")
-                        .font(.title3.weight(.bold).monospacedDigit())
-                        .foregroundStyle(.primary)
-                        .minimumScaleFactor(0.75)
-                    Text("COMPLETED")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                    VStack(spacing: 0) {
+                        Text("\(progress.completed)/\(progress.total)")
+                            .font(.title3.weight(.bold).monospacedDigit())
+                            .foregroundStyle(.primary)
+                            .minimumScaleFactor(0.75)
+                        Text("COMPLETED")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Today's progress")
+                .accessibilityValue(accessibilityProgressValue(progress))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Today's progress")
-            .accessibilityValue(accessibilityProgressValue(progress))
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+
+    private func accessibilityProgressContent(_ progress: SnapshotProgress) -> some View {
+        VStack(spacing: 4) {
+            Text("\(progress.completed)/\(progress.total)")
+                .font(.title3.weight(.bold).monospacedDigit())
+                .foregroundStyle(.primary)
+                .minimumScaleFactor(0.75)
+            Text("COMPLETED")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+            ProgressView(value: progressFraction(progress))
+                .progressViewStyle(.linear)
+                .tint(accentColor)
+                .widgetAccentable()
+                .frame(height: 9)
+                .accessibilityHidden(true)
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Today's progress")
+        .accessibilityValue(accessibilityProgressValue(progress))
     }
 
     private var unavailableView: some View {
