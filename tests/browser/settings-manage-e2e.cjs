@@ -75,7 +75,31 @@ let browser;
   await page.click('#manageCategoryList [data-habit-id="floss"] .manage-habit-row-button');
   await page.waitForFunction(() => !document.getElementById('habitEditorView').hidden);
   assert.equal(await page.$eval('#habitEditorReset', button => button.textContent.trim()), 'Reset habit defaults');
+  const beforeReset = await page.evaluate(() => JSON.stringify(Object.fromEntries(Object.entries(localStorage).sort())));
+  const cancelReset = new Promise((resolve, reject) => page.once('dialog', async dialog => {
+    try {
+      assert.equal(dialog.type(), 'confirm');
+      assert.match(dialog.message(), /Restore this habit’s defaults\?/);
+      assert.match(dialog.message(), /Category assignment (?:is kept|stays)/);
+      assert.match(dialog.message(), /Unsaved edits will be discarded/);
+      await dialog.dismiss();
+      resolve();
+    } catch (error) { await dialog.dismiss(); reject(error); }
+  }));
   await page.click('#habitEditorReset');
+  await cancelReset;
+  assert.equal(await page.evaluate(() => JSON.stringify(Object.fromEntries(Object.entries(localStorage).sort()))), beforeReset,
+    'cancelled reset preserves exact storage bytes');
+  const acceptReset = new Promise((resolve, reject) => page.once('dialog', async dialog => {
+    try {
+      assert.equal(dialog.type(), 'confirm');
+      assert.match(dialog.message(), /Restore this habit’s defaults\?/);
+      await dialog.accept();
+      resolve();
+    } catch (error) { await dialog.dismiss(); reject(error); }
+  }));
+  await page.click('#habitEditorReset');
+  await acceptReset;
   await page.waitForFunction(() => !document.getElementById('habitEditorView').hidden);
   const overridesAfterScopedReset = await page.evaluate(() => JSON.parse(localStorage.getItem(CUSTOM_HABITS_KEY) || '{}'));
   assert.deepEqual(overridesAfterScopedReset, { wake:{ note:'Keep morning' } },
@@ -138,7 +162,7 @@ let browser;
       input:document.getElementById('firstNameInput').value,
     };
   });
-  assert.deepEqual(backupTransfer, { version:10, exportedFirstName:firstName, stored:'Ari', input:'Ari' },
+  assert.deepEqual(backupTransfer, { version:11, exportedFirstName:firstName, stored:'Ari', input:'Ari' },
     'backup export/import round-trips First Name through the production import path');
   await page.click('#navHome');
   await page.waitForFunction(() => !document.getElementById('homeView').hidden);

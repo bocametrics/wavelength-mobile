@@ -8,9 +8,11 @@ const here=path.dirname(fileURLToPath(import.meta.url));
 const builds=[['mobile','../index.html'],['desktop','fixtures/friday_app_2026-07-12.html']];
 function extractFunction(source,name){
  const start=source.indexOf(`function ${name}(`);assert.notEqual(start,-1,`${name} is missing`);
- const signature=source.slice(start).match(/^function\s+\w+\([\s\S]*?\)\s*\{/);assert.ok(signature,`${name} body missing`);
- const brace=start+signature[0].length-1;let depth=0,quote=null,escaped=false;
- for(let i=brace;i<source.length;i+=1){const c=source[i];if(quote){if(escaped)escaped=false;else if(c==='\\')escaped=true;else if(c===quote)quote=null;continue;}if(c==="'"||c==='"'||c==='`'){quote=c;continue;}if(c==='{')depth+=1;else if(c==='}'&&--depth===0)return source.slice(start,i+1);}
+ // Compile, never execute: comments, regexes and templates must not fool extraction.
+ for(let end=start;(end=source.indexOf('}',end+1))!==-1;){
+  const candidate=source.slice(start,end+1);
+  for(const prefix of ['', 'async '])try{new Function(`return (${prefix}${candidate});`);return candidate;}catch(error){if(!(error instanceof SyntaxError))throw error;}
+ }
  throw new Error(`${name} does not terminate`);
 }
 for(const [label,relative] of builds){

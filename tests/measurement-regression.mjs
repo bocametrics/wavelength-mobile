@@ -54,6 +54,9 @@ function loadFunctions(html) {
     'getDailyHabitStats',
     'isValidDateKey',
     'normalizeProgressByDate',
+    'normalizeTrackingSnapshot',
+    'normalizeTrackingHistory',
+    'resolveTrackingConfigForDate',
     'normalizeStoredState',
     'updateMeasuredHabitState',
     'getMeasurementDisplay',
@@ -359,7 +362,7 @@ for (const [label, htmlPath] of builds) {
 
   const water = { id:'water', measurement:'amount', target:64, step:12, unit:'oz' };
   const pushups = { id:'pushups', measurement:'count', target:3 };
-  assert.equal(getHabitProgress({ water:true }, {}, water), 64, `${label}: a legacy completed check migrates as a completed measured goal`);
+  assert.equal(getHabitProgress({ water:true }, {}, water), null, `${label}: a recorded completion never invents a measured quantity`);
   assert.equal(getHabitProgress({}, { water:24 }, water), 24, `${label}: stored numeric progress takes precedence`);
   assert.equal(getHabitProgress({}, { water:-5 }, water), 0, `${label}: invalid negative progress is ignored`);
   assert.equal(adjustHabitProgress(60, water, 1), 72, `${label}: amount increments may cross the target by one configured serving`);
@@ -400,7 +403,13 @@ for (const [label, htmlPath] of builds) {
     { id:'water', measurement:'amount', target:64, step:12, unit:'oz' },
     { id:'pushups', measurement:'count', target:20 },
     { id:'check' },
-  ];
+  ].map(habit => ({ ...habit, trackingHistory:{
+    initial:{ ...normalizeMeasurementConfig(habit), planningMinutes:null }, changes:[],
+  } }));
+  const unknownTrackingHabits = validationHabits.map(({ trackingHistory, ...habit }) => habit);
+  assert.deepEqual(plain(normalizeProgressByDate({ '2026-08-27':{ check:1, pushups:1.5, water:12.34 } }, unknownTrackingHabits, true)),
+    { '2026-08-27':{ check:1, pushups:1.5, water:12.34 } },
+    `${label}: unknown legacy configurations preserve quantities without assigning today's kind or units`);
   assert.equal(isValidDateKey('2026-08-27'), true, `${label}: real calendar dates are accepted`);
   assert.equal(isValidDateKey('2026-99-99'), false, `${label}: impossible calendar dates are rejected`);
   assert.deepEqual(
@@ -495,9 +504,9 @@ for (const [label, htmlPath] of builds) {
   const changedDone = { '2026-08-27':{ water:true } };
   const changedProgress = { '2026-08-27':{ water:72 } };
   reconcileMeasuredDay(changedDone, changedProgress, [{ ...water, target:80 }], day);
-  assert.equal(Object.hasOwn(changedDone['2026-08-27'], 'water'), false, `${label}: raising a goal immediately unmarks insufficient progress`);
+  assert.equal(changedDone['2026-08-27'].water, true, `${label}: raising a goal never erases recorded completion evidence`);
   reconcileMeasuredDay(changedDone, changedProgress, [water], day);
-  assert.equal(changedDone['2026-08-27'].water, true, `${label}: lowering a goal immediately restores completion from recorded progress`);
+  assert.equal(changedDone['2026-08-27'].water, true, `${label}: later goal changes retain the recorded completion`);
   assert.equal(changedProgress['2026-08-27'].water, 72, `${label}: goal edits never rewrite the recorded amount`);
 
   const measuredHistory = {
@@ -538,6 +547,8 @@ for (const [label, htmlPath] of builds) {
     progress:{ '2026-08-26':{ water:72 } },
   }, `${label}: reset clears completion and progress for exactly the same date`);
 
+  // Legacy utility behavior only: editor/create/reset paths explicitly prohibit this
+  // destructive reconciler; dated migration preservation is exercised in browser.
   const convertedDone = { '2026-08-27':{ water:true, check:true } };
   const convertedProgress = {
     '2026-08-26':{ water:60 },
@@ -561,7 +572,7 @@ for (const [label, htmlPath] of builds) {
     day,
   );
   assert.equal(convertedProgress['2026-08-27'].check, 8, `${label}: a later goal edit keeps the amount established at conversion`);
-  assert.equal(Object.hasOwn(convertedDone['2026-08-27'], 'check'), false, `${label}: raising the converted measured goal recalculates today from materialized progress`);
+  assert.equal(convertedDone['2026-08-27'].check, true, `${label}: even legacy utility fixtures retain already-recorded completion across a later goal edit`);
 
   const resetDefaultsDone = {
     '2026-08-26':{ water:true },
@@ -581,7 +592,7 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /class=["']eh-measurement["']/, `${label}: Manage rows need a measurement type selector`);
   assert.doesNotMatch(html, /<span class=["']habit-badge["']>/, `${label}: daily cards must not display unused weight metadata`);
   assert.doesNotMatch(html, /class=["']eh-weight["']/, `${label}: Manage no longer exposes the obsolete weight selector`);
-  assert.match(html, /class=["']eh-system-title["']/, `${label}: system habits show a locked generated title`);
+  assert.match(html, /class="eh-identity-row eh-system-title"[\s\S]*?<span class="eh-system-name"><textarea class="eh-text" rows="1" readonly aria-label="Habit name">/, `${label}: system habits show the generated title in the shared visible read-only identity field`);
   assert.match(html, /value=["']check["'][^>]*>Check once</, `${label}: Manage supports check-once habits`);
   assert.match(html, /value=["']count["'][^>]*>Count</, `${label}: Manage supports count habits`);
   assert.match(html, /value=["']amount["'][^>]*>Amount</, `${label}: Manage supports amount habits`);
@@ -637,7 +648,9 @@ for (const [label, htmlPath] of builds) {
   assert.match(html, /case 'aqi-below':[\s\S]*!Number\.isFinite\(data\.aqi\)[\s\S]*Outdoor range · AQI \$\{rhythm\.threshold\} or lower[\s\S]*data\.aqi <= rhythm\.threshold/, `${label}: partial air-quality data keeps the configured AQI threshold visible`);
   assert.match(html, /normalizeRhythmConfig/, `${label}: rhythm config is normalized for validation and rendering`);
   assert.match(html, /JSON\.stringify\(rhythm\)\s*!==\s*JSON\.stringify\(defaultRhythm\)/, `${label}: Manage does not persist rhythm overrides identical to shipped defaults`);
-  assert.match(html, /function resetHabitEditorDefaults\(\)[\s\S]*previousHabits[\s\S]*reconcileMeasurementTypeChanges[\s\S]*saveState\(\)[\s\S]*renderHabits\(resetDate\)/, `${label}: focused Reset defaults reconciles measured state and saves before rerendering`);
+  const resetDefaults = extractFunction(html, 'resetHabitEditorDefaults');
+  assert.match(resetDefaults, /stageTrackingCatalog[\s\S]*normalizeInsightHistoryAgainstState[\s\S]*commitStorageSnapshot[\s\S]*\[STORAGE_KEY\][\s\S]*\[INSIGHT_STORAGE_KEY\][\s\S]*renderHabits\(resetDate\)/, `${label}: Reset defaults stages tracking and evidence atomically before rendering`);
+  assert.doesNotMatch(resetDefaults, /reconcileMeasurementTypeChanges\(|reconcileMeasuredDay\(|\bsaveState\(/, `${label}: Reset defaults neither erases measurements nor regrades recorded completions`);
   assert.match(html, /getDailyHabitStats\(state\.done \|\| \{\}, HABITS, [^;]+state\.progress \|\| \{\}\)/, `${label}: rendered totals pass measured progress to shared calculations`);
   if (label === 'mobile') {
     assert.match(html, /const importedAllHabits = applyCategoryStateToHabits\(importedCompleteHabits, importedCategoryState\)[\s\S]*const importedHabits = getHabitsActiveOnDate\(\s*importedAllHabits, importedHabitCatalog, dateKey\(importDate\),?\s*\)/, `${label}: backup import builds complete and date-effective active habit catalogs before validating progress`);

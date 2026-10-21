@@ -1,0 +1,27 @@
+{
+  "sourceSha256": "fc326999dd18394bc335ac572a15f2e34c4e15e381fd41b6476e1e0e30d5dcde",
+  "mirrors": [
+    "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/index.html",
+    "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/tests/fixtures/friday_app_2026-07-12.html",
+    "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/friday_app_2026-07-12.html"
+  ],
+  "browserSuites": 30,
+  "browserRuns": 60,
+  "sourceSuites": 56,
+  "actualNavigationResponses": 850,
+  "verifiedScreenshots": 150,
+  "ownedProfiles": 60,
+  "allOwnedProfilesAbsent": true,
+  "sourceAndTestsSealed": true,
+  "runtimeErrors": 0,
+  "scope": "Local source/browser acceptance only. Native picker, package/WidgetKit, physical device and release not tested.",
+  "baselineSourceSha256": "b90190024fd9cf3664b85f3c2ba68b223e2508b8f8aafd2c1178afa8410a6549",
+  "identityCasesPerTheme": 71,
+  "geometryRecordsPerTheme": 68,
+  "maxLabelAndControlTopDifferencePx": 0,
+  "duplicatesInEditor": 0,
+  "homeAndSaveFunctionsUnchanged": true,
+  "review": "Independent source/pixel review PASS",
+  "durableEvidenceRoot": "/home/ai_agent/.hermes/artifacts/wavelength/editor-identity-cleanup-20261020",
+  "commitPushDeployInstall": "Not performed"
+}

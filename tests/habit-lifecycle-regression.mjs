@@ -64,6 +64,7 @@ function loadLifecycleFunctions(source) {
     'createDefaultHabitCatalogState',
     'normalizeHabitIcon',
     'normalizeCustomHabitDefinition',
+    'normalizeSharedFieldSettings',
     'normalizeHabitCatalogState',
     'loadHabitCatalogState',
     'saveHabitCatalogState',
@@ -72,6 +73,7 @@ function loadLifecycleFunctions(source) {
     'createCustomHabitDraft',
     'normalizeNewCustomHabitDraft',
     'normalizeExistingCustomHabitDraft',
+    'resolveSharedHabitDuration',
     'buildCompleteHabitCatalog',
     'isHabitActiveOnDate',
     'getHabitsActiveOnDate',
@@ -174,14 +176,15 @@ for (const [label, htmlPath] of builds) {
     reconcileCompleteHabitOrder,
   } = loadLifecycleFunctions(html);
 
-  assert.equal(HABIT_CATALOG_SCHEMA_VERSION, 1, `${label}: habit lifecycle catalog begins at schema 1`);
+  assert.equal(HABIT_CATALOG_SCHEMA_VERSION, 2, `${label}: shared fields use catalog schema 2 while importing schema 1`);
   assert.equal(HABIT_CATALOG_KEY, 'wavelength_habit_catalog_v1', `${label}: lifecycle data uses an isolated storage key`);
   assert.equal(MAX_CUSTOM_HABITS, 100, `${label}: custom habit count is bounded`);
 
   const initial = plain(createDefaultHabitCatalogState(migrationDate));
   assert.deepEqual(initial, {
-    schemaVersion:1,
+    schemaVersion:2,
     customDefinitions:[],
+    fieldSettings:[],
     status:[{
       habitId:'medication',
       initialActive:true,
@@ -230,10 +233,10 @@ for (const [label, htmlPath] of builds) {
     getItem:() => '{"schemaVersion":1,"customDefinitions":"broken"}',
     setItem:() => { malformedWrites += 1; },
   };
-  assert.deepEqual(
-    plain(loadHabitCatalogState(defaults, activeCategoryIds, migrationDate, malformedStorage)),
-    initial,
-    `${label}: malformed local lifecycle data falls back safely`,
+  assert.throws(
+    () => loadHabitCatalogState(defaults, activeCategoryIds, migrationDate, malformedStorage),
+    /cannot be loaded safely/i,
+    `${label}: malformed retained lifecycle data fails closed instead of becoming a default catalog`,
   );
   assert.equal(malformedWrites, 0,
     `${label}: malformed local lifecycle data is not silently overwritten`);
@@ -599,8 +602,8 @@ for (const [label, htmlPath] of builds) {
       migrationDate,
       true,
     )),
-    archivedCustomCatalog,
-    `${label}: a v9 JSON round trip preserves custom definitions and archived transitions exactly`,
+    { ...archivedCustomCatalog, schemaVersion:2, fieldSettings:[] },
+    `${label}: a v9 JSON round trip preserves definitions and archived transitions while adapting the catalog schema`,
   );
   const emptyArchiveCatalog = { ...restoredOnMigrationDate, status:[] };
   assert.deepEqual(

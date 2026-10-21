@@ -46,7 +46,7 @@ const documentFor = (enabled, setting = 'either') => ({schemaVersion:1,settings:
 for (const [label, relative] of builds) {
   const source = fs.readFileSync(path.resolve(here, relative), 'utf8');
   const required = ['createDefaultCustomNextWaveState','normalizeCustomNextWaveState',
-    'normalizePreferenceWindow','buildRuntimeHabits','buildCompleteHabitCatalog',
+    'resolveSharedHabitDuration','normalizePreferenceWindow','buildRuntimeHabits','buildCompleteHabitCatalog',
     'isValidDateKey','isHabitActiveOnDate','getHabitsActiveOnDate'];
   const optional = ['deriveCustomRecommendationContext'].filter(name => source.includes(`function ${name}(`));
   const sandbox = {};

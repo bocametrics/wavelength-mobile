@@ -751,14 +751,14 @@ test('daily evidence cap refuses new episodes instead of evicting prior evidence
 });
 
 test('backup schema v9 exports v2 evidence', () => {
-  assert.match(html, /const BACKUP_VERSION\s*=\s*10\s*;/, 'portable backup schema advances to version 10');
+  assert.match(html, /const BACKUP_VERSION\s*=\s*11\s*;/, 'portable backup schema advances to version 11');
   assert.match(extractFunction(html, 'createBackupPayload'), /normalizeInsightHistory[\s\S]*insightHistory/,
     'v9 export validates schema-v2 insight evidence');
 });
 
 test('backup v9 accepts versions 1 through 8 and migrates v1 insight history', () => {
   const importer = extractFunction(html, 'importBackupFile');
-  assert.match(importer, /\[1,\s*2,\s*3,\s*4,\s*5,\s*6,\s*7,\s*8,\s*9,\s*BACKUP_VERSION\]\.includes\(payload\.version\)/,
+  assert.match(importer, /\[1,\s*2,\s*3,\s*4,\s*5,\s*6,\s*7,\s*8,\s*9,\s*10,\s*BACKUP_VERSION\]\.includes\(payload\.version\)/,
     'version 1 through version 8 backups remain accepted by v9');
   assert.match(importer, /normalizeInsightHistory\(payload\.insightHistory,\s*importedAllHabits,\s*true\)/,
     'legacy schema-v1 insight histories migrate against active and archived identities');

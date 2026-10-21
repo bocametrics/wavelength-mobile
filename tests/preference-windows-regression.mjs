@@ -112,16 +112,16 @@ for (const { label, path } of BUILD_FILES) {
     'buildRuntimeHabits merges and re-normalizes preferenceWindow');
 
   // ── Manage UI source ──
-  assert(/eh-preference/.test(script), 'focused habit editor renders the preferred-time field');
+  assert(/eh-custom-preferred-time/.test(script), 'focused habit editor renders the shared preferred-time field');
   assert(/isEligibleForPreferenceWindow\(h\)/.test(script), 'preferred-time field is eligibility-gated');
-  assert(/displayTimeToPreferenceWindow\(prefValue\)/.test(script), 'saveHabitEditorForm converts display time to a window');
-  assert(/changes\.preferenceWindow = null/.test(script), 'clearing the field clears the preference');
-  assert(/preferenceWindowToDisplayTime\(h\.preferenceWindow\)/.test(script), 'editor pre-fills from stored preference');
+  assert(/changes\.preferenceWindow = getCustomPreferredTimeDraftFromEditor\(\)/.test(script), 'system Save uses the preservation-safe shared timing codec');
+  assert(/if \(mode === 'any'\) return null/.test(script), 'explicit Any time clears the preference');
+  assert(/getCustomPreferredTimeSelection\(h\.preferenceWindow\)/.test(script), 'editor decodes exact and opaque saved windows honestly');
 
   // ── backup schema (v9) ──
-  assert(/const BACKUP_VERSION = 10;/.test(script), 'backup schema is version 10');
+  assert(/const BACKUP_VERSION = 11;/.test(script), 'backup schema is version 11');
   assert(!/preferenceWindows:\s*Object\.fromEntries\(/.test(script), 'v9 avoids a duplicate top-level preferenceWindows map');
-  assert(/\[1, 2, 3, 4, 5, 6, 7, 8, 9, BACKUP_VERSION\]\.includes\(payload\.version\)/.test(html), 'import still accepts v1–v9');
+  assert(/\[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, BACKUP_VERSION\]\.includes\(payload\.version\)/.test(html), 'import still accepts v1–v10');
   assert(/payload\.version <= 5 && payload\.preferenceWindows/.test(script),
     'legacy v5 and earlier imports restore the former preferenceWindows map');
 
