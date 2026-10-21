@@ -251,8 +251,12 @@ for (const [label, htmlPath] of builds) {
     `${label}: completion-cue copy is data-driven rather than floss-hardcoded`);
   assert.match(html, /class="eh-system-name">/,
     `${label}: Manage locks the stable system identity separately`);
-  assert.match(html, /class="eh-system-target"/,
-    `${label}: Manage previews the adjustable target separately`);
+  assert.doesNotMatch(html, /eh-system-target/,
+    `${label}: Manage omits the redundant target preview DOM and CSS`);
+  assert.match(html, /return `<label class="eh-param-field[\s\S]*?<span>\$\{escapeHtml\(label\)\}<\/span>\$\{control\}/,
+    `${label}: Manage renders each adjustable parameter inside its explicit label`);
+  assert.match(html, /<textarea class="eh-text" rows="1" readonly aria-label="Habit name">\$\{escapeHtml\(h\.text\)\}<\/textarea>/,
+    `${label}: Manage exposes the actual stable identity as a read-only name value`);
   assert.match(html, /\.habit-target\s*\{[\s\S]*?color:\s*var\(--text2\)/,
     `${label}: the target has a secondary visual treatment that does not rely on title text`);
   assert.match(html, /@media\s*\(max-width:\s*600px\)[\s\S]*?\.next-wave-target\s*\{[^}]*font-size:\s*0\.9375rem;[^}]*font-weight:\s*600;/,

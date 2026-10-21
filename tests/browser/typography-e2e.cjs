@@ -249,7 +249,7 @@ function contrastRatio(foreground, background) {
         const row = document.querySelector('#habitEditorBody .edit-habit .eh-row');
         const note = row.querySelector('.eh-note').getBoundingClientRect();
         const counter = row.querySelector('.eh-note-count').getBoundingClientRect();
-        const parameter = row.querySelector('.eh-param-field')?.getBoundingClientRect();
+        const parameter = document.querySelector('#habitEditorBody .edit-habit .eh-param-field')?.getBoundingClientRect();
         return {
           noteWidth:note.width,
           noteRight:note.right,

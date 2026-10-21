@@ -12,24 +12,10 @@ const builds = [
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}(`);
   assert.notEqual(start, -1, `${name} is missing`);
-  const brace = source.indexOf('{', start);
-  let depth = 0;
-  let quote = null;
-  let escaped = false;
-  for (let index = brace; index < source.length; index += 1) {
-    const char = source[index];
-    if (quote) {
-      if (escaped) escaped = false;
-      else if (char === '\\') escaped = true;
-      else if (char === quote) quote = null;
-      continue;
-    }
-    if (char === "'" || char === '"' || char === '`') { quote = char; continue; }
-    if (char === '{') depth += 1;
-    else if (char === '}') {
-      depth -= 1;
-      if (depth === 0) return source.slice(start, index + 1);
-    }
+  // Compile, never execute: comments, regexes and templates must not fool extraction.
+  for(let end=start;(end=source.indexOf('}',end+1))!==-1;){
+    const candidate=source.slice(start,end+1);
+    for(const prefix of ['', 'async '])try{new Function(`return (${prefix}${candidate});`);return candidate;}catch(error){if(!(error instanceof SyntaxError))throw error;}
   }
   throw new Error(`${name} does not terminate`);
 }
@@ -185,8 +171,12 @@ for (const [label, htmlPath] of builds) {
     `${label}: custom editing atomically includes configuration without losing archived peer consent`);
   assert.match(saveExistingCustomHabit, /normalizeExistingCustomHabitDraft[\s\S]*customDefinitions:\s*habitCatalogState\.customDefinitions\.map[\s\S]*commitStorageSnapshot\(localStorage,\s*\{[\s\S]*\[HABIT_CATALOG_KEY\][\s\S]*\[CATEGORY_STATE_KEY\]/,
     `${label}: editing a custom habit atomically updates its retained definition and category state`);
-  assert.match(saveExistingCustomHabit, /previousHabits[\s\S]*nextState[\s\S]*reconcileMeasurementTypeChanges\(nextState\.done,\s*nextState\.progress,\s*previousHabits[\s\S]*reconcileMeasuredDay\(nextState\.done,\s*nextState\.progress[\s\S]*nextInsightHistory[\s\S]*commitStorageSnapshot\(localStorage,\s*\{[\s\S]*\[STORAGE_KEY\][\s\S]*\[INSIGHT_STORAGE_KEY\][\s\S]*\}\)[\s\S]*state = nextState[\s\S]*insightHistory = nextInsightHistory/,
-    `${label}: custom measurement edits reconcile state and evidence inside the same atomic commit`);
+  assert.match(saveExistingCustomHabit, /stageTrackingCatalog[\s\S]*nextState = normalizeStoredState\(nextState, nextAssignedCatalog, true\)[\s\S]*normalizeInsightHistoryAgainstState\(nextInsightHistory, nextState, true\)[\s\S]*commitStorageSnapshot\(localStorage,\s*\{[\s\S]*\[STORAGE_KEY\][\s\S]*\[INSIGHT_STORAGE_KEY\][\s\S]*\}\)[\s\S]*state = nextState[\s\S]*insightHistory = nextInsightHistory/,
+    `${label}: custom edits preserve dated quantities and strictly stage evidence inside the same atomic commit`);
+  for (const name of ['saveNewCustomHabit','saveExistingCustomHabit','saveHabitEditorForm','resetHabitEditorDefaults']) {
+    assert.doesNotMatch(extractFunction(html,name), /\breconcileMeasurementTypeChanges\(|\breconcileMeasuredDay\(/,
+      `${label}: ${name} never converts or regrades recorded activity`);
+  }
   assert.match(saveHabitEditorPage, /habitEditorMode === 'create'[\s\S]*saveNewCustomHabit[\s\S]*isCustomHabitId\(editingHabitId\)[\s\S]*saveExistingCustomHabit/,
     `${label}: existing custom habits save through the catalog-backed edit path`);
 

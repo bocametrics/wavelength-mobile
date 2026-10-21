@@ -39,7 +39,7 @@ let browser;
   const fieldPresence = await page.evaluate(() => {
     const row = document.querySelector('#habitEditorBody .edit-habit');
     return {
-      hasField:!!row?.querySelector('.eh-preference'),
+      hasField:!!row?.querySelector('.eh-custom-specific-time'),
       eligible:isEligibleForPreferenceWindow(HABITS.find(habit => habit.id === 'stretch')),
       heading:document.getElementById('habitEditorHeading').textContent.trim(),
       identity:row.querySelector('.eh-system-name').textContent.trim(),
@@ -47,8 +47,9 @@ let browser;
   });
   assert.deepEqual(fieldPresence, { hasField:true, eligible:true, heading:'Edit Habit', identity:'Mobility' });
 
+  await page.select('#habitEditorBody .eh-custom-preferred-time', 'specific');
   await page.evaluate(() => {
-    const input = document.querySelector('#habitEditorBody .eh-preference');
+    const input = document.querySelector('#habitEditorBody .eh-custom-specific-time');
     input.value = '07:30';
     input.dispatchEvent(new Event('change', { bubbles:true }));
   });
@@ -65,12 +66,12 @@ let browser;
     };
   });
   assert.deepEqual(stored, {
-    override:{ idealStart:435, idealEnd:465 }, backupVersion:10,
-    payloadOverride:{ idealStart:435, idealEnd:465 }, runtimeStretch:{ idealStart:435, idealEnd:465 },
+    override:{ idealStart:450, idealEnd:451 }, backupVersion:11,
+    payloadOverride:{ idealStart:450, idealEnd:451 }, runtimeStretch:{ idealStart:450, idealEnd:451 },
   });
 
   const stretchFit = await page.evaluate(() => {
-    const now = new Date(); now.setHours(7, 20, 0, 0);
+    const now = new Date(); now.setHours(7, 30, 0, 0);
     const map = getPreferenceWindowsMap(HABITS);
     return getHabitRecommendationFit(HABITS.find(habit => habit.id === 'stretch'), now, null, map.stretch);
   });
@@ -78,13 +79,9 @@ let browser;
   assert.equal(stretchFit.phase, 'ideal');
 
   await openStretch();
-  assert.equal(await page.$eval('#habitEditorBody .eh-preference', input => input.value), '07:30');
+  assert.equal(await page.$eval('#habitEditorBody .eh-custom-specific-time', input => input.value), '07:30');
   await page.screenshot({ path:SHOT, fullPage:false });
-  await page.evaluate(() => {
-    const input = document.querySelector('#habitEditorBody .eh-preference');
-    input.value = '';
-    input.dispatchEvent(new Event('change', { bubbles:true }));
-  });
+  await page.select('#habitEditorBody .eh-custom-preferred-time', 'any');
   await page.click('#habitEditorSave');
   await page.waitForFunction(() => !document.getElementById('manageCategoryView').hidden);
   assert.equal(await page.evaluate(() => !!JSON.parse(localStorage.getItem('wavelength_wpb_habits') || '{}').stretch?.preferenceWindow), false);
@@ -105,7 +102,7 @@ let browser;
 
   await page.evaluate(() => openHabitEditorPage('stretch'));
   await page.waitForFunction(() => !document.getElementById('habitEditorView').hidden);
-  const layout = await page.evaluate(() => ({ documentWidth:document.documentElement.scrollWidth, viewportWidth:innerWidth, fieldVisible:!!document.querySelector('.eh-preference') }));
+  const layout = await page.evaluate(() => ({ documentWidth:document.documentElement.scrollWidth, viewportWidth:innerWidth, fieldVisible:!!document.querySelector('.eh-custom-preferred-time') }));
   assert.equal(layout.fieldVisible, true);
   assert.ok(layout.documentWidth <= layout.viewportWidth, 'full-page editor has no horizontal overflow');
   assert.deepEqual(runtimeErrors, []);

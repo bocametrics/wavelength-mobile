@@ -10,7 +10,7 @@ function extract(source,name){
 }
 for(const [label,file] of [['mobile','../index.html'],['desktop','fixtures/friday_app_2026-07-12.html']]){
  const html=fs.readFileSync(path.resolve(here,file),'utf8');
- assert.match(html,/const BACKUP_VERSION\s*=\s*10\s*;/,`${label}: isolated custom recommendation settings require portable backup v10`);
+ assert.match(html,/const BACKUP_VERSION\s*=\s*11\s*;/,`${label}: backup v11 retains the isolated custom recommendation settings introduced in v10`);
  const exporter=extract(html,'createBackupPayload'),importer=extract(html,'importBackupFile');
  assert.match(exporter,/assertCustomNextWaveStorageIntegrity\(/,`${label}: export cannot silently replace corrupt retained settings with read fallback`);
  assert.match(exporter,/customNextWave\s*:/,`${label}: v10 has the explicit separate transfer document`);

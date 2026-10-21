@@ -1,0 +1,25 @@
+{
+  "sourceSha256": "d2f52f05c2105034064c79964b14b108415e7d5fdcc296b4ad8669b8323c11fe",
+  "mirrors": [
+    "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/index.html",
+    "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/tests/fixtures/friday_app_2026-07-12.html",
+    "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/friday_app_2026-07-12.html"
+  ],
+  "browserSuites": 28,
+  "browserRuns": 56,
+  "sourceSuites": 56,
+  "actualNavigationResponses": 838,
+  "verifiedScreenshots": 142,
+  "ownedProfiles": 56,
+  "allOwnedProfilesAbsent": true,
+  "sourceAndTestsSealed": true,
+  "runtimeErrors": 0,
+  "scope": "Local source/browser acceptance only. Native picker, package/WidgetKit, physical device and release not tested.",
+  "durableEvidenceRoot": "/home/ai_agent/.hermes/artifacts/wavelength/editor-consistency-20261020",
+  "copiedBrowserFileCount": 336,
+  "review": "Independent final exact-candidate source/oracle review PASS, no remaining bounded blockers.",
+  "gitBase": "a7eb71ae57efd29475ccadbb91e87fa8372353d2",
+  "commitPushDeployInstall": "Not performed",
+  "newFocusedChecksPerTheme": 187,
+  "newPreservationCasesPerTheme": 35
+}

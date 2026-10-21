@@ -20,15 +20,15 @@ for(const [label,relative] of builds){
  const run=(name,fn)=>{try{fn();rows.push({build:label,name,passed:true});}catch(e){if(e.name!=='AssertionError')throw e;rows.push({build:label,name,passed:false,error:e.message});}};
  run('startup explicitly loads isolated runtime model before catalog construction',()=>{
   assert.match(source,/let\s+customNextWaveState\s*=\s*loadCustomNextWaveState\(habitCatalogState\)/);
-  assert.match(source,/const initialCompleteHabitCatalog = buildCompleteHabitCatalog\(\s*DEFAULT_HABITS,\s*loadCustomHabits\(\) \|\| \{\},\s*habitCatalogState,\s*customNextWaveState,?\s*\)/);
+  assert.match(source,/const initialCompleteHabitCatalog = buildCompleteHabitCatalog\(\s*DEFAULT_HABITS,\s*loadCustomHabits\(\) \|\| \{\},\s*habitCatalogState,\s*customNextWaveState,\s*dateKey\(new Date\(\)\)\s*\)/);
  });
  run('reload reads isolated runtime model after catalog and passes it explicitly',()=>{
   const body=sandbox.extract(source,'reloadHabits');
-  assert.match(body,/habitCatalogState = loadHabitCatalogState[\s\S]*customNextWaveState = loadCustomNextWaveState\(habitCatalogState\)[\s\S]*buildCompleteHabitCatalog\(\s*DEFAULT_HABITS,\s*overrides \|\| \{\},\s*habitCatalogState,\s*customNextWaveState,?\s*\)/);
+  assert.match(body,/habitCatalogState = loadHabitCatalogState[\s\S]*customNextWaveState = loadCustomNextWaveState\(habitCatalogState\)[\s\S]*buildCompleteHabitCatalog\(\s*DEFAULT_HABITS,\s*overrides \|\| \{\},\s*habitCatalogState,\s*customNextWaveState,\s*dateKey\(now\)\s*\)/);
  });
  run('import stages incoming normalized consent and never publishes its model before commit',()=>{
   const body=sandbox.extract(source,'importBackupFile');
-  assert.match(body,/buildCompleteHabitCatalog\(\s*DEFAULT_HABITS,\s*customHabits,\s*importedHabitCatalog,\s*importedCustomNextWave,?\s*\)/);
+  assert.match(body,/buildCompleteHabitCatalog\(\s*DEFAULT_HABITS,\s*customHabits,\s*importedHabitCatalog,\s*importedCustomNextWave,\s*dateKey\(importDate\)\s*\)/);
   assert.doesNotMatch(body.slice(0,body.indexOf('commitStorageSnapshot(')),/\bcustomNextWaveState\s*=/);
  });
  for(const name of ['saveNewCustomHabit','saveExistingCustomHabit'])run(`${name} rejects stale/corrupt isolated configuration before authoring writes`,()=>{

@@ -86,7 +86,7 @@ function assertOrdered(source, tokens, message) {
 for (const [label, htmlPath] of builds) {
   const html = fs.readFileSync(htmlPath, 'utf8');
 
-  assert.match(html, /const BACKUP_VERSION\s*=\s*10\s*;/,
+  assert.match(html, /const BACKUP_VERSION\s*=\s*11\s*;/,
     `${label}: portable backups advance to version 10 without weakening lifecycle compatibility`);
 
   const exporter = extractFunction(html, 'createBackupPayload');
@@ -100,8 +100,8 @@ for (const [label, htmlPath] of builds) {
     `${label}: v9 export retains completion, progress, and evidence documents`);
 
   const importer = extractFunction(html, 'importBackupFile');
-  assert.match(importer, /\[1,\s*2,\s*3,\s*4,\s*5,\s*6,\s*7,\s*8,\s*9,\s*BACKUP_VERSION\]\.includes\(payload\.version\)/,
-    `${label}: versions 1 through 9 remain importable under v10`);
+  assert.match(importer, /\[1,\s*2,\s*3,\s*4,\s*5,\s*6,\s*7,\s*8,\s*9,\s*10,\s*BACKUP_VERSION\]\.includes\(payload\.version\)/,
+    `${label}: versions 1 through 10 remain importable under v11`);
   assert.match(importer, /payload\.version >= 9 && !payload\.habitCatalog/,
     `${label}: a v9 document without its lifecycle catalog fails closed`);
   assert.match(importer, /const importedHabitCatalog = payload\.version >= 9[\s\S]*normalizeHabitCatalogState\(payload\.habitCatalog[\s\S]*createDefaultHabitCatalogState\(dateKey\(importDate\)\)/,

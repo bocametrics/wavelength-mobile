@@ -243,12 +243,16 @@ for (const [label, htmlPath] of builds) {
   );
   assert.match(html, /const SYSTEM_HABIT_IDS = new Set\(DEFAULT_HABITS\.map\(h => h\.id\)\);/,
     `${label}: every shipped default has an explicit system identity independent of parameters`);
-  assert.match(html, /const isSystem = SYSTEM_HABIT_IDS\.has\(h\.id\);[\s\S]*?\$\{isSystem \? `<div class="eh-system-title">/,
-    `${label}: every system habit title renders locked, not only parameterized habits`);
-  assert.match(html, /\$\{isSystem \? `<div class="eh-system-anchor">[\s\S]*?Habit cue[\s\S]*?Set by Wavelength/,
-    `${label}: system habit cues use the unified feature name with a read-only managed explanation`);
-  assert.match(html, /<div class="eh-rhythm-block" \$\{isSystem \? 'hidden' : ''\}>/,
-    `${label}: system rhythm editors are withheld from the active UI`);
+  assert.match(html, /const isSystem = SYSTEM_HABIT_IDS\.has\(h\.id\);[\s\S]*?class="eh-identity-row eh-system-title"[\s\S]*?<span class="eh-system-name"><textarea class="eh-text" rows="1" readonly aria-label="Habit name">/,
+    `${label}: every system habit title uses the shared read-only identity field, not only parameterized habits`);
+  assert.match(html, /class="eh-system-notice"[\s\S]*?Wavelength habit[\s\S]*?Some fields are managed by Wavelength and can’t be edited\./,
+    `${label}: managed system restrictions are explained without tapping disabled controls`);
+  assert.match(html, /<div class="eh-rhythm-block\$\{isSystem \? ' eh-system-anchor' : ''\}">[\s\S]*?Habit cue[\s\S]*?class="eh-rhythm"[^>]*\$\{isSystem \? 'disabled' : ''\}/,
+    `${label}: system cues stay visible with a disabled shared selector`);
+  assert.match(html, /class="eh-rhythm-threshold" \$\{isSystem \? 'readonly' : ''\}/,
+    `${label}: system cue thresholds are read-only`);
+  assert.match(html, /class="eh-rhythm-note"[^>]*\$\{isSystem \? 'readonly' : ''\}/,
+    `${label}: system cue messages are read-only`);
   assert.match(html, /const existingOverrides = loadCustomHabits\(\) \|\| \{\};[\s\S]*?const hasGrandfatheredTitle = isSystem[\s\S]*?parseLegacySystemHabitTitle\(id, existingText\) === null;[\s\S]*?if \(!isSystem && text !== def\.text\) changes\.text = text;[\s\S]*?else if \(hasGrandfatheredTitle\) changes\.text = existingText;/,
     `${label}: Manage saves retain every existing unrecognized system title, including unparameterized defaults`);
 

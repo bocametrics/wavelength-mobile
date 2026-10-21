@@ -2310,22 +2310,6 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     white-space: nowrap;
   }
 
-  .eh-system-target {
-    flex: 0 0 auto;
-    color: var(--text2);
-    font-size: 0.82em;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .eh-system-target::before {
-    content: '·';
-    margin-right: 6px;
-    color: var(--text3);
-  }
-
-  .eh-system-target[hidden] { display: none; }
-
   .eh-param-field {
     display: flex;
     align-items: center;
@@ -2766,7 +2750,6 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     .modal-header h3 { font-size: 1rem; line-height: 1.3; }
     .manage-all-link { font-size: 0.875rem; line-height: 1.3; }
     .eh-system-title { font-size: 0.9375rem; line-height: 1.3; }
-    .eh-system-target { font-size: 0.8125rem; line-height: 1.3; }
     .eh-param-field,
     .eh-preference-field { color: var(--text2); font-size: 0.8125rem; line-height: 1.35; }
     .eh-measurement-label,
@@ -2831,14 +2814,14 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   #habitEditorView .eh-category-field select,
   #habitEditorView .eh-measurement,
   #habitEditorView .eh-rhythm { width: 100%; min-width: 0; min-height: 44px; }
-  #habitEditorView .eh-identity-row { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; align-items: end; }
-  #habitEditorView .eh-emoji-field { display: grid; gap: 6px; color: var(--text2); font-size: 0.875rem; }
+  #habitEditorView .eh-identity-row { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; align-items: start; }
+  #habitEditorView .eh-emoji-field { display: flex; flex-direction: column; align-items: stretch; gap: 6px; color: var(--text2); font-size: 0.875rem; }
   #habitEmojiButton { width: 56px; min-height: 44px; border: 1px solid var(--border2); background: var(--surface2); border-radius: 8px; font-size: 1.4rem; cursor: pointer; }
   #habitEditorView .eh-label-row { display: flex; justify-content: space-between; gap: 6px; align-items: center; }
   #habitEditorView #habitNameCount,
   #habitEditorView .eh-note-count { color: var(--text2); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
   #habitEditorView .eh-note-row { display: grid; width: 100%; gap: 14px; }
-  #habitEditorView .eh-next-wave-group { display: grid; gap: 12px; min-width: 0; }
+  #habitEditorView .eh-next-wave-group { display: grid; gap: 18px; min-width: 0; }
   #habitEditorView .eh-next-wave-toggle { display: flex; align-items: center; justify-content: space-between; gap: 14px; min-height: 44px; color: var(--text2); font-size: 0.875rem; cursor: pointer; }
   #habitEditorView .eh-next-wave-toggle .native-switch input { width: 1px; height: 1px; min-height: 0; padding: 0; border: 0; }
   #habitEditorView .eh-setting { width: 100%; min-width: 0; min-height: 44px; }
@@ -2856,7 +2839,26 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   #habitEditorView .eh-param-field input,
   #habitEditorView .eh-param-field select { width: 100%; min-height: 44px; min-width: 0; }
   .eh-rhythm-label { flex-direction: column; align-items: stretch; text-transform: none; letter-spacing: 0; color: var(--text2); font-size: 0.875rem; }
-  #habitEditorView .eh-system-anchor { display: grid; gap: 6px; color: var(--text2); font-size: 0.875rem; }
+  #habitEditorView .eh-rhythm-block { display: grid; gap: 18px; }
+  #habitEditorView .eh-timing-group { display: grid; gap: 14px; }
+  #habitEditorView .eh-cue-message { gap: 6px; }
+  #habitEditorView .eh-cue-message .eh-rhythm-note { margin: 0; }
+  #habitEditorView .eh-system-notice { padding: 12px; border: 1px solid var(--border); border-radius: 10px; color: var(--text2); font-size: 0.875rem; }
+  #habitEditorView .eh-system-notice p { margin: 6px 0 0; }
+  #habitEditorView .eh-icon { width: 56px; min-width: 0; min-height: 44px; height: 44px; margin: 0; padding: 0; box-sizing: border-box; text-align: center; font-size: 1.4rem; }
+  #habitEmojiButton { height: 44px; padding: 0; box-sizing: border-box; }
+  #habitEditorView .eh-name-field { min-width: 0; }
+  #habitEditorView .eh-name-field > input { min-height: 44px; height: 44px; box-sizing: border-box; }
+  #habitEditorView .eh-system-name, #habitEditorView .eh-system-name .eh-text { display: block; width: 100%; }
+  #habitEditorView input[readonly], #habitEditorView textarea[readonly], #habitEditorView select:disabled { opacity: 1; color: var(--text2); -webkit-text-fill-color: var(--text2); }
+  #habitEditorView .reset-btn { width: 100%; min-height: 44px; margin-top: 12px; border: 0; background: transparent; color: var(--text2); text-decoration: underline; font: inherit; cursor: pointer; }
+  #habitEditorView .eh-field-review { padding: 12px; border: 1px solid var(--border2); border-radius: 10px; color: var(--text2); font-size: 0.875rem; }
+  #habitEditorView .eh-field-review p { margin: 0; line-height: 1.4; }
+
+  #habitEditorView [data-field-resolution] { scroll-margin-block: 110px; }
+  #habitEditorView .eh-duration-minutes { min-height: 44px; }
+  #habitEditorView .reset-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #habitAnchorHelp { flex-basis: 100%; margin: 0; }
   #habitEditorView .eh-system-anchor strong { font-weight: 500; color: var(--text); }
   #habitEditorView .eh-system-title { flex-wrap: wrap; }
   #habitEditorView .eh-system-name { white-space: normal; overflow-wrap: anywhere; overflow: visible; }
@@ -2865,6 +2867,21 @@ function getThemeStatusCopy(preference, effectiveTheme) {
   .eh-field-error { color: color-mix(in srgb, var(--rose) 80%, var(--text)); font-size: 0.8125rem; line-height: 1.4; margin: 2px 0 0; }
   .eh-validation-summary { color: var(--text2); font-size: 0.875rem; line-height: 1.4; margin: 16px 0; }
   #habitEditorView [aria-invalid="true"] { border-color: var(--rose); }
+  /* Peer field labels share one hierarchy across custom and system editors. */
+  #habitEditorView .eh-label-row > span:first-child,
+  #habitEditorView .eh-emoji-field > span:first-child,
+  #habitEditorView .eh-name-field > span:first-child:not(.eh-label-row),
+  #habitEditorView :is(.eh-category-field, .eh-measurement-label, .eh-measure-field,
+    .eh-schedule-label, .eh-param-field, .eh-form-field, .eh-preference-field,
+    .eh-next-wave-toggle, .eh-rhythm-label, .eh-rhythm-field) > span:first-child {
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--text2);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  #habitEditorView :is(input, select, textarea) { font-weight: 400; }
   #nextWaveNotificationTime { -webkit-appearance: none; appearance: none; }
   .habit-editor-save { width: 100%; min-height: 50px; margin-top: 20px; }
   .habit-editor-save:disabled { opacity: 0.55; cursor: not-allowed; }
@@ -3027,6 +3044,16 @@ function getThemeStatusCopy(preference, effectiveTheme) {
       </label>
     </section>
 
+    <section class="settings-card" aria-labelledby="habitAnchorsHeading">
+      <h2 id="habitAnchorsHeading">Daily anchors</h2>
+      <p>Use your existing habits to set your wake time and bedtime.</p>
+      <div class="data-tools">
+        <button type="button" class="modal-btn" data-habit-anchor="wake">Wake time</button>
+        <button type="button" class="modal-btn" data-habit-anchor="sleep">Bedtime</button>
+        <p id="habitAnchorHelp" class="eh-helper" hidden>Archived anchors can’t be edited here. Restore the habit in Manage to edit its time.</p>
+      </div>
+    </section>
+
     <section class="settings-card appearance-tools" aria-labelledby="appearanceHeading">
       <div class="appearance-heading">
         <strong id="appearanceHeading">Appearance</strong>
@@ -3101,7 +3128,7 @@ function getThemeStatusCopy(preference, effectiveTheme) {
     <p id="habitEditorValidationSummary" class="eh-validation-summary" role="status" hidden></p>
     <button class="modal-btn primary habit-editor-save" id="habitEditorSave" type="button" aria-describedby="habitEditorValidationSummary">Save</button>
     <button id="habitEditorArchive" class="modal-btn habit-editor-archive" type="button" hidden>Archive habit</button>
-    <button class="modal-btn danger" id="habitEditorReset" type="button">Reset habit defaults</button>
+    <button class="reset-btn" id="habitEditorReset" type="button">Reset habit defaults</button>
   </section>
 
   <section class="management-view" id="archivedHabitsView" aria-labelledby="archivedHabitsHeading" hidden inert>
@@ -3241,7 +3268,7 @@ const DEFAULT_HABITS = [
 
 const HABIT_NAME_MAX = 30;
 const HABIT_CARD_NOTE_MAX = 32;
-const HABIT_CATALOG_SCHEMA_VERSION = 1;
+const HABIT_CATALOG_SCHEMA_VERSION = 2;
 const HABIT_CATALOG_KEY = 'wavelength_habit_catalog_v1';
 const CUSTOM_NEXT_WAVE_KEY = 'wavelength_custom_next_wave_v1';
 const MAX_CUSTOM_HABITS = 100;
@@ -3513,14 +3540,195 @@ function deriveSystemHabitContext(habitId, baseContext = {}, paramsById = {}) {
 
 const SYSTEM_HABIT_IDS = new Set(DEFAULT_HABITS.map(h => h.id));
 
-function buildRuntimeHabits(defaults, overrides = {}) {
+function resolveSharedHabitDuration(habit, setting = null) {
+  if (['wake','sleep'].includes(habit.id)) return { mode:'not-applicable', minutes:null };
+  const minuteGoal = habit.measurement === 'amount' && typeof habit.unit === 'string' &&
+    ['min','mins','minute','minutes'].includes(habit.unit.trim().toLowerCase()) &&
+    Number.isFinite(habit.target) && habit.target > 0;
+  const legacyMinutes = setting?.durationMode === 'planned' ? setting.plannedDuration : habit.params?.durationMinutes ?? habit.context?.duration ?? null;
+  if (minuteGoal) {
+    if (setting?.durationMode !== 'goal' && Number.isFinite(legacyMinutes) && legacyMinutes !== habit.target) {
+      return { mode:'review', minutes:legacyMinutes, goal:habit.target, legacyMinutes };
+    }
+    return { mode:'goal', minutes:habit.target };
+  }
+  return { mode:'planned', minutes:setting?.durationMode === 'planned' ? setting.plannedDuration : legacyMinutes };
+}
+
+function normalizeTrackingSnapshot(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Invalid tracking snapshot.');
+  if (raw.type === 'unknown') {
+    if (Object.keys(raw).length !== 1) throw new Error('Unknown tracking must not invent a configuration.');
+    return { type:'unknown' };
+  }
+  const fields = ['type','target','step','unit','planningMinutes'];
+  if (Object.keys(raw).some(key => !fields.includes(key)) || fields.some(key => !Object.hasOwn(raw, key)) ||
+      !['check','count','amount'].includes(raw.type) ||
+      !(raw.planningMinutes === null || Number.isSafeInteger(raw.planningMinutes) && raw.planningMinutes > 0)) {
+    throw new Error('Invalid tracking snapshot fields.');
+  }
+  const config = normalizeMeasurementConfig({ measurement:raw.type, target:raw.target, step:raw.step, unit:raw.unit });
+  if (config.type !== raw.type || config.target !== raw.target || config.step !== raw.step || config.unit !== raw.unit) {
+    throw new Error('Invalid tracking snapshot configuration.');
+  }
+  return { type:config.type, target:config.target, step:config.step, unit:config.unit, planningMinutes:raw.planningMinutes };
+}
+
+function normalizeTrackingHistory(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw) ||
+      Object.keys(raw).some(key => !['initial','changes'].includes(key)) ||
+      !Object.hasOwn(raw, 'initial') || !Array.isArray(raw.changes)) throw new Error('Invalid tracking history.');
+  let previousDate = '';
+  const changes = raw.changes.map(entry => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry) ||
+        Object.keys(entry).some(key => !['date','config'].includes(key)) ||
+        !isValidDateKey(entry.date) || entry.date <= previousDate) throw new Error('Invalid tracking history date.');
+    previousDate = entry.date;
+    return { date:entry.date, config:normalizeTrackingSnapshot(entry.config) };
+  });
+  return { initial:normalizeTrackingSnapshot(raw.initial), changes };
+}
+
+function resolveTrackingConfigForDate(history, date) {
+  if (!isValidDateKey(date)) throw new Error('A valid tracking date is required.');
+  if (!history) return { type:'unknown' };
+  const normalized = normalizeTrackingHistory(history);
+  let config = normalized.initial;
+  for (const entry of normalized.changes) {
+    if (entry.date > date) break;
+    config = entry.config;
+  }
+  return { ...config };
+}
+
+function planTrackingHistoryChange(history, previousConfig, nextConfig, date, hasActivity) {
+  if (!isValidDateKey(date) || typeof hasActivity !== 'boolean') throw new Error('Invalid tracking change boundary.');
+  const previous = normalizeTrackingSnapshot(previousConfig), next = normalizeTrackingSnapshot(nextConfig);
+  const normalized = history ? normalizeTrackingHistory(history) : { initial:{ type:'unknown' }, changes:[] };
+  const pending = normalized.changes.filter(entry => entry.date > date);
+  const tomorrow = new Date(Number(date.slice(0,4)), Number(date.slice(5,7)) - 1, Number(date.slice(8,10)));
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const nextDate = `${String(tomorrow.getFullYear()).padStart(4,'0')}-${String(tomorrow.getMonth()+1).padStart(2,'0')}-${String(tomorrow.getDate()).padStart(2,'0')}`;
+  const effectiveDate = pending.length ? pending[pending.length - 1].date : hasActivity ? nextDate : date;
+  const changes = normalized.changes.filter(entry => entry.date !== effectiveDate &&
+    !(effectiveDate > date && entry.date === date));
+  // Immediate planning edits may have advanced beyond this day's tracking snapshot.
+  // Preserve the actual effective budget when establishing a future tracking cutover;
+  // timestamped Duration history still retains the earlier exposure budgets.
+  if (effectiveDate > date) changes.push({ date, config:previous });
+  changes.push({ date:effectiveDate, config:next });
+  changes.sort((a,b) => a.date.localeCompare(b.date));
+  return { history:normalizeTrackingHistory({ initial:normalized.initial, changes }), effectiveDate };
+}
+
+function normalizeSharedFieldSettings(raw, knownIds) {
+  if (!Array.isArray(raw)) throw new Error('Shared field settings must be an array.');
+  const seen = new Set();
+  return raw.map(entry => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry) ||
+        Object.keys(entry).some(key => !['habitId','durationMode','plannedDuration','durationHistory','targetMode','timingMode','trackingHistory'].includes(key)) ||
+        !knownIds.includes(entry.habitId) || seen.has(entry.habitId) ||
+        !['goal','planned'].includes(entry.durationMode)) throw new Error('Invalid or duplicate shared field settings.');
+    seen.add(entry.habitId);
+    const history = {};
+    if (Object.hasOwn(entry, 'targetMode')) {
+      if (entry.targetMode !== 'standard' || !['hydrate','gratitude'].includes(entry.habitId)) throw new Error('Invalid shared target intent.');
+      history.targetMode = entry.targetMode;
+    }
+    if (Object.hasOwn(entry, 'timingMode')) {
+      if (!['preferred','legacy-deadline'].includes(entry.timingMode) || ['wake','sleep'].includes(entry.habitId) ||
+          entry.timingMode === 'legacy-deadline' && entry.habitId !== 'dinner') throw new Error('Invalid shared timing intent.');
+      history.timingMode = entry.timingMode;
+    }
+    if (Object.hasOwn(entry, 'trackingHistory')) history.trackingHistory = normalizeTrackingHistory(entry.trackingHistory);
+    if (Object.hasOwn(entry, 'durationHistory')) {
+      if (!Array.isArray(entry.durationHistory) || entry.durationHistory.length < 2) throw new Error('Invalid Duration history.');
+      let previousAt = -1;
+      history.durationHistory = entry.durationHistory.map(snapshot => {
+        if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot) ||
+            Object.keys(snapshot).some(key => !['at','minutes','collidingMinutes'].includes(key)) ||
+            !Number.isSafeInteger(snapshot.at) || snapshot.at <= previousAt ||
+            !(snapshot.minutes === null || Number.isSafeInteger(snapshot.minutes) && snapshot.minutes > 0)) {
+          throw new Error('Invalid Duration history boundary or budget.');
+        }
+        previousAt = snapshot.at;
+        const collision = {};
+        if (Object.hasOwn(snapshot, 'collidingMinutes')) {
+          if (snapshot.at === 0 || !Array.isArray(snapshot.collidingMinutes) || snapshot.collidingMinutes.length === 0 ||
+              snapshot.collidingMinutes.some(value => !Number.isSafeInteger(value) || value <= 0) ||
+              new Set(snapshot.collidingMinutes).size !== snapshot.collidingMinutes.length ||
+              snapshot.minutes !== null && !snapshot.collidingMinutes.includes(snapshot.minutes)) {
+            throw new Error('Invalid exact-timestamp Duration budgets.');
+          }
+          collision.collidingMinutes = [...snapshot.collidingMinutes];
+        }
+        return { at:snapshot.at, minutes:snapshot.minutes, ...collision };
+      });
+      if (history.durationHistory[0].at !== 0) throw new Error('Duration history requires its legacy baseline.');
+    }
+    if (entry.durationMode === 'goal') {
+      if (Object.hasOwn(entry, 'plannedDuration')) throw new Error('Goal Duration cannot store a competing target.');
+      return { habitId:entry.habitId, durationMode:'goal', ...history };
+    }
+    if (!Object.hasOwn(entry, 'plannedDuration') || !(entry.plannedDuration === null ||
+        (Number.isFinite(entry.plannedDuration) && entry.plannedDuration >= 0.01 &&
+          Number.isSafeInteger(Math.ceil(entry.plannedDuration))))) throw new Error('Invalid planned Duration.');
+    return { habitId:entry.habitId, durationMode:'planned', plannedDuration:entry.plannedDuration, ...history };
+  });
+}
+
+function projectTrackingHabit(habit, setting, activeDate) {
+  const history = setting?.trackingHistory;
+  const result = { ...habit };
+  if (history) result.trackingHistory = normalizeTrackingHistory(history);
+  if (!activeDate || !history) return result;
+  const config = resolveTrackingConfigForDate(history, activeDate);
+  if (config.type === 'unknown') return result;
+  result.measurement = config.type;
+  result.target = config.target;
+  result.step = config.step;
+  result.unit = config.unit;
+  return result;
+}
+
+function buildRuntimeHabits(defaults, overrides = {}, fieldSettings = null, activeDate = null) {
+  if (activeDate && fieldSettings) {
+    overrides = { ...overrides };
+    fieldSettings = fieldSettings.map(setting => {
+      const config = setting.trackingHistory && resolveTrackingConfigForDate(setting.trackingHistory, activeDate);
+      if (!config || config.type === 'unknown') return setting;
+      const original = overrides[setting.habitId] || {};
+      overrides[setting.habitId] = { ...original, measurement:config.type, target:config.target, step:config.step, unit:config.unit };
+      if (!setting.trackingHistory.changes.some(entry => entry.date > activeDate)) return setting;
+      // A deferred legacy resolution retains the captured date-effective budget;
+      // do not recompute it from the still-active minute Goal before the cutover.
+      const linkedGoalBudget = config.type === 'amount' &&
+        ['min','mins','minute','minutes'].includes(config.unit.trim().toLowerCase()) &&
+        config.planningMinutes === Math.ceil(config.target);
+      return { ...setting, durationMode:linkedGoalBudget ? 'goal' : 'planned', plannedDuration:config.planningMinutes };
+    });
+  }
   const paramsById = {};
   for (const id of Object.keys(SYSTEM_HABIT_PARAMETER_DEFS)) {
     paramsById[id] = normalizeSystemHabitParams(id, overrides[id]?.params || {}, false);
   }
+  const durations = new Map();
+  if (fieldSettings !== null) for (const habit of defaults) {
+    const merged = { ...habit, ...overrides[habit.id], params:paramsById[habit.id] };
+    const duration = resolveSharedHabitDuration(merged, fieldSettings.find(entry => entry.habitId === habit.id));
+    durations.set(habit.id, duration);
+    // Resolve BEFORE anchor-relative math; only the planning budget rounds up.
+    if (Number.isFinite(duration.minutes) && paramsById[habit.id] &&
+        Object.hasOwn(paramsById[habit.id], 'durationMinutes')) {
+      paramsById[habit.id] = { ...paramsById[habit.id], durationMinutes:Math.ceil(duration.minutes) };
+    }
+  }
   return defaults.map(habit => {
     const override = overrides[habit.id] || {};
-    const runtime = { ...habit, ...override };
+    const trackingSetting = fieldSettings?.find(entry => entry.habitId === habit.id);
+    const runtime = trackingSetting?.trackingHistory ? projectTrackingHabit({ ...habit, ...override }, trackingSetting, activeDate) : { ...habit, ...override };
+    const durationHistory = fieldSettings?.find(entry => entry.habitId === habit.id)?.durationHistory;
+    if (durationHistory) runtime.durationHistory = durationHistory.map(snapshot => ({ ...snapshot }));
     if (override.preferenceWindow) runtime.preferenceWindow = normalizePreferenceWindow(override.preferenceWindow, false);
     if (paramsById[habit.id]) {
       runtime.params = paramsById[habit.id];
@@ -3537,11 +3745,33 @@ function buildRuntimeHabits(defaults, overrides = {}) {
       runtime.targetLabel = '';
       runtime.context = deriveSystemHabitContext(habit.id, habit.context, paramsById);
     }
+    const sharedDuration = durations.get(habit.id);
+    if (sharedDuration && sharedDuration.mode !== 'not-applicable') {
+      runtime.context = { ...runtime.context, duration:sharedDuration.minutes === null ? undefined : Math.ceil(sharedDuration.minutes),
+        ...(fieldSettings.some(entry => entry.habitId === habit.id) ? { authoredDuration:true } : {}) };
+      if (sharedDuration.mode === 'goal') runtime.targetLabel = `${runtime.target} ${runtime.unit}`;
+      else if (paramsById[habit.id]?.durationMinutes !== undefined && Number.isFinite(sharedDuration.minutes)) {
+        runtime.targetLabel = Object.hasOwn(override, 'text') ? '' : formatSystemHabitTarget(habit.id,
+          { ...runtime.params, durationMinutes:sharedDuration.minutes });
+      }
+    }
     if (Object.hasOwn(override, 'rhythm') && override.rhythm != null && SYSTEM_HABIT_IDS.has(habit.id)) {
       runtime.authoredCue = true;
       runtime.authoredCueSetting = ['indoor','outdoor','either'].includes(runtime.context?.setting)
         ? runtime.context.setting : 'either';
     }
+    const sharedSetting = fieldSettings?.find(entry => entry.habitId === habit.id);
+    if (sharedSetting?.targetMode === 'standard') {
+      const config = normalizeMeasurementConfig(runtime);
+      runtime.targetLabel = config.type === 'check' ? '' : config.type === 'amount' ? `${config.target} ${config.unit}` : `${config.target}`;
+    }
+    if (habit.id === 'dinner' && sharedSetting?.timingMode === 'preferred') {
+      runtime.context = { start:0, end:1440, setting:runtime.context?.setting || 'indoor',
+        duration:runtime.context?.duration, authoredDuration:runtime.context?.authoredDuration };
+      runtime.targetLabel = '';
+    }
+    if (habit.id === 'dinner' && sharedSetting?.timingMode === 'legacy-deadline' &&
+        !sharedSetting.durationHistory && runtime.context.duration === habit.context?.duration) delete runtime.context.authoredDuration;
     return runtime;
   });
 }
@@ -3551,6 +3781,7 @@ function createDefaultHabitCatalogState(migrationDate) {
   return {
     schemaVersion:HABIT_CATALOG_SCHEMA_VERSION,
     customDefinitions:[],
+    fieldSettings:[],
     status:[{
       habitId:'medication',
       initialActive:true,
@@ -3686,9 +3917,11 @@ function normalizeHabitCatalogState(raw, defaults, activeCategoryIds, validation
     fail('Habit catalog must be an object.');
     return fallback();
   }
-  const allowedRoot = new Set(['schemaVersion','customDefinitions','status']);
+  const allowedRoot = new Set(['schemaVersion','customDefinitions','status','fieldSettings']);
   if (Object.keys(raw).some(key => !allowedRoot.has(key)) ||
-      raw.schemaVersion !== HABIT_CATALOG_SCHEMA_VERSION ||
+      ![1, HABIT_CATALOG_SCHEMA_VERSION].includes(raw.schemaVersion) ||
+      (raw.schemaVersion === 1 && Object.hasOwn(raw, 'fieldSettings')) ||
+      (raw.schemaVersion === HABIT_CATALOG_SCHEMA_VERSION && !Array.isArray(raw.fieldSettings)) ||
       !Array.isArray(raw.customDefinitions) || !Array.isArray(raw.status)) {
     fail('Habit catalog schema is invalid.');
     return fallback();
@@ -3760,7 +3993,8 @@ function normalizeHabitCatalogState(raw, defaults, activeCategoryIds, validation
       status.push({ habitId:candidate.habitId, initialActive:candidate.initialActive, changes });
     }
   }
-  return { schemaVersion:HABIT_CATALOG_SCHEMA_VERSION, customDefinitions, status };
+  const fieldSettings = normalizeSharedFieldSettings(raw.schemaVersion === 1 ? [] : raw.fieldSettings, [...knownIds]);
+  return { schemaVersion:HABIT_CATALOG_SCHEMA_VERSION, customDefinitions, status, fieldSettings };
 }
 
 function loadHabitCatalogState(defaults, activeCategoryIds, migrationDate, storage = localStorage) {
@@ -3771,16 +4005,48 @@ function loadHabitCatalogState(defaults, activeCategoryIds, migrationDate, stora
     return createDefaultHabitCatalogState(migrationDate);
   }
   if (raw === null) {
-    const initial = createDefaultHabitCatalogState(migrationDate);
-    try {
-      storage.setItem(HABIT_CATALOG_KEY, JSON.stringify(initial));
-    } catch (error) {}
-    return initial;
+    const created = createDefaultHabitCatalogState(migrationDate);
+    try { storage.setItem(HABIT_CATALOG_KEY, JSON.stringify(created)); } catch (error) {}
+    return created;
   }
   try {
     return normalizeHabitCatalogState(JSON.parse(raw), defaults, activeCategoryIds, migrationDate, true);
   } catch (error) {
-    return createDefaultHabitCatalogState(migrationDate);
+    if (typeof document !== 'undefined' && !document.getElementById('habitCatalogLoadError')) {
+      const notice = document.createElement('section');
+      notice.id = 'habitCatalogLoadError';
+      notice.setAttribute('role', 'alert');
+      notice.style.cssText = 'position:fixed;inset:0;z-index:9999;display:grid;place-content:center;gap:16px;padding:24px;background:var(--bg);color:var(--text);';
+      const heading = document.createElement('h1');
+      heading.textContent = 'Saved data needs recovery';
+      const help = document.createElement('p');
+      help.textContent = 'The app is paused to protect saved data. Download a recovery file and seek help before changing or clearing browser data. Normal app controls are unavailable until the data is recovered.';
+      const download = document.createElement('button');
+      download.id = 'habitCatalogRecoveryDownload';
+      download.type = 'button';
+      download.className = 'modal-btn primary';
+      download.style.minHeight = '44px';
+      download.textContent = 'Download recovery file';
+      download.addEventListener('click', () => {
+        try {
+          const retained = Object.fromEntries(Object.keys(storage).map(key => [key, storage.getItem(key)]));
+          const payload = { app:'wavelength-recovery', version:1, createdAt:new Date().toISOString(), storage:retained };
+          const url = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' }));
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `wavelength-recovery-${Date.now()}.json`;
+          document.body.append(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (downloadError) {
+          help.textContent = 'The recovery download could not be created. Your saved data is unchanged. Do not clear browser data; seek help recovering it.';
+        }
+      });
+      notice.append(heading, help, download);
+      document.body.prepend(notice);
+    }
+    throw new Error(`Habit catalog cannot be loaded safely: ${error.message}`);
   }
 }
 
@@ -4063,11 +4329,12 @@ function getCustomPreferredTimeSelection(preferenceWindow) {
   return { mode:'saved', time:'' };
 }
 
-function deriveCustomRecommendationContext(definition, configurationEntry) {
+function deriveCustomRecommendationContext(definition, configurationEntry, duration = null) {
+  const planning = Number.isFinite(duration?.minutes) ? { duration:Math.ceil(duration.minutes), authoredDuration:true } : {};
   if (!configurationEntry || configurationEntry.habitId !== definition?.id ||
       configurationEntry.enabled !== true ||
-      !['indoor','outdoor','either'].includes(configurationEntry.setting)) return { recommend:false };
-  const context = { recommend:true, setting:configurationEntry.setting, start:0, end:1440 };
+      !['indoor','outdoor','either'].includes(configurationEntry.setting)) return { recommend:false, ...planning };
+  const context = { recommend:true, setting:configurationEntry.setting, start:0, end:1440, ...planning };
   const window = normalizePreferenceWindow(definition.preferenceWindow, false);
   if (window && Number.isInteger(window.idealStart) && Number.isInteger(window.idealEnd)) {
     context.start = Math.max(0, window.idealStart - 60);
@@ -4079,9 +4346,12 @@ function deriveCustomRecommendationContext(definition, configurationEntry) {
   return context;
 }
 
-function buildCompleteHabitCatalog(defaults, overrides, catalogState, customNextWave = null) {
-  const shipped = buildRuntimeHabits(Array.isArray(defaults) ? defaults : [], overrides || {});
-  const custom = Array.isArray(catalogState?.customDefinitions) ? catalogState.customDefinitions : [];
+function buildCompleteHabitCatalog(defaults, overrides, catalogState, customNextWave = null, activeDate = null) {
+  const shipped = buildRuntimeHabits(Array.isArray(defaults) ? defaults : [], overrides || {}, catalogState?.fieldSettings || [], activeDate);
+  const custom = (Array.isArray(catalogState?.customDefinitions) ? catalogState.customDefinitions : []).map(definition => {
+    const setting = catalogState?.fieldSettings?.find(entry => entry.habitId === definition.id);
+    return setting?.trackingHistory ? projectTrackingHabit(definition, setting, activeDate) : definition;
+  });
   const configuration = normalizeCustomNextWaveState(customNextWave, catalogState, false);
   const settings = new Map(configuration.settings.map(entry => [entry.habitId, entry]));
   return [
@@ -4092,7 +4362,12 @@ function buildCompleteHabitCatalog(defaults, overrides, catalogState, customNext
       targetLabel:'',
       authoredCue:true,
       authoredCueSetting:settings.get(definition.id)?.setting || 'either',
-      context:deriveCustomRecommendationContext(definition, settings.get(definition.id)),
+      ...(catalogState?.fieldSettings?.find(entry => entry.habitId === definition.id)?.durationHistory
+        ? { durationHistory:catalogState.fieldSettings.find(entry => entry.habitId === definition.id).durationHistory.map(snapshot => ({ ...snapshot })) } : {}),
+      context:deriveCustomRecommendationContext(definition, settings.get(definition.id),
+        activeDate && definition.trackingHistory?.changes.some(entry => entry.date > activeDate)
+          ? { minutes:resolveTrackingConfigForDate(definition.trackingHistory, activeDate).planningMinutes }
+          : resolveSharedHabitDuration(definition, catalogState?.fieldSettings?.find(entry => entry.habitId === definition.id))),
     })),
   ];
 }
@@ -4126,6 +4401,7 @@ function setHabitActiveOnDate(habitCatalogState, habitId, active, date, allHabit
   if (!(allHabits || []).some(habit => habit?.id === habitId)) throw new Error('Cannot change lifecycle state for an unknown habit.');
   if (typeof active !== 'boolean' || !isValidDateKey(date)) throw new Error('A valid lifecycle date and active state are required.');
   const next = {
+    ...JSON.parse(JSON.stringify(habitCatalogState)),
     schemaVersion:habitCatalogState.schemaVersion,
     customDefinitions:(habitCatalogState.customDefinitions || []).map(habit => ({ ...habit })),
     status:(habitCatalogState.status || []).map(entry => ({
@@ -4201,7 +4477,7 @@ function reloadHabits(now = new Date()) {
   const categoryIds = categoryState.definitions.map(category => category.id);
   habitCatalogState = loadHabitCatalogState(DEFAULT_HABITS, categoryIds, dateKey(now));
   customNextWaveState = loadCustomNextWaveState(habitCatalogState);
-  const completeCatalog = buildCompleteHabitCatalog(DEFAULT_HABITS, overrides || {}, habitCatalogState, customNextWaveState);
+  const completeCatalog = buildCompleteHabitCatalog(DEFAULT_HABITS, overrides || {}, habitCatalogState, customNextWaveState, dateKey(now));
   const activeCatalog = getHabitsActiveOnDate(completeCatalog, habitCatalogState, dateKey(now));
   categoryState = normalizeCategoryState(categoryState, completeCatalog, false, activeCatalog);
   ALL_HABITS = applyCategoryStateToHabits(completeCatalog, categoryState);
@@ -4610,11 +4886,23 @@ try {
 } catch (error) {
   localStorage.removeItem(IMPORT_JOURNAL_KEY);
 }
+// Catalog normalization needs cue constants before the first persisted-catalog read.
+const RHYTHM_TYPES = ['none', 'sunrise', 'sunset', 'temp-above', 'temp-below', 'uv-above', 'aqi-below'];
+const RHYTHM_LABELS = {
+  'none': 'No cue',
+  'sunrise': 'Within 1 hr of sunrise',
+  'sunset': 'Within 1 hr of sunset',
+  'temp-above': 'When feels-like exceeds',
+  'temp-below': 'When feels-like is below',
+  'uv-above': 'When UV index reaches',
+  'aqi-below': 'When US AQI is at most',
+};
+
 const initialHabitCatalogDate = dateKey(new Date());
 const initialActiveCategoryIds = loadHabitCatalogCategoryIds();
 let habitCatalogState = loadHabitCatalogState(DEFAULT_HABITS, initialActiveCategoryIds, initialHabitCatalogDate);
 let customNextWaveState = loadCustomNextWaveState(habitCatalogState);
-const initialCompleteHabitCatalog = buildCompleteHabitCatalog(DEFAULT_HABITS, loadCustomHabits() || {}, habitCatalogState, customNextWaveState);
+const initialCompleteHabitCatalog = buildCompleteHabitCatalog(DEFAULT_HABITS, loadCustomHabits() || {}, habitCatalogState, customNextWaveState, dateKey(new Date()));
 let categoryState;
 const initialActiveHabitCatalog = getHabitsActiveOnDate(initialCompleteHabitCatalog, habitCatalogState, initialHabitCatalogDate);
 categoryState = loadCategoryState(initialCompleteHabitCatalog, localStorage, initialActiveHabitCatalog);
@@ -4669,7 +4957,7 @@ function getHabitProgress(dayDone, dayProgress, habit) {
   if (config.type === 'check') return dayDone && dayDone[habit.id] ? 1 : 0;
   const stored = dayProgress && dayProgress[habit.id];
   if (Number.isFinite(stored) && stored >= 0) return stored;
-  return dayDone && dayDone[habit.id] ? config.target : 0;
+  return dayDone && dayDone[habit.id] ? null : 0;
 }
 
 function adjustHabitProgress(current, habit, direction) {
@@ -4683,7 +4971,7 @@ function adjustHabitProgress(current, habit, direction) {
 
 function isHabitProgressComplete(habit, progress) {
   const config = normalizeMeasurementConfig(habit);
-  return progress >= config.target;
+  return progress === null || progress >= config.target;
 }
 
 function buildWidgetSnapshot(input) {
@@ -4701,8 +4989,8 @@ function buildWidgetSnapshot(input) {
       icon:habit.icon,
       title:habit.text,
       targetLabel:habit.targetLabel,
-      complete:isHabitProgressComplete(habit, value),
-      progress:config.type === 'check' ? null : { value, target:config.target, unit:config.unit },
+      complete:!!dayDone?.[habit.id] || isHabitProgressComplete(habit, value),
+      progress:config.type === 'check' || value === null ? null : { value, target:config.target, unit:config.unit },
     };
   });
   const completed = rows.filter(row => row.complete).length;
@@ -4830,6 +5118,7 @@ function updateMeasuredHabitState(doneByDate, progressByDate, habits, date, id, 
   const dayDone = doneByDate[key] || (doneByDate[key] = {});
   const dayProgress = progressByDate[key] || (progressByDate[key] = {});
   const current = getHabitProgress(dayDone, dayProgress, habit);
+  if (current === null) return { progress:null, complete:true, changed:false };
   const progress = adjustHabitProgress(current, habit, direction);
   const complete = isHabitProgressComplete(habit, progress);
   if (progress > 0) dayProgress[id] = progress;
@@ -4845,7 +5134,7 @@ function getMeasurementDisplay(habit, progress) {
   const format = value => Number.isInteger(value) ? String(value) : String(Number(value.toFixed(2)));
   const suffix = config.unit ? ` ${config.unit}` : '';
   return {
-    summary: `${format(progress)} / ${format(config.target)}${suffix}`,
+    summary: progress === null ? 'Completed · amount not recorded' : `${format(progress)} / ${format(config.target)}${suffix}`,
     incrementLabel: `+${format(config.step)}${suffix}`,
     pct: Math.min(100, Math.round((progress / config.target) * 100)),
   };
@@ -4853,14 +5142,15 @@ function getMeasurementDisplay(habit, progress) {
 
 function reconcileMeasuredDay(doneByDate, progressByDate, habits, date) {
   const key = dateKey(date);
-  const dayDone = doneByDate[key] || (doneByDate[key] = {});
+  const dayDone = doneByDate[key] || {};
   const dayProgress = progressByDate[key] || {};
   habits.forEach(habit => {
-    if (normalizeMeasurementConfig(habit).type === 'check') return;
+    if (normalizeMeasurementConfig(habit).type === 'check' || dayDone[habit.id] === true) return;
     const progress = getHabitProgress(dayDone, dayProgress, habit);
     if (isHabitProgressComplete(habit, progress)) dayDone[habit.id] = true;
     else delete dayDone[habit.id];
   });
+  if (Object.keys(dayDone).length) doneByDate[key] = dayDone;
   return dayDone;
 }
 
@@ -5101,17 +5391,6 @@ function normalizeCustomHabitOverrides(overrides, defaults, strict = false) {
   }
   return normalized;
 }
-
-const RHYTHM_TYPES = ['none', 'sunrise', 'sunset', 'temp-above', 'temp-below', 'uv-above', 'aqi-below'];
-const RHYTHM_LABELS = {
-  'none': 'No cue',
-  'sunrise': 'Within 1 hr of sunrise',
-  'sunset': 'Within 1 hr of sunset',
-  'temp-above': 'When feels-like exceeds',
-  'temp-below': 'When feels-like is below',
-  'uv-above': 'When UV index reaches',
-  'aqi-below': 'When US AQI is at most',
-};
 
 function isConciseRhythmNote(note) {
   if (typeof note !== 'string') return false;
@@ -5579,7 +5858,7 @@ function getEffectiveRecommendationContext(habit, preferenceWindow = null) {
   const values = keys.map(key => preferenceWindow[key]);
   if (values.some(value => !Number.isInteger(value) || value < 0 || value > 1440)) return context;
   const [start, idealStart, idealEnd, lateStart, end] = values;
-  if (!(start <= idealStart && idealStart < idealEnd && idealEnd <= lateStart && lateStart < end)) return context;
+  if (!(start <= idealStart && idealStart < idealEnd && idealEnd <= lateStart && lateStart <= end)) return context;
   return { ...context, start, idealStart, idealEnd, lateStart, end };
 }
 
@@ -5876,6 +6155,8 @@ function getForecastAwareOutdoorSuggestion(habit, now, data, preferenceWindow = 
   // Sun protection is a two-minute protection task, not outdoor exposure.
   // It may use weather-only hourly UV and is never deferred to a later window.
   if (habit.id === 'sunscreen' || (rhythm?.type === 'uv-above' && context.duration === 2)) {
+    // Do not fabricate an hourly protection proof for a different/unset authored budget.
+    if (habit.id === 'sunscreen' && context.authoredDuration === true && context.duration !== 2) return null;
     const currentHour = `${day}T${pad(now.getHours())}:00`;
     const current = forecast.entries.find(entry => entry && entry.time === currentHour);
     const threshold = rhythm?.type === 'uv-above' ? rhythm.threshold : OPPORTUNITY_WINDOW_POLICY.uvCueThreshold;
@@ -5979,6 +6260,10 @@ function getHabitRecommendationFit(habit, date, data, preferenceWindow = null) {
     return { eligible:false, reason:'early', phase:'unavailable', nextBoundary };
   }
   if (end !== null && minute >= end) return { eligible:false, reason:'late', phase:'unavailable', nextBoundary:null };
+  if (context.authoredDuration === true && Number.isFinite(context.duration) &&
+      minute + date.getSeconds() / 60 + date.getMilliseconds() / 60000 + context.duration > (end ?? 1440)) {
+    return { eligible:false, reason:'duration-short', phase:'unavailable', nextBoundary:null };
+  }
   const rhythm = normalizeRhythmConfig(habit?.rhythm);
   const aqi = Number.isFinite(snapshot.aqi) && snapshot.aqi >= 0 ? snapshot.aqi : null;
   const airReason = aqi !== null && aqi > 100 && aqi <= 150
@@ -6020,7 +6305,8 @@ function getHabitRecommendationFit(habit, date, data, preferenceWindow = null) {
   const daylightClosingStart = context.daylightClosing === true && daylightEnd !== null
     ? daylightEnd - 15
     : null;
-  const boundaries = [idealStart, idealEnd, lateStart, urgencyStart, end, daylightClosingStart, daylightEnd]
+  const planningEnd = context.authoredDuration === true && duration !== null ? (end ?? 1440) - duration + 1 / 60000 : null;
+  const boundaries = [idealStart, idealEnd, lateStart, urgencyStart, end, daylightClosingStart, daylightEnd, planningEnd]
     .filter(value => value !== null && value > minute);
   return {
     eligible:true,
@@ -6131,6 +6417,10 @@ function getNextWaveRefreshDelay(habits, date, data, preferenceWindows = null) {
       if (Number.isInteger(value) && value > minute) boundaries.push(value);
     });
     const duration = Number.isInteger(context.duration) && context.duration > 0 ? context.duration : null;
+    if (context.authoredDuration === true && duration !== null) {
+      const cutoffMs = ((Number.isInteger(context.end) ? context.end : 1440) - duration) * 60000;
+      if (cutoffMs >= elapsedMs) authoredDelays.push(Math.max(50, cutoffMs - elapsedMs + 1));
+    }
     if (context.daylight === 'required' && duration !== null && sunset !== null) {
       const durationBoundary = sunset - duration;
       if (durationBoundary > minute) boundaries.push(durationBoundary);
@@ -6216,7 +6506,7 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
   };
   const incompleteHabits = scheduled.filter(habit => {
     const progress = getHabitProgress(dayDone, dayProgress, habit);
-    return !isHabitProgressComplete(habit, progress);
+    return dayDone[habit.id] !== true && !isHabitProgressComplete(habit, progress);
   });
   const coolingDownHabitId = isNextWaveProgressCueActive(progressCue, date)
     ? progressCue.habitId
@@ -6240,9 +6530,10 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
     getHabitRecommendationFit(habit, date, snapshot, preferenceWindows?.[habit.id])]));
   const currentMinute = date.getHours() * 60 + date.getMinutes();
   const boundaryAtMinute = boundary => {
-    if (!Number.isInteger(boundary) || boundary <= currentMinute) return null;
+    if (!Number.isFinite(boundary) || boundary <= currentMinute) return null;
     const boundaryDate = new Date(date.getTime());
-    boundaryDate.setHours(Math.floor(boundary / 60), boundary % 60, 0, 0);
+    boundaryDate.setHours(Math.floor(boundary / 60), Math.floor(boundary % 60), 0,
+      Math.round((boundary - Math.floor(boundary)) * 60000));
     return boundaryDate.getTime();
   };
   const boundaryForHabit = habit => {
@@ -6333,6 +6624,10 @@ function getNextWaveSuggestion(habits, doneByDate, progressByDate, date, data, c
       ? openHabits.find(habit => {
           if (!Array.isArray(habit.context?.afterCompletion) ||
               !habit.context.afterCompletion.includes(completionCue.habitId)) return false;
+          const cueContext = getEffectiveRecommendationContext(habit, preferenceWindows?.[habit.id]);
+          if (cueContext?.authoredDuration === true && Number.isFinite(cueContext.duration) &&
+              currentMinute + date.getSeconds() / 60 + date.getMilliseconds() / 60000 + cueContext.duration >
+                (Number.isInteger(cueContext.end) ? cueContext.end : 1440)) return false;
           const cueConfig = habit.context?.completionCue || {};
           return !cueConfig.requiresEligibility || eligibleHabits.includes(habit);
         }) || null
@@ -7195,9 +7490,16 @@ function normalizeInsightHistory(rawHistory, habits, strict = false) {
           shownDate.getSeconds() / 60 + shownDate.getMilliseconds() / 60000;
         const expectedQuarterStart = Math.ceil(shownMinute / 15) * 15;
         const candidateMinute = intervalMinute(candidate);
-        const habitDuration = Number.isInteger(habit?.context?.duration) && habit.context.duration > 0
-          ? habit.context.duration
-          : habit?.id === 'sunscreen' ? 2 : null;
+        const durationSnapshot = Array.isArray(habit?.durationHistory)
+          ? habit.durationHistory.filter(snapshot => snapshot.at <= rawRecord.shownAt).at(-1) : null;
+        // Events sharing a millisecond have no timestamp-only ordering.
+        const proofMinutes = candidateMinute.end - candidateMinute.start;
+        const budget = durationSnapshot && durationSnapshot.at === rawRecord.shownAt && durationSnapshot.collidingMinutes
+          ? durationSnapshot.collidingMinutes.includes(proofMinutes) ? proofMinutes : null
+          : durationSnapshot ? durationSnapshot.minutes : habit?.context?.duration;
+        const habitDuration = Number.isInteger(budget) && budget > 0
+          ? budget
+          : habit?.id === 'sunscreen' && !durationSnapshot ? 2 : null;
         let timingValid = habitDuration !== null;
         if (forecast.kind === 'comparison') {
           const baselineMinute = intervalMinute(baseline);
@@ -7645,7 +7947,8 @@ function normalizeProgressByDate(progressByDate, habits, strict = false) {
         invalid(`Invalid progress value for ${id}.`);
         continue;
       }
-      const measurement = normalizeMeasurementConfig(habit);
+      const historical = habit.trackingHistory ? resolveTrackingConfigForDate(habit.trackingHistory, key) : { type:'unknown' };
+      const measurement = historical.type === 'unknown' ? historical : normalizeMeasurementConfig({ measurement:historical.type, ...historical });
       if (measurement.type === 'check') {
         invalid(`Check once habit ${id} cannot have numeric progress.`);
         continue;
@@ -7654,7 +7957,7 @@ function normalizeProgressByDate(progressByDate, habits, strict = false) {
         invalid(`Count progress for ${id} must be a whole number.`);
         continue;
       }
-      if (measurement.type === 'amount' && Math.abs(value * 100 - Math.round(value * 100)) >= 0.000000001) {
+      if (measurement.type !== 'count' && Math.abs(value * 100 - Math.round(value * 100)) >= 0.000000001) {
         invalid(`Amount progress for ${id} exceeds supported precision.`);
         continue;
       }
@@ -8717,11 +9020,12 @@ function openManageCategoryPage(categoryId, origin = 'categories') {
 }
 
 function openHabitEditorPage(habitId) {
+  const origin = currentActiveView === 'settings' ? 'home' : 'manage';
   const habit = HABITS.find(value => value.id === habitId);
   if (!habit) return;
   editingHabitId = habitId;
   habitEditorMode = 'edit';
-  habitEditorOrigin = 'manage';
+  habitEditorOrigin = origin === 'home' ? 'home' : 'manage';
   habitEditorDraft = null;
   habitEditorDirty = false;
   document.getElementById('habitEditorHeading').textContent = 'Edit Habit';
@@ -9083,7 +9387,6 @@ function restoreManagementRoute(route) {
     }
     editingHabitId = habit.id;
     habitEditorMode = 'edit';
-    habitEditorOrigin = 'manage';
     habitEditorDirty = false;
     document.getElementById('habitEditorHeading').textContent = 'Edit Habit';
     document.getElementById('habitEditorSave').textContent = 'Save';
@@ -9323,7 +9626,7 @@ function partitionHabitsForTracking(orderedHabits, todayDone, todayProgress) {
   const completed = [];
   orderedHabits.forEach(habit => {
     const progress = getHabitProgress(todayDone, todayProgress, habit);
-    const destination = isHabitProgressComplete(habit, progress) ? completed : active;
+    const destination = todayDone[habit.id] === true || isHabitProgressComplete(habit, progress) ? completed : active;
     destination.push(habit);
   });
   return { active, completed };
@@ -9368,7 +9671,7 @@ function renderHabits(now = new Date()) {
     const rhythm = normalizeRhythmConfig(h.rhythm);
     const cardContext = resolveHabitCardContext(h, now, rhythmWeatherData, preferenceWindows?.[h.id]);
     const progress = getHabitProgress(todayDone, todayProgress, h);
-    const isDone = isHabitProgressComplete(h, progress);
+    const isDone = todayDone[h.id] === true || isHabitProgressComplete(h, progress);
     const measurementDisplay = measurement.type === 'check' ? null : getMeasurementDisplay(h, progress);
     const progressMarkup = measurementDisplay ? `
           <div class="habit-progress">
@@ -9378,9 +9681,9 @@ function renderHabits(now = new Date()) {
     const progressControls = measurementDisplay ? `
         <div class="progress-stepper">
           <button type="button" class="progress-step progress-plus" data-progress-id="${escapeHtml(h.id)}" data-progress-direction="1" aria-label="Add ${escapeHtml(measurementDisplay.incrementLabel.slice(1))} to ${escapeHtml(h.text)}" ${isDone ? 'disabled' : ''}>+</button>
-          <button type="button" class="progress-step progress-minus" data-progress-id="${escapeHtml(h.id)}" data-progress-direction="-1" aria-label="Subtract ${escapeHtml(measurementDisplay.incrementLabel.slice(1))} from ${escapeHtml(h.text)}" ${progress <= 0 ? 'disabled' : ''}>−</button>
+          <button type="button" class="progress-step progress-minus" data-progress-id="${escapeHtml(h.id)}" data-progress-direction="-1" aria-label="Subtract ${escapeHtml(measurementDisplay.incrementLabel.slice(1))} from ${escapeHtml(h.text)}" ${progress === null || progress <= 0 ? 'disabled' : ''}>−</button>
         </div>` : '';
-    const progressEdge = measurementDisplay ? `
+    const progressEdge = measurementDisplay && progress !== null ? `
         <div class="progress-edge" role="progressbar" aria-label="Progress for ${escapeHtml(h.text)}" aria-valuemin="0" aria-valuemax="${measurement.target}" aria-valuenow="${Math.min(progress, measurement.target)}">
           <div class="progress-fill" style="width:${measurementDisplay.pct}%"></div>
         </div>` : '';
@@ -10113,34 +10416,6 @@ function updateRhythmRow(row) {
   row.classList.remove('measurement-error');
 }
 
-function getSystemHabitParamsFromRow(row) {
-  const habitId = row?.dataset?.id;
-  const definition = SYSTEM_HABIT_PARAMETER_DEFS[habitId];
-  if (!definition) return null;
-  const values = {};
-  for (const [key, field] of Object.entries(definition)) {
-    const input = row.querySelector(`.eh-param-${key}`);
-    if (!input) continue;
-    let value = input.value;
-    if (input.tagName === 'SELECT' && value === 'custom') {
-      value = row.querySelector(`.eh-param-${key}-custom`)?.value;
-    }
-    values[key] = field.type === 'time' ? value : Number(value);
-  }
-  return normalizeSystemHabitParams(habitId, values, false);
-}
-
-function updateSystemHabitTitlePreview(row) {
-  if (!row || row.dataset.grandfatheredTitle === 'true') return false;
-  const params = getSystemHabitParamsFromRow(row);
-  const target = row.querySelector('.eh-system-target');
-  if (!params || !target) return false;
-  const text = formatSystemHabitTarget(row.dataset.id, params);
-  target.textContent = text;
-  target.hidden = !text;
-  return true;
-}
-
 function getManageScope() {
   const scoped = manageCategory !== 'all';
   return {
@@ -10199,7 +10474,7 @@ function getCustomNextWaveDraftFromEditor(habitId = null) {
 function getCustomPreferredTimeDraftFromEditor(existingWindow) {
   const row = document.querySelector('#habitEditorBody .edit-habit');
   const mode = row?.querySelector('.eh-custom-preferred-time');
-  if (!mode) return undefined;
+  if (!mode || mode.disabled) return undefined;
   const time = row.querySelector('.eh-custom-specific-time');
   return customPreferredTimeToPreferenceWindow(mode.value, time?.value,
     existingWindow === undefined ? mode.habitOriginalPreferenceWindow : existingWindow);
@@ -10211,7 +10486,7 @@ function updateCustomPreferredTimeRow(row) {
   if (!mode || !time) return;
   const specific = mode.value === 'specific';
   row.querySelector('.eh-custom-time-row').hidden = !specific;
-  time.disabled = !specific;
+  time.disabled = !specific || mode.disabled;
   const help = row.querySelector('.eh-custom-time-help');
   const formatMinute = minute => `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
   const window = mode.habitOriginalPreferenceWindow;
@@ -10224,6 +10499,7 @@ function updateCustomPreferredTimeRow(row) {
     help.textContent = ({ any:'No preferred time.', morning:'06:00–12:00.', afternoon:'12:00–18:00.',
       evening:'18:00–24:00.', specific:'Choose an exact preferred time.' })[mode.value] || 'Choose a preferred time option.';
   }
+  if (mode.disabled) help.textContent = `Not available for this system habit. ${mode.value === 'specific' && time.value ? `Saved preferred time: ${time.value}.` : help.textContent}`;
 }
 
 function getNewCustomHabitDraftFromEditor(activeDate = dateKey(new Date())) {
@@ -10272,11 +10548,109 @@ function getNewCustomHabitDraftFromEditor(activeDate = dateKey(new Date())) {
   return draft;
 }
 
+function updateSharedDurationRow(row) {
+  const input = row.querySelector('.eh-duration-minutes');
+  if (!input || input.disabled) return;
+  if (!input.readOnly) row.habitPlannedDuration = input.value;
+  const minuteGoal = row.querySelector('.eh-measurement')?.value === 'amount' &&
+    ['min','mins','minute','minutes'].includes((row.querySelector('.eh-unit')?.value || '').trim().toLowerCase());
+  const linked = minuteGoal && !row.habitDurationReview;
+  input.readOnly = linked;
+  if (linked) input.value = row.querySelector('.eh-target').value;
+  else input.value = row.habitPlannedDuration ?? '';
+  row.querySelector('.eh-duration-help').textContent = linked
+    ? 'Linked to Goal. Edit Goal to change the duration.' : 'Planned minutes for this habit, independent of tracking.';
+}
+
+function getSharedDurationSettingFromEditor(habitId) {
+  const row = document.querySelector('#habitEditorBody .edit-habit');
+  const input = row?.querySelector('.eh-duration-minutes');
+  if (!input || input.disabled) return null;
+  if (row.habitDurationReview) throw new Error('Review the saved Goal and Duration before saving.');
+  if (input.readOnly) return { habitId, durationMode:'goal' };
+  const plannedDuration = input.value === '' ? null : Number(input.value);
+  if (plannedDuration !== null && (!Number.isFinite(plannedDuration) || plannedDuration < 0.01 ||
+      !Number.isSafeInteger(Math.ceil(plannedDuration)))) {
+    throw new Error('Duration must be positive supported minutes or left blank.');
+  }
+  return { habitId, durationMode:'planned', plannedDuration };
+}
+
+function appendDurationBudgetHistory(previous, oldBudget, nextBudget, at, recordedAt = at) {
+  const validBudget = value => value === null || Number.isSafeInteger(value) && value > 0;
+  if (!validBudget(oldBudget) || !validBudget(nextBudget) || !Number.isSafeInteger(at) || at <= 0 ||
+      !Number.isSafeInteger(recordedAt) || recordedAt <= 0) throw new Error('Invalid Duration budget boundary.');
+  if (!previous && oldBudget === nextBudget) return null;
+  const history = previous ? previous.map(snapshot => ({ ...snapshot,
+    ...(snapshot.collidingMinutes ? { collidingMinutes:[...snapshot.collidingMinutes] } : {}) })) : [{ at:0, minutes:oldBudget }];
+  const last = history[history.length - 1];
+  if (last.minutes === nextBudget) return history;
+  if (at < last.at || at === last.at && at < recordedAt) {
+    throw new Error('The device clock or effective boundary moved backward. Duration was not changed.');
+  }
+  const collidingMinutes = at === recordedAt
+    ? [...new Set([...(at === last.at ? last.collidingMinutes || [last.minutes] : []), oldBudget, nextBudget]
+      .filter(value => value !== null))] : [];
+  const snapshot = { at, minutes:nextBudget, ...(collidingMinutes.length ? { collidingMinutes } : {}) };
+  return at === last.at ? [...history.slice(0,-1), snapshot] : [...history, snapshot];
+}
+
+function stageSharedDurationCatalog(catalog, habitId, authoredSetting = null) {
+  let setting = authoredSetting || getSharedDurationSettingFromEditor(habitId);
+  if (!setting) return catalog;
+  const previous = catalog.fieldSettings || [];
+  const previousSetting = previous.find(entry => entry.habitId === habitId);
+  setting = { ...previousSetting, ...setting };
+  if (setting.durationMode === 'goal') delete setting.plannedDuration;
+  const resolutionRow = document.querySelector('#habitEditorBody .edit-habit');
+  if (!authoredSetting && resolutionRow?.habitTargetResolution) setting.targetMode = 'standard';
+  if (!authoredSetting && resolutionRow?.habitTimingResolution) setting.timingMode = resolutionRow.habitTimingResolution;
+  if (previousSetting?.durationHistory) setting.durationHistory = previousSetting.durationHistory.map(snapshot => ({ ...snapshot }));
+  return { ...catalog, fieldSettings:previous.some(entry => entry.habitId === habitId)
+    ? previous.map(entry => entry.habitId === habitId ? setting : entry) : [...previous, setting] };
+}
+
+function stageTrackingCatalog(catalog, habitId, authoredHabit, now) {
+  const today = dateKey(now);
+  const overrides = loadCustomHabits() || {};
+  // Editor caches can predate midnight or a suspended application's pending cutover.
+  const previousHabit = buildCompleteHabitCatalog(DEFAULT_HABITS, overrides, habitCatalogState, customNextWaveState, today)
+    .find(habit => habit.id === habitId);
+  if (!previousHabit) return catalog;
+  const previousSetting = habitCatalogState.fieldSettings?.find(entry => entry.habitId === habitId);
+  const setting = catalog.fieldSettings.find(entry => entry.habitId === habitId);
+  const snapshot = habit => ({ ...normalizeMeasurementConfig(habit), planningMinutes:habit.context?.duration ?? null });
+  const previous = snapshot(previousHabit);
+  const next = snapshot(authoredHabit);
+  const authoredBefore = buildCompleteHabitCatalog(DEFAULT_HABITS, overrides, habitCatalogState, customNextWaveState)
+    .find(habit => habit.id === habitId);
+  const before = authoredBefore && snapshot(authoredBefore);
+  const semantics = config => config && JSON.stringify({ type:config.type, target:config.target, step:config.step, unit:config.unit });
+  const pending = previousSetting?.trackingHistory?.changes.filter(entry => entry.date > today).at(-1)?.date;
+  const changed = semantics(before) !== semantics(next) || pending && before?.planningMinutes !== next.planningMinutes;
+  if (!setting && !changed) return catalog;
+  const activity = Object.hasOwn(state.done?.[today] || {}, habitId) ||
+    Object.hasOwn(state.progress?.[today] || {}, habitId) || !!insightHistory.days?.[today]?.completions?.[habitId];
+  const plan = changed ? planTrackingHistoryChange(previousSetting?.trackingHistory, previous, next, today, activity) : null;
+  // Anchors need tracking history too, without making their Duration applicable.
+  const updated = { ...(setting || { habitId, durationMode:'planned', plannedDuration:null }),
+    ...(plan ? { trackingHistory:plan.history } : {}) };
+  const effectiveDate = plan?.effectiveDate || pending || today;
+  const effectiveAt = effectiveDate > today ? new Date(`${effectiveDate}T00:00:00`).getTime() : now.getTime();
+  const history = appendDurationBudgetHistory(previousSetting?.durationHistory, previous.planningMinutes,
+    next.planningMinutes, effectiveAt, now.getTime());
+  if (history) updated.durationHistory = history;
+  return { ...catalog, fieldSettings:setting
+    ? catalog.fieldSettings.map(entry => entry.habitId === habitId ? updated : entry)
+    : [...catalog.fieldSettings, updated] };
+}
+
 function updateHabitEditorValidity() {
   const save = document.getElementById('habitEditorSave');
   const summary = document.getElementById('habitEditorValidationSummary');
   const row = document.querySelector('#habitEditorBody .edit-habit');
   if (!row) { save.disabled = true; return false; }
+  updateSharedDurationRow(row);
   updateCustomPreferredTimeRow(row);
   const draft = getNewCustomHabitDraftFromEditor();
   const isSystem = habitEditorMode === 'edit' && SYSTEM_HABIT_IDS.has(editingHabitId);
@@ -10285,12 +10659,23 @@ function updateHabitEditorValidity() {
     : null;
   const activeCategoryIds = getActiveCategoryDefinitions(categoryState).map(category => category.id);
   const errors = getHabitEditorValidationErrors(draft, existingDefinition, { isSystem, activeCategoryIds, knownHabits:ALL_HABITS });
+  if (['hydrate','gratitude'].includes(editingHabitId) && !row.habitTargetResolution &&
+      habitCatalogState.fieldSettings?.find(entry => entry.habitId === editingHabitId)?.targetMode !== 'standard') {
+    const authored = buildCompleteHabitCatalog(DEFAULT_HABITS, loadCustomHabits() || {}, habitCatalogState, customNextWaveState)
+      .find(habit => habit.id === editingHabitId);
+    if (JSON.stringify(normalizeMeasurementConfig(draft)) !== JSON.stringify(normalizeMeasurementConfig(authored))) {
+      errors.measurement = 'Choose Keep current tracking or Use new tracking Goal to resolve the legacy target.';
+    }
+  }
+  try { getSharedDurationSettingFromEditor(editingHabitId || 'new-custom-habit'); }
+  catch (error) { errors.duration = error.message; }
   if (!isSystem) {
     try { getCustomNextWaveDraftFromEditor(habitEditorMode === 'edit' ? editingHabitId : null); }
     catch (error) { errors.setting = error.message; }
   }
   if (isSystem && SYSTEM_HABIT_PARAMETER_DEFS[editingHabitId]) {
     for (const [key, field] of Object.entries(SYSTEM_HABIT_PARAMETER_DEFS[editingHabitId])) {
+      if (key === 'durationMinutes' || ['hydrate','gratitude','dinner'].includes(editingHabitId)) continue;
       const control = row.querySelector(`.eh-param-${key}`);
       const input = control?.value === 'custom' ? row.querySelector(`.eh-param-${key}-custom`) : control;
       const value = input?.value;
@@ -10298,7 +10683,7 @@ function updateHabitEditorValidity() {
       catch (error) { errors[`param-${key}`] = `Enter a valid ${field.label.toLowerCase()}.`; }
     }
   }
-  const selectors = { text:'.eh-text', note:'.eh-note', icon:'#habitEmojiInput', cat:'.eh-category', days:'.eh-days', measurement:'.eh-measurement', target:'.eh-target', step:'.eh-step', unit:'.eh-unit', rhythm:'.eh-rhythm', threshold:'.eh-rhythm-threshold', rhythmNote:'.eh-rhythm-note', setting:'.eh-setting' };
+  const selectors = { text:'.eh-text', note:'.eh-note', icon:'#habitEmojiInput', cat:'.eh-category', days:'.eh-days', measurement:'.eh-measurement', target:'.eh-target', step:'.eh-step', unit:'.eh-unit', rhythm:'.eh-rhythm', threshold:'.eh-rhythm-threshold', rhythmNote:'.eh-rhythm-note', setting:'.eh-setting', duration:'.eh-duration-minutes' };
   const customTimeMode = row.querySelector('.eh-custom-preferred-time');
   if (customTimeMode) {
     selectors.preferenceWindow = customTimeMode.value === 'specific'
@@ -10357,7 +10742,7 @@ function updateHabitEditorValidity() {
   growHabitEditorTextareas();
   summary.hidden = valid;
   summary.textContent = valid ? '' : `Before saving: ${Object.values(errors).join(' ')}`;
-  save.disabled = !valid;
+  save.disabled = !valid && !(row.habitDurationReview && Object.keys(errors).length === 1 && errors.duration);
   return valid;
 }
 
@@ -10366,7 +10751,7 @@ function renderHabitEditorForm(habitId) {
   const body = document.getElementById('habitEditorBody');
   const habits = habitEditorMode === 'create'
     ? (habitEditorDraft ? [{ ...habitEditorDraft, id:'new-custom-habit' }] : [])
-    : HABITS.filter(habit => habit.id === habitId);
+    : buildCompleteHabitCatalog(DEFAULT_HABITS, loadCustomHabits() || {}, habitCatalogState, customNextWaveState).filter(habit => habit.id === habitId);
   if (habits.length !== 1) return false;
   const existingOverrides = loadCustomHabits() || {};
   body.innerHTML = habits.map(h => {
@@ -10376,39 +10761,40 @@ function renderHabitEditorForm(habitId) {
     const isSystem = SYSTEM_HABIT_IDS.has(h.id);
     const systemAnchor = normalizeRhythmConfig(h.rhythm);
     const nextWaveEntry = customNextWaveState.settings.find(entry => entry.habitId === h.id);
-    const customTime = !isSystem ? getCustomPreferredTimeSelection(h.preferenceWindow) : null;
+    const customTime = !['wake','sleep'].includes(h.id) ? getCustomPreferredTimeSelection(h.preferenceWindow) : null;
+    const preferenceEditable = !isSystem || h.id === 'dinner' || isEligibleForPreferenceWindow(h);
+    const fieldSetting = habitCatalogState.fieldSettings?.find(entry => entry.habitId === h.id);
+    const targetReview = ['hydrate','gratitude'].includes(h.id) && fieldSetting?.targetMode !== 'standard';
+    const dinnerReview = h.id === 'dinner' && fieldSetting?.timingMode !== 'preferred';
+    const trackingPending = fieldSetting?.trackingHistory?.changes.filter(entry => entry.date > dateKey(new Date())).at(-1);
+
+    const renderParameter = (key, field) => {
+      const value = h.params?.[key] ?? field.default;
+      const label = h.id === 'dinner' && key === 'targetTime' ? 'Preferred time' : field.label;
+      const helper = h.id === 'dinner' ? 'Finish dinner by this time.' : '';
+      const classes = `eh-param eh-param-${escapeHtml(key)}`;
+      let control;
+      if (field.type === 'time') control = `<input type="time" class="${classes}" min="${escapeHtml(field.min || '00:00')}" max="${escapeHtml(field.max || '23:59')}" value="${escapeHtml(value)}">`;
+      else control = `<input type="number" class="${classes}" min="${field.min}" max="${field.max}" step="${field.type === 'count' ? '1' : '0.01'}" value="${value}">${field.unit ? ` ${escapeHtml(field.unit)}` : ''}`;
+      return `<label class="eh-param-field"><span>${escapeHtml(label)}</span>${control}${helper ? `<span class="eh-helper">${helper}</span>` : ''}</label>`;
+    };
+    const parameters = Object.entries(paramDefs || {});
+
+    const sharedDuration = resolveSharedHabitDuration(h, habitCatalogState.fieldSettings?.find(entry => entry.habitId === h.id));
+    const timing = parameters.find(([, field]) => field.type === 'time');
+    const setting = isSystem ? h.context?.setting : nextWaveEntry?.setting ?? 'either';
+    const inclusion = isSystem ? (h.context ? h.context.recommend !== false : null) : nextWaveEntry?.enabled === true;
     const hasGrandfatheredTitle = isSystem && typeof existingOverrides[h.id]?.text === 'string' &&
       parseLegacySystemHabitTitle(h.id, existingOverrides[h.id].text) === null;
     return `
       <div class="edit-habit" data-id="${escapeHtml(h.id)}" data-grandfathered-title="${hasGrandfatheredTitle}">
         <div class="eh-fields">
-          <label class="eh-category-field"><span>Category</span><select ${habitEditorMode === 'create' ? 'id="habitCategoryInput" required' : ''} class="eh-category">${habitEditorMode === 'create' ? '<option value="">Choose a category</option>' : ''}${getActiveCategoryDefinitions(categoryState).map(category => `<option value="${escapeHtml(category.id)}" ${h.cat === category.id ? 'selected' : ''}>${escapeHtml(getCategoryIcon(category))} ${escapeHtml(category.name)}</option>`).join('')}</select></label>
-          ${isSystem ? `<div class="eh-system-title"><span class="eh-icon">${escapeHtml(h.icon)}</span><span class="eh-system-name">${escapeHtml(h.text)}</span>${h.targetLabel ? ` <span class="eh-system-target">${escapeHtml(h.targetLabel)}</span>` : '<span class="eh-system-target" hidden></span>'}</div><input type="hidden" class="eh-text" value="${escapeHtml(h.text)}">` : `<div class="eh-identity-row"><div class="eh-emoji-field"><span>Emoji</span><button type="button" id="habitEmojiButton" aria-label="Choose habit emoji" aria-expanded="false" aria-controls="habitEmojiPicker">${escapeHtml(h.icon)}</button></div><label class="eh-name-field"><span class="eh-label-row"><span>Habit name</span><span id="habitNameCount" aria-live="polite">${h.text.length} / ${HABIT_NAME_MAX}</span></span>${habitEditorMode === 'create' ? `<input type="text" id="habitNameInput" maxlength="30" required class="eh-text" value="${escapeHtml(h.text)}" aria-label="Habit name" autocomplete="off">` : `${h.text.length > HABIT_NAME_MAX ? `<textarea id="habitNameInput" class="eh-text" aria-label="Habit name" rows="1" maxlength="${h.text.length}" aria-describedby="habitNameLegacyHelp">${escapeHtml(h.text)}</textarea><span id="habitNameLegacyHelp" class="eh-helper" data-legacy-field="text">Unchanged saved name may stay. If you edit it, use 30 characters or fewer.</span>` : `<input type="text" id="habitNameInput" class="eh-text" aria-label="Habit name" maxlength="${HABIT_NAME_MAX}" value="${escapeHtml(h.text)}">`}`}</label></div><div id="habitEmojiPicker" class="eh-emoji-picker" hidden><div class="category-icon-choices" role="group" aria-label="Habit emoji quick picks">${['⭐','💧','🧘','🚣','🏋️','📖','✍️','🎯','🌙'].map(emoji => `<button type="button" class="category-icon-choice" data-habit-emoji="${emoji}" aria-label="Choose ${emoji}">${emoji}</button>`).join('')}</div><label class="eh-form-field"><span>Custom emoji</span><input type="text" id="habitEmojiInput" class="eh-emoji-input" maxlength="32" autocomplete="off" value="${escapeHtml(h.icon)}" aria-describedby="habitEmojiHelp"></label><p id="habitEmojiHelp" class="eh-helper">Use your emoji keyboard to enter one emoji, or choose a quick pick above.</p><button type="button" class="modal-btn" id="habitEmojiDone">Done</button></div>`}
+          ${isSystem ? `<div class="eh-system-notice"><strong>Wavelength habit</strong><p>Some fields are managed by Wavelength and can’t be edited.</p></div><div class="eh-identity-row eh-system-title"><label class="eh-emoji-field"><span>Emoji</span><input class="eh-icon" value="${escapeHtml(h.icon)}" readonly aria-label="Habit emoji"></label><label class="eh-name-field"><span>Habit name</span><span class="eh-system-name"><textarea class="eh-text" rows="1" readonly aria-label="Habit name">${escapeHtml(h.text)}</textarea></span></label></div>` : `<div class="eh-identity-row"><div class="eh-emoji-field"><span>Emoji</span><button type="button" id="habitEmojiButton" aria-label="Choose habit emoji" aria-expanded="false" aria-controls="habitEmojiPicker">${escapeHtml(h.icon)}</button></div><label class="eh-name-field"><span class="eh-label-row"><span>Habit name</span><span id="habitNameCount" aria-live="polite">${h.text.length} / ${HABIT_NAME_MAX}</span></span>${habitEditorMode === 'create' ? `<input type="text" id="habitNameInput" maxlength="30" required class="eh-text" value="${escapeHtml(h.text)}" aria-label="Habit name" autocomplete="off">` : `${h.text.length > HABIT_NAME_MAX ? `<textarea id="habitNameInput" class="eh-text" aria-label="Habit name" rows="1" maxlength="${h.text.length}" aria-describedby="habitNameLegacyHelp">${escapeHtml(h.text)}</textarea><span id="habitNameLegacyHelp" class="eh-helper" data-legacy-field="text">Unchanged saved name may stay. If you edit it, use 30 characters or fewer.</span>` : `<input type="text" id="habitNameInput" class="eh-text" aria-label="Habit name" maxlength="${HABIT_NAME_MAX}" value="${escapeHtml(h.text)}">`}`}</label></div><div id="habitEmojiPicker" class="eh-emoji-picker" hidden><div class="category-icon-choices" role="group" aria-label="Habit emoji quick picks">${['⭐','💧','🧘','🚣','🏋️','📖','✍️','🎯','🌙'].map(emoji => `<button type="button" class="category-icon-choice" data-habit-emoji="${emoji}" aria-label="Choose ${emoji}">${emoji}</button>`).join('')}</div><label class="eh-form-field"><span>Custom emoji</span><input type="text" id="habitEmojiInput" class="eh-emoji-input" maxlength="32" autocomplete="off" value="${escapeHtml(h.icon)}" aria-describedby="habitEmojiHelp"></label><p id="habitEmojiHelp" class="eh-helper">Use your emoji keyboard to enter one emoji, or choose a quick pick above.</p><button type="button" class="modal-btn" id="habitEmojiDone">Done</button></div>`}
           <div class="eh-row eh-note-row">
             <label class="eh-note-field"><span class="eh-label-row"><span>Card description</span><span class="eh-note-count" aria-live="polite">${h.note.length} / ${HABIT_CARD_NOTE_MAX}</span></span>${habitEditorMode === 'create' ? `<input type="text" id="habitNoteInput" maxlength="32" class="eh-note" value="${escapeHtml(h.note)}" aria-label="Card description">` : `${h.note.length > HABIT_CARD_NOTE_MAX || /[\r\n]/.test(h.note) ? `<textarea class="eh-note" rows="1" maxlength="${Math.max(HABIT_CARD_NOTE_MAX, h.note.length)}" aria-label="Card description" ${h.note.length > HABIT_CARD_NOTE_MAX ? 'aria-describedby="habitNoteLegacyHelp"' : ''}>${escapeHtml(h.note)}</textarea>${h.note.length > HABIT_CARD_NOTE_MAX ? '<span id="habitNoteLegacyHelp" class="eh-helper" data-legacy-field="note">Unchanged saved description may stay. If you edit it, use 32 characters or fewer.</span>' : ''}` : `<input type="text" class="eh-note" maxlength="${HABIT_CARD_NOTE_MAX}" value="${escapeHtml(h.note)}" aria-label="Card description">`}`}</label>
-            ${paramDefs ? Object.entries(paramDefs).map(([key, field]) => {
-              if (field.type === 'time') {
-                const v = h.params?.[key] || field.default;
-                return `<label class="eh-param-field"><span>${escapeHtml(field.label)}</span><input type="time" class="eh-param eh-param-${escapeHtml(key)}" min="${escapeHtml(field.min || '00:00')}" max="${escapeHtml(field.max || '23:59')}" value="${escapeHtml(v)}"></label>`;
-              } else if (field.type === 'quantity') {
-                const v = h.params?.[key] ?? field.default;
-                return `<label class="eh-param-field"><span>${escapeHtml(field.label)}</span><input type="number" class="eh-param eh-param-${escapeHtml(key)}" min="${field.min}" max="${field.max}" step="0.01" value="${v}"> ${escapeHtml(field.unit || '')}</label>`;
-              } else {
-                const v = h.params?.[key] ?? field.default;
-                const opts = [5,10,15,20,30,45,60].map(d => `<option value="${d}" ${v === d ? 'selected' : ''}>${d} min</option>`).join('');
-                return `<label class="eh-param-field"><span>${escapeHtml(field.label)}</span><select class="eh-param eh-param-${escapeHtml(key)}">${opts}<option value="custom" ${![5,10,15,20,30,45,60].includes(v) ? 'selected' : ''}>Custom</option></select><input type="number" class="eh-param-custom eh-param-${escapeHtml(key)}-custom" min="${field.min}" max="${field.max}" value="${v}" ${[5,10,15,20,30,45,60].includes(v) ? 'hidden' : ''}></label>`;
-              }
-            }).join('') : ''}
+
           </div>
-          ${!isSystem ? `<div class="eh-next-wave-group">
-            <label class="eh-next-wave-toggle"><span>Include in Next Wave</span><span class="native-switch"><input type="checkbox" role="switch" class="eh-next-wave-enabled" ${nextWaveEntry?.enabled === true ? 'checked' : ''}><span class="native-switch-track" aria-hidden="true"></span></span></label>
-            <label class="eh-form-field"><span>Setting</span><select class="eh-setting">${['indoor','outdoor','either'].map(setting => `<option value="${setting}" ${(nextWaveEntry?.setting ?? 'either') === setting ? 'selected' : ''}>${setting === 'indoor' ? 'Indoor' : setting === 'outdoor' ? 'Outdoor' : 'Either'}</option>`).join('')}</select></label>
-          </div>` : ''}
-          ${!isSystem ? `<div class="eh-custom-time-group">
-            <label class="eh-form-field eh-custom-time-label"><span>Preferred time</span><select class="eh-custom-preferred-time">${[['any','Any time'],['morning','Morning'],['afternoon','Afternoon'],['evening','Evening'],['specific','Specific time'],...(customTime.mode === 'saved' ? [['saved','Saved window']] : [])].map(([value, label]) => `<option value="${value}" ${customTime.mode === value ? 'selected' : ''}>${label}</option>`).join('')}</select></label>
-            <label class="eh-form-field eh-custom-time-row" ${customTime.mode === 'specific' ? '' : 'hidden'}><span>Specific time</span><input type="time" class="eh-custom-specific-time" value="${escapeHtml(customTime.time)}" ${customTime.mode === 'specific' ? '' : 'disabled'}></label>
-            <p class="eh-helper eh-custom-time-help"></p>
-          </div>` : ''}
+          <label class="eh-category-field"><span>Category</span><select ${habitEditorMode === 'create' ? 'id="habitCategoryInput" required' : ''} class="eh-category">${habitEditorMode === 'create' ? '<option value="">Choose a category</option>' : ''}${getActiveCategoryDefinitions(categoryState).map(category => `<option value="${escapeHtml(category.id)}" ${h.cat === category.id ? 'selected' : ''}>${escapeHtml(getCategoryIcon(category))} ${escapeHtml(category.name)}</option>`).join('')}</select></label>
           <div class="eh-measurement-block">
             <label class="eh-measurement-label" for="${habitEditorMode === 'create' ? 'habitMeasurementInput' : `measurement-${escapeHtml(h.id)}`}">
               <span>Track as</span>
@@ -10424,36 +10810,96 @@ function renderHabitEditorForm(habitId) {
               <label class="eh-measure-field eh-step-field" ${measurement.type !== 'amount' ? 'hidden' : ''}><span>Add per tap</span><input ${habitEditorMode === 'create' ? 'id="habitStepInput"' : ''} class="eh-step" aria-label="Add per tap" type="number" min="0.01" step="0.01" value="${h.step ?? ''}" placeholder="e.g. 2"><span class="eh-step-preview">Each + tap adds your chosen amount.</span></label>
             </div>
           </div>
+          ${targetReview ? `<div class="eh-field-review"><p>Legacy ${h.id === 'hydrate' ? `${h.params?.amount ?? 16} oz` : `${h.params?.count ?? 3} good things`}. This is not your tracking Goal. Keep your current tracking, or explicitly use the new Goal above.</p><button type="button" class="reset-btn" data-field-resolution="keep-tracking">Keep current tracking</button><button type="button" class="reset-btn" data-field-resolution="use-new-target">Use new tracking Goal</button></div>` : ''}
+          ${trackingPending ? `<p class="eh-tracking-effective-date">Starts ${trackingPending.date} (tomorrow or later). Current activity keeps its existing tracking.</p>` : ''}
+          ${parameters.filter(([key, field]) => !['hydrate','gratitude'].includes(h.id) && key !== 'durationMinutes' && field.type !== 'time').map(([key, field]) => renderParameter(key, field)).join('')}
           <div class="eh-schedule">
             <div class="eh-schedule-label"><span>Repeat</span><span class="eh-schedule-summary">${getScheduleSummary(selectedDays)}</span></div>
             <div class="eh-days" role="group" aria-label="Days for ${escapeHtml(h.text)}">
               ${SCHEDULE_DAYS.map(day => `<button type="button" class="eh-day" data-day="${day.value}" role="checkbox" aria-checked="${selectedDays.includes(day.value)}">${day.label}</button>`).join('')}
             </div>
           </div>
-          ${isSystem ? `<div class="eh-system-anchor"><span>Habit cue</span><strong>${escapeHtml(systemAnchor ? RHYTHM_LABELS[systemAnchor.type] : 'No cue')}</strong><span class="eh-helper">Set by Wavelength</span></div>` : ''}
-          <div class="eh-rhythm-block" ${isSystem ? 'hidden' : ''}>
+          <label class="eh-form-field eh-duration-field"><span>Duration</span>${sharedDuration.mode === 'not-applicable' ? '<input disabled aria-label="Duration" value="Not applicable"><span class="eh-helper">This habit uses a clock anchor, not an authored duration.</span>' : `<input type="number" class="eh-duration-minutes" aria-label="Duration in minutes" min="0.01" step="any" value="${sharedDuration.minutes ?? ''}"><span class="eh-helper eh-duration-help"></span>`}</label>
+          ${sharedDuration.mode === 'review' ? `<div class="eh-field-review" role="group" aria-label="Review saved Duration"><p>Saved Goal: ${sharedDuration.goal} ${escapeHtml(h.unit)}. Saved Duration: ${sharedDuration.legacyMinutes} minutes. Choose which value to use.</p><button type="button" class="reset-btn" data-field-resolution="use-goal">Use Goal (${sharedDuration.goal} min)</button><button type="button" class="reset-btn" data-field-resolution="use-duration">Use Duration (${sharedDuration.legacyMinutes} min)</button></div>` : ''}
+          <div class="eh-timing-group">
+            ${timing && ['wake','sleep'].includes(h.id) ? renderParameter(...timing) : ''}
+            ${dinnerReview ? `<div class="eh-field-review"><p>Saved legacy finish-by deadline: ${escapeHtml(h.params?.targetTime || '19:00')}. Keeping it preserves its deadline and urgency, including any Saved window.</p><button type="button" class="reset-btn" data-field-resolution="keep-deadline">Keep deadline</button><button type="button" class="reset-btn" data-field-resolution="replace-deadline">Replace with Preferred time</button><button type="button" class="reset-btn" data-field-resolution="clear-deadline">Clear deadline</button></div>` : ''}
+          ${customTime ? `<div class="eh-custom-time-group" ${dinnerReview ? 'hidden' : ''}>
+            <label class="eh-form-field eh-custom-time-label"><span>Preferred time</span><select class="eh-custom-preferred-time" ${preferenceEditable ? '' : 'disabled'}>${[['any','Any time'],['morning','Morning'],['afternoon','Afternoon'],['evening','Evening'],['specific','Specific time'],...(customTime.mode === 'saved' ? [['saved','Saved window']] : [])].map(([value, label]) => `<option value="${value}" ${customTime.mode === value ? 'selected' : ''}>${!preferenceEditable && value === 'any' ? 'Not available' : label}</option>`).join('')}</select></label>
+            <label class="eh-form-field eh-custom-time-row" ${customTime.mode === 'specific' ? '' : 'hidden'}><span>Specific time</span><input type="time" class="eh-custom-specific-time" value="${escapeHtml(customTime.time)}" ${customTime.mode === 'specific' && preferenceEditable ? '' : 'disabled'}></label>
+            <p class="eh-helper eh-custom-time-help"></p>
+          </div>` : ''}
+
+          </div>
+          <div class="eh-next-wave-group">
+          <label class="eh-form-field eh-setting-field"><span>Setting</span><select class="eh-setting" ${isSystem ? 'disabled' : ''}>${!['indoor','outdoor','either'].includes(setting) ? '<option value="" selected>Not available</option>' : ['indoor','outdoor','either'].map(value => `<option value="${value}" ${setting === value ? 'selected' : ''}>${value === 'indoor' ? 'Indoor' : value === 'outdoor' ? 'Outdoor' : 'Either'}</option>`).join('')}</select></label>
+          <label class="eh-next-wave-toggle"><span>Include in Next Wave${inclusion === null ? ' (Not available)' : ''}</span><span class="native-switch"><input type="checkbox" role="switch" class="eh-next-wave-enabled" ${inclusion === true ? 'checked' : ''} ${isSystem ? 'disabled' : ''}><span class="native-switch-track" aria-hidden="true"></span></span></label>
+          </div>
+          <div class="eh-rhythm-block${isSystem ? ' eh-system-anchor' : ''}">
             <label class="eh-rhythm-label" for="${habitEditorMode === 'create' ? 'habitRhythmInput' : `rhythm-${escapeHtml(h.id)}`}">
               <span>Habit cue</span>
-              <select ${habitEditorMode === 'create' ? 'id="habitRhythmInput"' : `id="rhythm-${escapeHtml(h.id)}"`} class="eh-rhythm" aria-label="Habit cue">
+              <select ${habitEditorMode === 'create' ? 'id="habitRhythmInput"' : `id="rhythm-${escapeHtml(h.id)}"`} class="eh-rhythm" aria-label="Habit cue" ${isSystem ? 'disabled' : ''}>
                 ${habitEditorMode === 'create'
                   ? '<option value="none">No cue</option><option value="sunrise">Within 1 hr of sunrise</option><option value="sunset">Within 1 hr of sunset</option><option value="temp-above">When feels-like exceeds</option><option value="temp-below">When feels-like is below</option><option value="uv-above">When UV index reaches</option><option value="aqi-below">When US AQI is at most</option>'
-                  : RHYTHM_TYPES.map(rt => `<option value="${rt}" ${normalizeRhythmConfig(h.rhythm)?.type === rt ? 'selected' : ''}>${RHYTHM_LABELS[rt]}</option>`).join('')}
+                  : RHYTHM_TYPES.map(rt => `<option value="${rt}" ${(systemAnchor?.type || 'none') === rt ? 'selected' : ''}>${RHYTHM_LABELS[rt]}</option>`).join('')}
               </select>
             </label>
             <label class="eh-rhythm-field eh-rhythm-threshold-field" ${normalizeRhythmConfig(h.rhythm)?.type !== 'temp-above' && normalizeRhythmConfig(h.rhythm)?.type !== 'temp-below' && normalizeRhythmConfig(h.rhythm)?.type !== 'uv-above' && normalizeRhythmConfig(h.rhythm)?.type !== 'aqi-below' ? 'hidden' : ''}>
-              <span class="eh-threshold-label">Threshold ${systemAnchor?.type === 'uv-above' ? '(UV index)' : systemAnchor?.type === 'aqi-below' ? '(AQI)' : '(°F)'}</span><input class="eh-rhythm-threshold" ${habitEditorMode === 'create' ? 'id="habitRhythmThresholdInput"' : ''} type="number" min="0" step="0.1" value="${normalizeRhythmConfig(h.rhythm)?.threshold ?? ''}" placeholder="${normalizeRhythmConfig(h.rhythm)?.type === 'aqi-below' ? 'e.g. 50' : normalizeRhythmConfig(h.rhythm)?.type === 'uv-above' ? 'e.g. 8' : 'e.g. 90'}">
+              <span class="eh-threshold-label">Threshold ${systemAnchor?.type === 'uv-above' ? '(UV index)' : systemAnchor?.type === 'aqi-below' ? '(AQI)' : '(°F)'}</span><input class="eh-rhythm-threshold" ${isSystem ? 'readonly' : ''} ${habitEditorMode === 'create' ? 'id="habitRhythmThresholdInput"' : ''} type="number" min="0" step="0.1" value="${normalizeRhythmConfig(h.rhythm)?.threshold ?? ''}" placeholder="${normalizeRhythmConfig(h.rhythm)?.type === 'aqi-below' ? 'e.g. 50' : normalizeRhythmConfig(h.rhythm)?.type === 'uv-above' ? 'e.g. 8' : 'e.g. 90'}">
             </label>
-            <label class="eh-form-field eh-cue-message" ${systemAnchor ? '' : 'hidden'}><span>Cue message (optional)</span>${habitEditorMode === 'edit' && !isSystem && /[\r\n]/.test(systemAnchor?.note ?? '') ? `<textarea class="eh-rhythm-note" rows="1" aria-label="Cue message (optional)" maxlength="60" aria-describedby="habitCueHelp">${escapeHtml(systemAnchor.note)}</textarea>` : `<input type="text" ${habitEditorMode === 'create' ? 'id="habitRhythmNoteInput"' : ''} class="eh-rhythm-note" aria-label="Cue message (optional)" maxlength="60" value="${escapeHtml(systemAnchor?.note ?? '')}" aria-describedby="habitCueHelp" ${isSystem ? 'readonly' : ''} ${systemAnchor ? '' : 'hidden'}>`}<span id="habitCueHelp" class="eh-helper eh-cue-help">Shown on the habit card when cue conditions are met.</span></label>
+            <label class="eh-form-field eh-cue-message" ${systemAnchor ? '' : 'hidden'}><span>Cue message (optional)</span>${habitEditorMode === 'edit' && /[\r\n]/.test(systemAnchor?.note ?? '') ? `<textarea class="eh-rhythm-note" ${isSystem ? 'readonly' : ''} rows="1" aria-label="Cue message (optional)" maxlength="60" aria-describedby="habitCueHelp">${escapeHtml(systemAnchor.note)}</textarea>` : `<input type="text" ${habitEditorMode === 'create' ? 'id="habitRhythmNoteInput"' : ''} class="eh-rhythm-note" aria-label="Cue message (optional)" maxlength="60" value="${escapeHtml(systemAnchor?.note ?? '')}" aria-describedby="habitCueHelp" ${isSystem ? 'readonly' : ''} ${systemAnchor ? '' : 'hidden'}>`}<span id="habitCueHelp" class="eh-helper eh-cue-help">Shown on the habit card when cue conditions are met.</span></label>
           </div>
-          ${habitEditorMode === 'edit' && isEligibleForPreferenceWindow(h) ? `<label class="eh-preference-field"><span>Preferred time</span><input type="time" class="eh-preference" value="${escapeHtml(preferenceWindowToDisplayTime(h.preferenceWindow))}" placeholder="Optional"></label>` : ''}
         </div>
       </div>
     `;
   }).join('');
 
   const renderedHabit = habits[0];
+  const durationRow = body.querySelector('.edit-habit');
+  const initialDuration = resolveSharedHabitDuration(renderedHabit, habitCatalogState.fieldSettings?.find(entry => entry.habitId === renderedHabit.id));
+  durationRow.habitDurationReview = initialDuration.mode === 'review' ? initialDuration : null;
+  durationRow.habitPlannedDuration = initialDuration.minutes ?? '';
+  body.querySelectorAll('[data-field-resolution]').forEach(button => button.addEventListener('click', () => {
+    const action = button.dataset.fieldResolution;
+    if (['keep-tracking','use-new-target'].includes(action)) {
+      durationRow.habitTargetResolution = action;
+      if (action === 'keep-tracking') {
+        const config = normalizeMeasurementConfig(renderedHabit);
+        body.querySelector('.eh-measurement').value = config.type;
+        body.querySelector('.eh-target').value = config.type === 'check' ? '' : config.target;
+        body.querySelector('.eh-step').value = config.type === 'amount' ? config.step : '';
+        body.querySelector('.eh-unit').value = config.unit;
+        updateMeasurementRow(durationRow);
+      }
+      habitEditorDirty = true;
+      updateHabitEditorValidity();
+      return;
+    }
+    if (['keep-deadline','replace-deadline','clear-deadline'].includes(action)) {
+      durationRow.habitTimingResolution = action === 'keep-deadline' ? 'legacy-deadline' : 'preferred';
+      body.querySelector('.eh-custom-time-group').hidden = action === 'keep-deadline';
+      if (action === 'clear-deadline') body.querySelector('.eh-custom-preferred-time').value = 'any';
+      habitEditorDirty = true;
+      updateHabitEditorValidity();
+      return;
+    }
+    const review = durationRow.habitDurationReview;
+    if (!review) return;
+    const minutes = button.dataset.fieldResolution === 'use-duration' ? review.legacyMinutes : review.goal;
+    body.querySelector('.eh-target').value = minutes;
+    durationRow.habitDurationReview = null;
+    button.closest('.eh-field-review').remove();
+    habitEditorDirty = true;
+    updateHabitEditorValidity();
+  }));
+  const systemPreference = body.querySelector('.eh-preference');
+  if (systemPreference) systemPreference.habitOriginalPreferenceValue = systemPreference.value;
   const customTimeMode = body.querySelector('.eh-custom-preferred-time');
-  if (customTimeMode) customTimeMode.habitOriginalPreferenceWindow = renderedHabit.preferenceWindow;
+  if (customTimeMode) {
+    customTimeMode.habitOriginalPreferenceWindow = renderedHabit.preferenceWindow;
+    customTimeMode.habitInitialMode = customTimeMode.value;
+    customTimeMode.habitInitialTime = body.querySelector('.eh-custom-specific-time').value;
+  }
   for (const field of ['text', 'note', 'rhythm-note']) {
     const input = body.querySelector(`.eh-${field}`);
     if (!input) continue;
@@ -10464,15 +10910,23 @@ function renderHabitEditorForm(habitId) {
   }
   requestAnimationFrame(growHabitEditorTextareas);
   document.fonts.ready.then(growHabitEditorTextareas);
+  body.querySelector('.eh-clear-preference')?.addEventListener('click', () => {
+    const input = body.querySelector('.eh-preference');
+    input.value = '';
+    input.dispatchEvent(new Event('input', { bubbles:true }));
+    document.getElementById('habitPreferredTimeHelp').textContent = 'No preferred time set. Save to apply.';
+  });
 
   body.oninput = event => {
-    if (event.target.matches('input, select, textarea')) {
+    if (event.target.matches('input, select, textarea') && !event.target.disabled && !event.target.readOnly) {
+      if (event.target.matches('.eh-preference')) event.target.habitClearPreference = event.target.value === '';
       habitEditorDirty = true;
       updateHabitEditorValidity();
     }
   };
   body.onchange = event => {
-    if (event.target.matches('input, select, textarea')) {
+    if (event.target.matches('input, select, textarea') && !event.target.disabled && !event.target.readOnly) {
+      if (event.target.matches('.eh-preference')) event.target.habitClearPreference = event.target.value === '';
       habitEditorDirty = true;
       updateHabitEditorValidity();
     }
@@ -10522,25 +10976,21 @@ function renderHabitEditorForm(habitId) {
     });
   });
   body.querySelectorAll('.eh-measurement').forEach(select => {
-    select.addEventListener('change', () => updateMeasurementRow(select.closest('.edit-habit')));
+    select.addEventListener('change', () => {
+      if (renderedHabit.id === 'gratitude' && select.value === 'count' && !body.querySelector('.eh-target').value) body.querySelector('.eh-target').value = '3';
+      updateMeasurementRow(select.closest('.edit-habit'));
+      updateHabitEditorValidity();
+    });
   });
   body.querySelectorAll('.eh-rhythm').forEach(select => {
     select.addEventListener('change', () => updateRhythmRow(select.closest('.edit-habit')));
   });
-  body.querySelectorAll('.eh-param').forEach(input => {
-    const update = () => {
+  body.querySelectorAll('select.eh-param').forEach(input => {
+    input.addEventListener('change', () => {
       const row = input.closest('.edit-habit');
-      if (input.tagName === 'SELECT') {
-        const custom = row.querySelector(`.${input.classList[1]}-custom`);
-        if (custom) custom.hidden = input.value !== 'custom';
-      }
-      updateSystemHabitTitlePreview(row);
-    };
-    (input.tagName === 'SELECT' ? ['change'] : ['input','change'])
-      .forEach(eventName => input.addEventListener(eventName, update));
-  });
-  body.querySelectorAll('.eh-param-custom').forEach(input => {
-    input.addEventListener('input', () => updateSystemHabitTitlePreview(input.closest('.edit-habit')));
+      const custom = row.querySelector(`.${input.classList[1]}-custom`);
+      if (custom) custom.hidden = input.value !== 'custom';
+    });
   });
   body.querySelectorAll('.eh-rhythm-threshold, .eh-rhythm-note').forEach(input => {
     input.addEventListener('input', () => input.closest('.edit-habit').classList.remove('measurement-error'));
@@ -10559,12 +11009,17 @@ function saveHabitEditorForm() {
   if (editorRow) editorRow.dataset.validateAll = 'true';
   if (!updateHabitEditorValidity()) {
     editorRow?.querySelector('[aria-invalid="true"]')?.focus();
+    editorRow?.querySelector('.eh-field-review')?.scrollIntoView({ block:'center', behavior:'instant' });
     return false;
   }
   const visibleOverrides = {};
   const visibleIds = [];
   const existingOverrides = loadCustomHabits() || {};
   const completeCategoryCatalog = buildCompleteHabitCatalog(DEFAULT_HABITS, existingOverrides, habitCatalogState, customNextWaveState);
+  let nextHabitCatalog = normalizeHabitCatalogState(stageSharedDurationCatalog(habitCatalogState, editingHabitId),
+    DEFAULT_HABITS, categoryState.definitions.map(category => category.id), dateKey(new Date()), true);
+  assertHabitCatalogStorageIntegrity(habitCatalogState, DEFAULT_HABITS,
+    categoryState.definitions.map(category => category.id), dateKey(new Date()));
   const activeCategoryCatalog = getHabitsActiveOnDate(
     completeCategoryCatalog, habitCatalogState, dateKey(new Date()),
   );
@@ -10634,9 +11089,10 @@ function saveHabitEditorForm() {
     else if (hasGrandfatheredTitle) changes.text = existingText;
     if (note !== def.note) changes.note = note;
     if (hasParams) {
+      if (existingOverrides[id]?.params) changes.params = { ...existingOverrides[id].params };
       const paramInputs = row.querySelectorAll('.eh-param');
       if (paramInputs.length > 0) {
-        const paramValues = {};
+        const paramValues = { ...existingOverrides[id]?.params };
         for (const input of paramInputs) {
           const key = input.classList[1]?.replace('eh-param-', '');
           if (!key) continue;
@@ -10658,6 +11114,7 @@ function saveHabitEditorForm() {
         const changedParams = Object.fromEntries(Object.entries(normalizedParams)
           .filter(([k, v]) => v !== defaultParams[k]));
         if (Object.keys(changedParams).length > 0) changes.params = changedParams;
+        else delete changes.params;
       }
     }
     if (days.join(',') !== allDays.join(',')) changes.days = days;
@@ -10705,7 +11162,15 @@ function saveHabitEditorForm() {
     const preferenceInput = row.querySelector('.eh-preference');
     if (preferenceInput) {
       const prefValue = preferenceInput.value.trim();
-      if (prefValue) {
+      if (preferenceInput.habitClearPreference === true) {
+        changes.preferenceWindow = null;
+      } else if (prefValue === preferenceInput.habitOriginalPreferenceValue) {
+        // A clock is not a lossless editor for every supported saved window.
+        // Untouched UI must preserve the actual override, including explicit null.
+        if (Object.hasOwn(existingOverrides[id] || {}, 'preferenceWindow')) {
+          changes.preferenceWindow = existingOverrides[id].preferenceWindow;
+        }
+      } else if (prefValue) {
         const pw = displayTimeToPreferenceWindow(prefValue);
         if (pw) {
           const def2 = DEFAULT_HABITS.find(h2 => h2.id === id);
@@ -10722,11 +11187,28 @@ function saveHabitEditorForm() {
         changes.preferenceWindow = null;
       }
     }
+    const preferredMode = row.querySelector('.eh-custom-preferred-time');
+    if (!preferenceInput && !preferredMode && Object.hasOwn(existingOverrides[id] || {}, 'preferenceWindow')) {
+      changes.preferenceWindow = existingOverrides[id].preferenceWindow;
+    }
+    if (preferredMode) {
+      const unchanged = preferredMode.value === preferredMode.habitInitialMode &&
+        row.querySelector('.eh-custom-specific-time').value === preferredMode.habitInitialTime;
+      if (id === 'dinner' && row.habitTimingResolution !== 'preferred' &&
+          habitCatalogState.fieldSettings?.find(entry => entry.habitId === id)?.timingMode !== 'preferred') {
+        if (Object.hasOwn(existingOverrides[id] || {}, 'preferenceWindow')) changes.preferenceWindow = existingOverrides[id].preferenceWindow;
+      } else if (preferredMode.disabled || unchanged && !row.habitTimingResolution) {
+        if (Object.hasOwn(existingOverrides[id] || {}, 'preferenceWindow')) changes.preferenceWindow = existingOverrides[id].preferenceWindow;
+      } else changes.preferenceWindow = getCustomPreferredTimeDraftFromEditor();
+    }
     if (Object.keys(changes).length > 0) visibleOverrides[id] = changes;
   }
   const overrides = mergeVisibleManageOverrides(existingOverrides, visibleOverrides, visibleIds);
   const editDate = new Date();
-  const nextCompleteCatalog = buildCompleteHabitCatalog(DEFAULT_HABITS, overrides, habitCatalogState, customNextWaveState);
+  const authoredHabit = buildCompleteHabitCatalog(DEFAULT_HABITS, overrides, nextHabitCatalog, customNextWaveState).find(habit => habit.id === editingHabitId);
+  nextHabitCatalog = normalizeHabitCatalogState(stageTrackingCatalog(nextHabitCatalog, editingHabitId, authoredHabit, editDate),
+    DEFAULT_HABITS, categoryState.definitions.map(category => category.id), dateKey(editDate), true);
+  const nextCompleteCatalog = buildCompleteHabitCatalog(DEFAULT_HABITS, overrides, nextHabitCatalog, customNextWaveState, dateKey(editDate));
   const nextActiveCatalog = getHabitsActiveOnDate(nextCompleteCatalog, habitCatalogState, dateKey(editDate));
   nextCategoryState = normalizeCategoryState(nextCategoryState, nextCompleteCatalog, true, nextActiveCatalog);
   const nextAssignedCatalog = applyCategoryStateToHabits(nextCompleteCatalog, nextCategoryState);
@@ -10734,8 +11216,7 @@ function saveHabitEditorForm() {
   const nextState = JSON.parse(JSON.stringify(state));
   let nextInsightHistory = JSON.parse(JSON.stringify(insightHistory));
   nextState.progress = nextState.progress || {};
-  reconcileMeasurementTypeChanges(nextState.done, nextState.progress, previousHabits, nextAssignedActiveCatalog, editDate);
-  reconcileMeasuredDay(nextState.done, nextState.progress, nextAssignedActiveCatalog, editDate);
+  // Date-effective configuration preserves completion and recorded quantities verbatim.
   nextState.streak = calculateCurrentStreak(
     nextState.done || {}, nextAssignedCatalog, editDate, 5, nextState.progress || {}, habitCatalogState,
   );
@@ -10756,10 +11237,12 @@ function saveHabitEditorForm() {
   normalizeInsightHistoryAgainstState(nextInsightHistory, nextState, true);
   commitStorageSnapshot(localStorage, {
     [CUSTOM_HABITS_KEY]:Object.keys(overrides).length ? JSON.stringify(overrides) : null,
+    [HABIT_CATALOG_KEY]:JSON.stringify(nextHabitCatalog),
     [CATEGORY_STATE_KEY]:JSON.stringify(nextCategoryState),
     [STORAGE_KEY]:JSON.stringify(nextState),
     [INSIGHT_STORAGE_KEY]:JSON.stringify(nextInsightHistory),
   });
+  habitCatalogState = nextHabitCatalog;
   categoryState = nextCategoryState;
   state = nextState;
   insightHistory = nextInsightHistory;
@@ -10784,7 +11267,6 @@ function saveNewCustomHabit() {
     habitCatalogState, DEFAULT_HABITS, categoryIds, activeDate,
   );
   assertCustomNextWaveStorageIntegrity(customNextWaveState, habitCatalogState);
-  const previousHabits = HABITS.map(habit => ({ ...habit }));
   let nextState = JSON.parse(JSON.stringify(state));
   let nextInsightHistory = JSON.parse(JSON.stringify(insightHistory));
   const nextWaveDraft = getCustomNextWaveDraftFromEditor();
@@ -10794,7 +11276,7 @@ function saveNewCustomHabit() {
     draft, ALL_HABITS, activeCategoryIds, activeDate,
   );
   const nextHabitCatalog = normalizeHabitCatalogState({
-    ...habitCatalogState,
+    ...stageSharedDurationCatalog(habitCatalogState, createdHabit.id),
     customDefinitions:[...habitCatalogState.customDefinitions, createdHabit],
   }, DEFAULT_HABITS, categoryIds, activeDate, true);
   const nextCustomNextWaveState = normalizeCustomNextWaveState({
@@ -10802,7 +11284,7 @@ function saveNewCustomHabit() {
     settings:[...customNextWaveState.settings, { habitId:createdHabit.id, ...nextWaveDraft }],
   }, nextHabitCatalog, true);
   const nextCompleteCatalog = buildCompleteHabitCatalog(
-    DEFAULT_HABITS, loadCustomHabits() || {}, nextHabitCatalog, nextCustomNextWaveState,
+    DEFAULT_HABITS, loadCustomHabits() || {}, nextHabitCatalog, nextCustomNextWaveState, activeDate,
   );
   const nextActiveCatalog = getHabitsActiveOnDate(nextCompleteCatalog, nextHabitCatalog, activeDate);
   const nextCategoryState = normalizeCategoryState(
@@ -10812,8 +11294,7 @@ function saveNewCustomHabit() {
   const nextOrder = reconcileCompleteHabitOrder([...userOrder, createdHabit.id], nextAssignedCatalog);
   const nextAssignedActiveCatalog = getHabitsActiveOnDate(nextAssignedCatalog, nextHabitCatalog, activeDate);
   nextState.progress = nextState.progress || {};
-  reconcileMeasurementTypeChanges(nextState.done, nextState.progress, previousHabits, nextAssignedActiveCatalog, createDate);
-  reconcileMeasuredDay(nextState.done, nextState.progress, nextAssignedActiveCatalog, createDate);
+  // Adding a habit never converts or regrades an existing habit's recorded activity.
   nextState = normalizeStoredState(nextState, nextAssignedCatalog, true);
   nextState.streak = calculateCurrentStreak(
     nextState.done || {}, nextAssignedCatalog, createDate, 5, nextState.progress || {}, nextHabitCatalog,
@@ -10873,7 +11354,6 @@ function saveExistingCustomHabit() {
     habitCatalogState, DEFAULT_HABITS, categoryIds, activeDate,
   );
   assertCustomNextWaveStorageIntegrity(customNextWaveState, habitCatalogState);
-  const previousHabits = HABITS.map(habit => ({ ...habit }));
   let nextState = JSON.parse(JSON.stringify(state));
   let nextInsightHistory = JSON.parse(JSON.stringify(insightHistory));
   const existingDefinition = habitCatalogState.customDefinitions
@@ -10889,8 +11369,8 @@ function saveExistingCustomHabit() {
   const updatedHabit = normalizeExistingCustomHabitDraft(
     draft, existingDefinition, ALL_HABITS, activeCategoryIds,
   );
-  const nextHabitCatalog = normalizeHabitCatalogState({
-    ...habitCatalogState,
+  let nextHabitCatalog = normalizeHabitCatalogState({
+    ...stageSharedDurationCatalog(habitCatalogState, updatedHabit.id),
     customDefinitions:habitCatalogState.customDefinitions.map(habit =>
       habit.id === updatedHabit.id ? updatedHabit : habit),
   }, DEFAULT_HABITS, categoryIds, activeDate, true);
@@ -10902,8 +11382,13 @@ function saveExistingCustomHabit() {
         : [...customNextWaveState.settings, { habitId:updatedHabit.id, ...nextWaveDraft }])
       : customNextWaveState.settings,
   }, nextHabitCatalog, true);
+  const authoredHabit = buildCompleteHabitCatalog(DEFAULT_HABITS, loadCustomHabits() || {}, nextHabitCatalog, nextCustomNextWaveState)
+    .find(habit => habit.id === updatedHabit.id);
+  nextHabitCatalog = normalizeHabitCatalogState(stageTrackingCatalog(nextHabitCatalog, updatedHabit.id, authoredHabit, editDate),
+    DEFAULT_HABITS, categoryIds, activeDate, true);
   const nextCompleteCatalog = buildCompleteHabitCatalog(
     DEFAULT_HABITS, loadCustomHabits() || {}, nextHabitCatalog, nextCustomNextWaveState,
+    activeDate,
   );
   const nextActiveCatalog = getHabitsActiveOnDate(nextCompleteCatalog, nextHabitCatalog, activeDate);
   const nextCategoryState = normalizeCategoryState({
@@ -10915,8 +11400,7 @@ function saveExistingCustomHabit() {
     nextAssignedCatalog, nextHabitCatalog, activeDate,
   );
   nextState.progress = nextState.progress || {};
-  reconcileMeasurementTypeChanges(nextState.done, nextState.progress, previousHabits, nextAssignedActiveCatalog, editDate);
-  reconcileMeasuredDay(nextState.done, nextState.progress, nextAssignedActiveCatalog, editDate);
+  // Date-effective configuration preserves completion and recorded quantities verbatim.
   nextState = normalizeStoredState(nextState, nextAssignedCatalog, true);
   nextState.streak = calculateCurrentStreak(
     nextState.done || {}, nextAssignedCatalog, editDate, 5, nextState.progress || {}, nextHabitCatalog,
@@ -10966,24 +11450,65 @@ function saveExistingCustomHabit() {
 
 function resetHabitEditorDefaults() {
   if (!editingHabitId) return false;
-  const previousHabits = HABITS.map(habit => ({ ...habit }));
-  const overrides = loadCustomHabits() || {};
-  delete overrides[editingHabitId];
-  saveCustomHabits(overrides);
-  reloadHabits();
-  const resetDate = new Date();
-  state.progress = state.progress || {};
-  reconcileMeasurementTypeChanges(state.done, state.progress, previousHabits, HABITS, resetDate);
-  reconcileMeasuredDay(state.done, state.progress, HABITS, resetDate);
-  saveState();
-  saveInsightHistory(resetDate);
-  renderHabits(resetDate);
-  const habit = HABITS.find(value => value.id === editingHabitId);
-  if (habit) document.getElementById('habitEditorHeading').textContent = 'Edit Habit';
-  habitEditorDirty = false;
-  renderHabitEditorForm(editingHabitId);
-  showToast('↻ Habit reset to defaults');
-  return true;
+  if (!window.confirm('Restore this habit’s defaults? Saved name, description, repeat days, tracking, cue, preferred time, duration and parameter overrides will be removed. Recorded completion and amounts/counts are kept. If today has activity, tracking changes start tomorrow. Category assignment stays. Unsaved edits will be discarded.')) return false;
+  try {
+    const resetDate = new Date();
+    const categoryIds = categoryState.definitions.map(category => category.id);
+    assertHabitCatalogStorageIntegrity(habitCatalogState, DEFAULT_HABITS, categoryIds, dateKey(resetDate));
+    const overrides = loadCustomHabits() || {};
+    delete overrides[editingHabitId];
+    const defaultHabit = buildRuntimeHabits(DEFAULT_HABITS, {}).find(habit => habit.id === editingHabitId);
+    if (!defaultHabit) return false;
+    let nextHabitCatalog = normalizeHabitCatalogState(['wake','sleep'].includes(editingHabitId)
+      ? habitCatalogState : stageSharedDurationCatalog(habitCatalogState, editingHabitId,
+        { habitId:editingHabitId, durationMode:'planned', plannedDuration:defaultHabit.context?.duration ?? null }),
+      DEFAULT_HABITS, categoryIds, dateKey(resetDate), true);
+    nextHabitCatalog = { ...nextHabitCatalog, fieldSettings:nextHabitCatalog.fieldSettings.map(entry => {
+      if (entry.habitId !== editingHabitId) return entry;
+      const reset = { ...entry };
+      delete reset.targetMode;
+      delete reset.timingMode;
+      return reset;
+    }) };
+    const authoredHabit = buildCompleteHabitCatalog(DEFAULT_HABITS, overrides, nextHabitCatalog, customNextWaveState)
+      .find(habit => habit.id === editingHabitId);
+    nextHabitCatalog = normalizeHabitCatalogState(stageTrackingCatalog(nextHabitCatalog, editingHabitId, authoredHabit, resetDate),
+      DEFAULT_HABITS, categoryIds, dateKey(resetDate), true);
+    const nextCatalog = applyCategoryStateToHabits(
+      buildCompleteHabitCatalog(DEFAULT_HABITS, overrides, nextHabitCatalog, customNextWaveState, dateKey(resetDate)), categoryState);
+    const nextState = JSON.parse(JSON.stringify(state));
+
+    // Reset uses the same date-effective tracking cutover as ordinary Save.
+    nextState.streak = calculateCurrentStreak(nextState.done, nextCatalog, resetDate, 5, nextState.progress, nextHabitCatalog);
+    nextState.longestStreak = resolveLongestStreak(calculateLongestScheduledStreak(
+      nextState.done, nextCatalog, resetDate, 5, nextState.progress, nextHabitCatalog), nextState.streak);
+    const nextInsightHistory = normalizeInsightHistory(JSON.parse(JSON.stringify(insightHistory)), nextCatalog, true);
+    normalizeInsightHistoryAgainstState(nextInsightHistory, nextState, true);
+    commitStorageSnapshot(localStorage, {
+      [CUSTOM_HABITS_KEY]:Object.keys(overrides).length ? JSON.stringify(overrides) : null,
+      [HABIT_CATALOG_KEY]:JSON.stringify(nextHabitCatalog),
+      [CATEGORY_STATE_KEY]:JSON.stringify(categoryState),
+      [STORAGE_KEY]:JSON.stringify(nextState),
+      [INSIGHT_STORAGE_KEY]:JSON.stringify(nextInsightHistory),
+    });
+    habitCatalogState = nextHabitCatalog;
+    state = nextState;
+    insightHistory = nextInsightHistory;
+    reloadHabits(resetDate);
+    const previousCommittedRender = renderingCommittedHabitEditorSnapshot;
+    renderingCommittedHabitEditorSnapshot = true;
+    try { renderHabits(resetDate); }
+    finally { renderingCommittedHabitEditorSnapshot = previousCommittedRender; }
+    queueNativeNotificationSync();
+    document.getElementById('habitEditorHeading').textContent = 'Edit Habit';
+    habitEditorDirty = false;
+    renderHabitEditorForm(editingHabitId);
+    showToast('↻ Habit reset to defaults');
+    return true;
+  } catch (error) {
+    showToast('Unable to restore defaults. Your changes are kept; try again.');
+    return false;
+  }
 }
 
 function saveHabitEditorPage() {
@@ -10991,6 +11516,7 @@ function saveHabitEditorPage() {
   if (editorRow) editorRow.dataset.validateAll = 'true';
   if (habitEditorMode !== 'create' && !updateHabitEditorValidity()) {
     editorRow?.querySelector('[aria-invalid="true"]')?.focus();
+    editorRow?.querySelector('.eh-field-review')?.scrollIntoView({ block:'center', behavior:'instant' });
     return false;
   }
   if (habitEditorMode === 'create') {
@@ -11056,7 +11582,7 @@ function saveHabitEditorPage() {
 // ═══════════════════════════════════════════════════════════════════
 // OFFLINE AND DATA TRANSFER
 // ═══════════════════════════════════════════════════════════════════
-const BACKUP_VERSION = 10;
+const BACKUP_VERSION = 11;
 
 function setupOfflineStatus() {
   const pill = document.getElementById('offlinePill');
@@ -11141,7 +11667,7 @@ async function importBackupFile(file) {
   if (!file) return;
   try {
     const payload = JSON.parse(await file.text());
-    if (payload.app !== 'wavelength' || ![1, 2, 3, 4, 5, 6, 7, 8, 9, BACKUP_VERSION].includes(payload.version) || !payload.state || !Array.isArray(payload.order) ||
+    if (payload.app !== 'wavelength' || ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, BACKUP_VERSION].includes(payload.version) || !payload.state || !Array.isArray(payload.order) ||
         (payload.version >= 2 && !payload.insightHistory) ||
         (payload.version >= 4 && typeof payload.firstName !== 'string') ||
         (payload.version >= 6 && !payload.categoryState) ||
@@ -11170,7 +11696,7 @@ async function importBackupFile(file) {
     const importedCustomNextWave = payload.version >= 10
       ? normalizeCustomNextWaveState(payload.customNextWave, importedHabitCatalog, true)
       : createDefaultCustomNextWaveState();
-    const importedCompleteHabits = buildCompleteHabitCatalog(DEFAULT_HABITS, customHabits, importedHabitCatalog, importedCustomNextWave);
+    const importedCompleteHabits = buildCompleteHabitCatalog(DEFAULT_HABITS, customHabits, importedHabitCatalog, importedCustomNextWave, dateKey(importDate));
     const importedActiveHabits = getHabitsActiveOnDate(importedCompleteHabits, importedHabitCatalog, dateKey(importDate));
     const importedCategoryState = payload.version >= 6
       ? normalizeCategoryState(payload.categoryState, importedCompleteHabits, true, importedActiveHabits)
@@ -11257,6 +11783,17 @@ let currentActiveView = 'home';
 
 function setActiveView(view, scroll = true) {
   const activeView = ['home','insights','settings'].includes(view) ? view : 'home';
+  if (activeView === 'settings') {
+    let hasArchivedAnchor = false;
+    for (const button of document.querySelectorAll('[data-habit-anchor]')) {
+      button.disabled = !HABITS.some(habit => habit.id === button.dataset.habitAnchor);
+      if (button.disabled) {
+        hasArchivedAnchor = true;
+        button.setAttribute('aria-describedby', 'habitAnchorHelp');
+      } else button.removeAttribute('aria-describedby');
+    }
+    document.getElementById('habitAnchorHelp').hidden = !hasArchivedAnchor;
+  }
   const views = {
     home: { panel:document.getElementById('homeView'), button:document.getElementById('navHome') },
     insights: { panel:document.getElementById('insightsView'), button:document.getElementById('navInsights') },
@@ -11330,6 +11867,11 @@ function init() {
     restoringArchivedHabitId = null;
   });
   document.getElementById('habitEditorReset').addEventListener('click', resetHabitEditorDefaults);
+  document.querySelectorAll('[data-habit-anchor]').forEach(button => button.addEventListener('click', () => {
+    if (!HABITS.some(habit => habit.id === button.dataset.habitAnchor)) return;
+    beginManagementFlow();
+    openHabitEditorPage(button.dataset.habitAnchor);
+  }));
   document.getElementById('newCategoryBtn').addEventListener('click', () => openCategoryEditorPage(null, 'categories'));
   document.getElementById('categoryOptionsBtn').addEventListener('click', openCategoryOptions);
   document.getElementById('editCategoryOption').addEventListener('click', () => {

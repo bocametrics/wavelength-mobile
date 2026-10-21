@@ -1,0 +1,27 @@
+{
+  "sourceSha256": "b90190024fd9cf3664b85f3c2ba68b223e2508b8f8aafd2c1178afa8410a6549",
+  "mirrors": [
+    "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/index.html",
+    "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/WavelengthMobile/tests/fixtures/friday_app_2026-07-12.html",
+    "/mnt/c/Users/AI Agent/OneDrive/Documents/FridayApps/friday_app_2026-07-12.html"
+  ],
+  "browserSuites": 29,
+  "browserRuns": 58,
+  "sourceSuites": 56,
+  "actualNavigationResponses": 842,
+  "verifiedScreenshots": 146,
+  "ownedProfiles": 58,
+  "allOwnedProfilesAbsent": true,
+  "sourceAndTestsSealed": true,
+  "runtimeErrors": 0,
+  "scope": "Local source/browser acceptance only. Native picker, package/WidgetKit, physical device and release not tested.",
+  "baselineSourceSha256": "d2f52f05c2105034064c79964b14b108415e7d5fdcc296b4ad8669b8323c11fe",
+  "cssOnly": true,
+  "markupAndScriptsUnchanged": true,
+  "existingTestsUnchanged": 84,
+  "typographyCasesPerTheme": 27,
+  "review": "Independent CSS/pixel review PASS",
+  "durableEvidenceRoot": "/home/ai_agent/.hermes/artifacts/wavelength/editor-label-typography-20261020",
+  "initialAttempt": "57/58, HTTP503 console failure; unchanged targeted retry passed. Separate clean final matrix58/58 used for acceptance.",
+  "commitPushDeployInstall": "Not performed"
+}

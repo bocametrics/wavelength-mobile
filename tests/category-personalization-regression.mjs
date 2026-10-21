@@ -381,14 +381,14 @@ for (const [label, htmlPath] of builds) {
     `${label}: runtime category state loads against complete and date-effective active catalogs`);
   assert.match(html, /const completeCatalog = buildCompleteHabitCatalog[\s\S]*const activeCatalog = getHabitsActiveOnDate[\s\S]*normalizeCategoryState\(categoryState, completeCatalog, false, activeCatalog\)[\s\S]*ALL_HABITS = applyCategoryStateToHabits[\s\S]*HABITS = getHabitsActiveOnDate/,
     `${label}: runtime applies retained assignments before deriving current categorized habits`);
-  assert.match(html, /const BACKUP_VERSION = 10;/,
+  assert.match(html, /const BACKUP_VERSION = 11;/,
     `${label}: portable backup schema v9 retains arbitrary category emoji`);
   const backupExporter = extractFunction(html, 'createBackupPayload');
   assert.match(backupExporter, /const categoryCatalogs = getCategoryValidationCatalogs\(exportDate\)[\s\S]*categoryState:normalizeCategoryState\(categoryState, categoryCatalogs\.completeHabits, true, categoryCatalogs\.activeHabits\)/,
     `${label}: v9 backups preserve active and archived assignments using uncategorized validation catalogs`);
   assert.match(html, /payload\.version >= 6 && !payload\.categoryState/,
     `${label}: v6+ imports require category state while older backups migrate defaults`);
-  assert.match(html, /const importedCompleteHabits = buildCompleteHabitCatalog\(\s*DEFAULT_HABITS,\s*customHabits,\s*importedHabitCatalog,\s*importedCustomNextWave,?\s*\)[\s\S]*const importedActiveHabits = getHabitsActiveOnDate\(importedCompleteHabits, importedHabitCatalog, dateKey\(importDate\)\)[\s\S]*const importedCategoryState = payload\.version >= 6[\s\S]*normalizeCategoryState\(payload\.categoryState, importedCompleteHabits, true, importedActiveHabits\)[\s\S]*createDefaultCategoryState\(\)[\s\S]*const importedAllHabits = applyCategoryStateToHabits\(importedCompleteHabits, importedCategoryState\)[\s\S]*const importedHabits = getHabitsActiveOnDate\(\s*importedAllHabits, importedHabitCatalog, dateKey\(importDate\),?\s*\)/,
+  assert.match(html, /const importedCompleteHabits = buildCompleteHabitCatalog\(\s*DEFAULT_HABITS,\s*customHabits,\s*importedHabitCatalog,\s*importedCustomNextWave,\s*dateKey\(importDate\)\s*\)[\s\S]*const importedActiveHabits = getHabitsActiveOnDate\(importedCompleteHabits, importedHabitCatalog, dateKey\(importDate\)\)[\s\S]*const importedCategoryState = payload\.version >= 6[\s\S]*normalizeCategoryState\(payload\.categoryState, importedCompleteHabits, true, importedActiveHabits\)[\s\S]*createDefaultCategoryState\(\)[\s\S]*const importedAllHabits = applyCategoryStateToHabits\(importedCompleteHabits, importedCategoryState\)[\s\S]*const importedHabits = getHabitsActiveOnDate\(\s*importedAllHabits, importedHabitCatalog, dateKey\(importDate\),?\s*\)/,
     `${label}: version-9 category imports use the imported complete and date-effective active catalogs while legacy v1-v5 backups receive deterministic categories`);
   assert.match(html, /const importedOrder = normalizeImportedHabitOrder\(\s*payload\.order,\s*payload\.version >= 9 \? importedCompleteHabits : DEFAULT_HABITS,?\s*\)/,
     `${label}: version-9 self-import retains complete-catalog order, including archived identities`);
