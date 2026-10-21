@@ -1,5 +1,16 @@
 # Shared habit fields: publication and physical iPhone release
 
+## Completion checkpoint
+
+- Feature PR #4 merged at release commit `1e35b19abc2ef5ceb103edd22f4f75b7415936e8`. GitHub Pages reports that commit built, and cache-busted live HTML/service-worker bytes match the release. Bounded live actual-Edge checks pass 36/36 cases across four runs, with 78 matching document responses, zero runtime errors and all owned profiles removed. An initial directory-redirect response-body collector failure is retained; the corrected preload normalizes the initial directory slash without changing driver fixtures/assertions or production code.
+- Exact-commit isolated Mac build passed npm ci, Capacitor sync and Xcode build with zero warning/error lines. App and Widget signatures, bundle IDs, build4, physical-device inclusion, App Group entitlements and all11 packaged public files were verified. All160 tracked source files remained sealed after the build. The existing shared Mac checkout and its local signing/deleted-lockfile changes remain untouched; the isolated artifact, not that older checkout, is the release provenance target.
+- App **1.0 (4)** installed in place without uninstall/reset. Installed-app readback passed. The first launch was correctly blocked by the locked phone; after David unlocked it, launch succeeded and process1065 matched the exact installed App executable.
+- Pre-install, immediate post-install/prelaunch and postlaunch readable backups each contain12 LocalStorage keys. Every raw key/value row is identical across all three snapshots, with no semantic changes. Each snapshot has SQLite integrity OK, two matching independent WebKit copies and individually reconciled archive members. OS-owned SplashBoard remains explicitly excluded.
+- Existing Personal-Team profiles were reused, not renewed: App expires **2026-10-23T00:05:05Z**, Widget one second later. Installation and launch pass now, but the free-signing renewal deadline remains real. No paid/developer credentials were requested or automated.
+- No duplicate Xcode was found. No15.9GB simulator download, runtime deletion, simulator-data removal or shared-checkout repair was needed. Native picker interaction, full widget appearance coverage and notification delivery remain untested and are not inferred from installation.
+
+Native receipts are retained under `/Users/wavelength/Developer/WavelengthArtifacts/shared-fields-v51-1e35b19/` and copied to the durable release artifact root. Phone backups are under `/Users/wavelength/Developer/WavelengthDeviceBackups/shared-fields-v51-{pre-install,post-install,post-launch}-...`. The completion documentation checkpoint changes no app, tests or release metadata; the installed artifact remains built from release commit `1e35b19...`.
+
 ## Authorization and exact source
 
 David authorized commit, publication and in-place phone installation. He also requested checking Xcode's iOS 27.1 Components offer and removing a previous copy if genuinely redundant because Mac storage is limited.
@@ -21,7 +32,7 @@ Release HTML: `bfa822b983d7cc851ff08eeb26a0eb7e03e1ebdfb1805e699d2d95af284b5508`
 - Current-release shell assertions separately observed RED for cache and build, then GREEN after metadata updates and canonical native-web generation.
 - No native Swift, dependency, signing-team or capability changes. Signing team is an isolated build argument, not committed source.
 
-## Remaining publication/device gates
+## Gates recorded at the release commit (completed as detailed above)
 
 1. **Mac preflight PASS:** pinned SSH, GUI owner `wavelength`, one Xcode 27.1 installation and installed physical iOS 27.1 SDK. Paired physical iPhone 16e reachable on iOS 26.6.1. GUI signing keychain is unlocked/readable/writable. Existing App/Widget profiles include the phone and expire 2026-10-23 UTC; read back the actual built profiles, do not assume renewal. Approximately 17 GiB free at preflight. Shared Mac checkout is preserved at its existing older commit with signing and deleted Package.resolved deltas; no repair, sync or reset of that checkout.
 2. **Commit/publication OPEN:** stage only owned reviewed files, seal exact index, commit/push release branch, verify PR merge and Pages deployment commit, compare live HTML/SW bytes and exercise bounded real-browser flows. No publication claim from a push alone.
